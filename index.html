@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mastering Science - Chemistry</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #f5f0ff;
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            padding: 20px;
+        }
+        :root {
+            --deep-purple: #4a1d8c;
+            --deep-purple-light: #7c3aed;
+            --gold: #fbbf24;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 28px;
+            padding: 1.2rem;
+            margin-bottom: 1.2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .btn {
+            border: none;
+            background: var(--deep-purple);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .btn-outline {
+            background: white;
+            color: var(--deep-purple);
+            border: 1px solid var(--deep-purple);
+        }
+        .btn-danger { background: #dc2626; }
+        .btn-small { padding: 0.25rem 0.8rem; font-size: 0.75rem; }
+        .btn-success { background: #10b981; }
+        .unit-group { margin-bottom: 1.5rem; }
+        .unit-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2e0f5a;
+            border-left: 5px solid var(--deep-purple);
+            padding-left: 12px;
+            margin-bottom: 0.8rem;
+        }
+        .chapter-item {
+            background: #f9f7ff;
+            border-radius: 20px;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .chapter-info { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .progress-badge {
+            background: #e9e4f5;
+            padding: 0.2rem 0.7rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: var(--deep-purple);
+        }
+        .nav-tabs {
+            display: flex;
+            gap: 0.8rem;
+            margin-bottom: 1.2rem;
+            border-bottom: 2px solid #e0d6f5;
+            padding-bottom: 0.5rem;
+        }
+        .tab {
+            background: none;
+            border: none;
+            padding: 0.4rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 40px;
+        }
+        .tab.active { background: var(--deep-purple); color: white; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            width: 95%;
+            max-width: 650px;
+            border-radius: 28px;
+            padding: 1rem;
+            max-height: 90%;
+            overflow-y: auto;
+            position: relative;
+        }
+        .close-icon {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .option-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: #f3f0ff;
+            margin: 0.4rem 0;
+            padding: 0.6rem;
+            border-radius: 60px;
+            border: none;
+            cursor: pointer;
+        }
+        .option-btn.selected {
+            background: var(--deep-purple-light);
+            color: white;
+        }
+        .timer {
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-align: center;
+            background: #2e0f5a;
+            color: white;
+            padding: 4px;
+            border-radius: 40px;
+            margin-bottom: 10px;
+        }
+        .question-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+            justify-content: center;
+        }
+        .q-nav-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #e9e4f5;
+            border: none;
+            cursor: pointer;
+        }
+        .q-nav-btn.current { background: var(--deep-purple); color: white; }
+        .q-nav-btn.answered { background: #10b981; color: white; }
+        .q-nav-btn.unanswered { background: #fbbf24; }
+        .result-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.8rem; }
+        .result-table th, .result-table td { border: 1px solid #ddd; padding: 6px; vertical-align: top; }
+        .explanation-text { background: #fff3cd; padding: 4px; margin-top: 4px; border-radius: 6px; }
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 12px; gap: 8px; }
+        @media (max-width: 640px) {
+            .chapter-item { flex-direction: column; align-items: stretch; }
+            .chapter-info { justify-content: space-between; }
+        }
+    </style>
+    <script src="chem_questions.js"></script>
+</head>
+<body>
+<div id="loginScreen" style="max-width: 400px; margin: 80px auto;" class="card">
+    <h2 style="color: var(--deep-purple);">🧪 Mastering Science</h2>
+    <p>Master science, one step at a time</p>
+    <input type="text" id="studentName" placeholder="Name" style="width:100%; padding:8px; margin:10px 0; border-radius:40px; border:1px solid #ccc;">
+    <input type="text" id="studentClass" placeholder="Class" style="width:100%; padding:8px; margin-bottom:10px; border-radius:40px; border:1px solid #ccc;">
+    <button class="btn" id="loginBtn" style="width:100%;">Start Learning</button>
+</div>
+
+<div id="mainApp" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h1 style="color: var(--deep-purple);">📘 Mastering Science</h1>
+        <span id="userLabel"></span>
+    </div>
+    <div class="nav-tabs">
+        <button class="tab active" data-tab="practice">📖 Practice</button>
+        <button class="tab" data-tab="myMistakes">❌ My Mistakes</button>
+        <button class="tab" data-tab="pastMistakes">🕒 Past Mistakes</button>
+        <button class="tab" data-tab="pinned">⭐ Pinned</button>
+    </div>
+    <div id="practicePanel"></div>
+    <div id="myMistakesPanel" style="display:none;"></div>
+    <div id="pastMistakesPanel" style="display:none;"></div>
+    <div id="pinnedPanel" style="display:none;"></div>
+</div>
+
+<!-- 练习模态框 -->
+<div id="quizModal" class="modal">
+    <div class="modal-content">
+        <span class="close-icon" id="closeModalIcon">&times;</span>
+        <div class="timer" id="timerDisplay">--:--</div>
+        <div class="question-nav" id="questionNav"></div>
+        <h3 id="modalQuestionText"></h3>
+        <div id="modalImageArea"></div>
+        <div id="modalOptions"></div>
+        <div class="nav-buttons">
+            <button id="prevBtn" class="btn btn-outline btn-small">◀ Previous</button>
+            <button id="nextBtn" class="btn btn-outline btn-small">Next ▶</button>
+        </div>
+        <button id="submitAllBtn" class="btn btn-success" style="margin-top:10px; width:100%;">Submit All</button>
+    </div>
+</div>
+
+<!-- 成绩总表 -->
+<div id="resultModal" class="modal">
+    <div class="modal-content">
+        <h3>Result Summary</h3>
+        <div id="resultContent"></div>
+        <button id="closeResultBtn" class="btn" style="margin-top:1rem;">Close</button>
+    </div>
+</div>
+
+<script>
+// ==================== 全局变量 ====================
+let currentUser = null;
+let userData = { latestStatus: {}, allAttempts: [], favorites: [] };
+let currentChapterId = null;
+let currentQuestions = [];
+let currentOptionsMapping = [];
+let currentAnswers = [];
+let currentQIndex = 0;
+let timerInterval = null;
+let timeRemaining = 0;
+
+// ==================== 辅助函数 ====================
+function saveUserData() {
+    if (!currentUser) return;
+    localStorage.setItem(`ms_chem_${currentUser.id}`, JSON.stringify(userData));
+}
+function loadUserData() {
+    if (!currentUser) return;
+    const raw = localStorage.getItem(`ms_chem_${currentUser.id}`);
+    if (raw) userData = JSON.parse(raw);
+    else userData = { latestStatus: {}, allAttempts: [], favorites: [] };
+    if (!userData.latestStatus) userData.latestStatus = {};
+    if (!userData.allAttempts) userData.allAttempts = [];
+    if (!userData.favorites) userData.favorites = [];
+    saveUserData();
+}
+function recordBatch(answers) {
+    for (let a of answers) {
+        userData.latestStatus[a.qid] = a.isCorrect;
+        userData.allAttempts.push({ qid: a.qid, isCorrect: a.isCorrect, timestamp: Date.now() });
+    }
+    saveUserData();
+}
+function getChapterMastery(chapterId) {
+    let parts = chapterId.split('_');
+    let unit = parseInt(parts[0]);
+    let chapter = parseInt(parts[1]);
+    let questions = ALL_UNITS[unit]?.chapters[chapter]?.questions || [];
+    if (questions.length === 0) return null;
+    let correct = 0;
+    for (let q of questions) if (userData.latestStatus[q.id] === true) correct++;
+    return Math.round((correct / questions.length) * 100);
+}
+function getCurrentWrong() {
+    let wrong = [];
+    for (let u in ALL_UNITS) {
+        for (let c in ALL_UNITS[u].chapters) {
+            for (let q of ALL_UNITS[u].chapters[c].questions) {
+                if (userData.latestStatus[q.id] === false) {
+                    wrong.push({ ...q, unitName: ALL_UNITS[u].name, chapterName: ALL_UNITS[u].chapters[c].name });
+                }
+            }
+        }
+    }
+    return wrong;
+}
+function getPastWrong() {
+    const wrongQids = new Set();
+    for (let att of userData.allAttempts) if (!att.isCorrect) wrongQids.add(att.qid);
+    let past = [];
+    for (let u in ALL_UNITS) {
+        for (let c in ALL_UNITS[u].chapters) {
+            for (let q of ALL_UNITS[u].chapters[c].questions) {
+                if (wrongQids.has(q.id)) past.push({ ...q, unitName: ALL_UNITS[u].name, chapterName: ALL_UNITS[u].chapters[c].name });
+            }
+        }
+    }
+    return past;
+}
+function shuffle(arr) { for (let i=arr.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+// ==================== UI 渲染 ====================
+function renderPractice() {
+    const container = document.getElementById('practicePanel');
+    if (!container) return;
+    if (!window.ALL_UNITS) { container.innerHTML = '<div class="card">题库未载入，请检查 chem_questions.js</div>'; return; }
+    let html = '';
+    for (let unit in ALL_UNITS) {
+        let unitObj = ALL_UNITS[unit];
+        let chapters = unitObj.chapters;
+        if (Object.keys(chapters).length === 0) continue;
+        html += `<div class="unit-group"><div class="unit-title">${unitObj.name}</div>`;
+        for (let ch in chapters) {
+            let mastery = getChapterMastery(`${unit}_${ch}`);
+            let masteryText = mastery !== null ? `✅ ${mastery}%` : '📖 Not started';
+            html += `
+                <div class="chapter-item">
+                    <div class="chapter-info">
+                        <strong>${chapters[ch].name}</strong>
+                        <span class="progress-badge">${masteryText}</span>
+                    </div>
+                    <div class="chapter-actions">
+                        <button class="btn btn-outline btn-small practice-chapter" data-unit="${unit}" data-chapter="${ch}">✏️ Practice</button>
+                        <button class="btn btn-danger btn-small clear-chapter" data-unit="${unit}" data-chapter="${ch}">🗑️ Reset</button>
+                    </div>
+                </div>
+            `;
+        }
+        html += `</div>`;
+    }
+    container.innerHTML = html;
+    // 绑定事件
+    document.querySelectorAll('.practice-chapter').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            let unit = btn.dataset.unit;
+            let chapter = btn.dataset.chapter;
+            startPractice(unit, chapter);
+        });
+    });
+    document.querySelectorAll('.clear-chapter').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            let unit = btn.dataset.unit;
+            let chapter = btn.dataset.chapter;
+            if (confirm(`Clear all progress for ${ALL_UNITS[unit].chapters[chapter].name}?`)) {
+                let questions = ALL_UNITS[unit].chapters[chapter].questions;
+                for (let q of questions) delete userData.latestStatus[q.id];
+                userData.allAttempts = userData.allAttempts.filter(att => !questions.some(q => q.id === att.qid));
+                saveUserData();
+                renderPractice();
+                renderMyMistakes();
+                renderPastMistakes();
+                renderPinned();
+            }
+        });
+    });
+}
+
+function renderMyMistakes() {
+    const container = document.getElementById('myMistakesPanel');
+    let wrong = getCurrentWrong();
+    if (wrong.length===0) { container.innerHTML='<div class="card">✨ No wrong questions.</div>'; return; }
+    let html = '<div class="card"><h3>My Mistakes</h3>';
+    wrong.forEach(q => {
+        let isFav = userData.favorites.includes(q.id);
+        html += `<div class="chapter-item"><div><strong>[${q.unitName} / ${q.chapterName}]</strong> ${q.text}</div>
+                 <div><span class="star ${isFav?'active':''}" data-qid="${q.id}">${isFav?'★':'☆'}</span>
+                 <button class="btn btn-outline btn-small redo-q" data-qid="${q.id}">Redo</button></div></div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    attachStarAndRedo();
+}
+function renderPastMistakes() {
+    const container = document.getElementById('pastMistakesPanel');
+    let past = getPastWrong();
+    if (past.length===0) { container.innerHTML='<div class="card">📭 No past mistakes.</div>'; return; }
+    let html = '<div class="card"><h3>Past Mistakes</h3>';
+    past.forEach(q => {
+        let isFav = userData.favorites.includes(q.id);
+        html += `<div class="chapter-item"><div><strong>[${q.unitName} / ${q.chapterName}]</strong> ${q.text}</div>
+                 <div><span class="star ${isFav?'active':''}" data-qid="${q.id}">${isFav?'★':'☆'}</span>
+                 <button class="btn btn-outline btn-small redo-q" data-qid="${q.id}">Redo</button></div></div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    attachStarAndRedo();
+}
+function renderPinned() {
+    const container = document.getElementById('pinnedPanel');
+    let favs = userData.favorites;
+    if (favs.length===0) { container.innerHTML='<div class="card">⭐ No pinned questions.</div>'; return; }
+    let html = '<div class="card"><h3>Pinned Questions</h3>';
+    favs.forEach(qid => {
+        let found = null, unitName='', chapterName='';
+        for (let u in ALL_UNITS) {
+            for (let c in ALL_UNITS[u].chapters) {
+                let q = ALL_UNITS[u].chapters[c].questions.find(qq=>qq.id===qid);
+                if (q) { found=q; unitName=ALL_UNITS[u].name; chapterName=ALL_UNITS[u].chapters[c].name; break; }
+            }
+            if(found) break;
+        }
+        if(found) html += `<div class="chapter-item"><div><strong>[${unitName} / ${chapterName}]</strong> ${found.text}</div>
+                           <button class="btn btn-outline btn-small redo-q" data-qid="${qid}">Redo</button></div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    document.querySelectorAll('.redo-q').forEach(btn => btn.addEventListener('click', (e) => redoQuestion(btn.dataset.qid)));
+}
+function attachStarAndRedo() {
+    document.querySelectorAll('.star').forEach(star => {
+        star.addEventListener('click', (e) => {
+            let qid = star.dataset.qid;
+            if (userData.favorites.includes(qid)) userData.favorites = userData.favorites.filter(id=>id!==qid);
+            else userData.favorites.push(qid);
+            saveUserData();
+            renderMyMistakes(); renderPastMistakes(); renderPinned();
+        });
+    });
+    document.querySelectorAll('.redo-q').forEach(btn => {
+        btn.addEventListener('click', (e) => redoQuestion(btn.dataset.qid));
+    });
+}
+
+// ==================== 练习逻辑 ====================
+function startPractice(unit, chapter) {
+    let questions = ALL_UNITS[unit]?.chapters[chapter]?.questions;
+    if (!questions || questions.length===0) return;
+    currentChapterId = `${unit}_${chapter}`;
+    currentQuestions = [...questions];
+    currentOptionsMapping = currentQuestions.map(q => {
+        let texts = q.options.map(opt => opt.replace(/^[A-D]\.\s*/, ''));
+        let shuffled = shuffle([...texts]);
+        let letters = ['A','B','C','D'];
+        let map = {};
+        for (let i=0;i<4;i++) map[letters[i]] = shuffled[i];
+        let correctText = q.options.find(opt=>opt.startsWith(q.correct)).replace(/^[A-D]\.\s*/, '');
+        let correctLetter = null;
+        for (let [l,t] of Object.entries(map)) if(t===correctText) { correctLetter=l; break; }
+        return { letterToText: map, correctLetter };
+    });
+    currentAnswers = new Array(questions.length).fill(null);
+    currentQIndex = 0;
+    timeRemaining = questions.length * 90;
+    updateTimerDisplay();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (timeRemaining <= 0) submitAll();
+        else { timeRemaining--; updateTimerDisplay(); }
+    }, 1000);
+    showQuizModal();
+}
+
+function showQuizModal() {
+    renderQuizNav();
+    renderCurrentQuestion();
+    document.getElementById('quizModal').style.display = 'flex';
+}
+function renderQuizNav() {
+    let nav = document.getElementById('questionNav');
+    let html = '';
+    for (let i=0; i<currentQuestions.length; i++) {
+        let cls = '';
+        if (i===currentQIndex) cls='current';
+        else if (currentAnswers[i]!==null) cls='answered';
+        else cls='unanswered';
+        html += `<button class="q-nav-btn ${cls}" data-idx="${i}">${i+1}</button>`;
+    }
+    nav.innerHTML = html;
+    document.querySelectorAll('.q-nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            currentQIndex = parseInt(btn.dataset.idx);
+            renderQuizNav();
+            renderCurrentQuestion();
+            updateNavButtons();
+        });
+    });
+}
+function renderCurrentQuestion() {
+    let q = currentQuestions[currentQIndex];
+    let map = currentOptionsMapping[currentQIndex];
+    document.getElementById('modalQuestionText').innerHTML = `Question ${currentQIndex+1}/${currentQuestions.length}<br>${q.text}`;
+    let optsDiv = document.getElementById('modalOptions');
+    optsDiv.innerHTML = '';
+    for (let letter of ['A','B','C','D']) {
+        let btn = document.createElement('button');
+        btn.className = 'option-btn';
+        if (currentAnswers[currentQIndex] === letter) btn.classList.add('selected');
+        btn.textContent = `${letter}. ${map.letterToText[letter]}`;
+        btn.addEventListener('click', () => {
+            currentAnswers[currentQIndex] = letter;
+            renderCurrentQuestion();
+            renderQuizNav();
+        });
+        optsDiv.appendChild(btn);
+    }
+    updateNavButtons();
+}
+function updateNavButtons() {
+    let prev = document.getElementById('prevBtn');
+    let next = document.getElementById('nextBtn');
+    prev.disabled = (currentQIndex === 0);
+    next.disabled = (currentQIndex === currentQuestions.length-1);
+}
+function submitAll() {
+    if (timerInterval) clearInterval(timerInterval);
+    let results = [];
+    let batch = [];
+    for (let i=0; i<currentQuestions.length; i++) {
+        let q = currentQuestions[i];
+        let map = currentOptionsMapping[i];
+        let userLetter = currentAnswers[i];
+        let isCorrect = (userLetter === map.correctLetter);
+        let userText = userLetter ? map.letterToText[userLetter] : '(No answer)';
+        let correctText = map.letterToText[map.correctLetter];
+        results.push({
+            text: q.text,
+            user: userText,
+            correct: correctText,
+            isCorrect: isCorrect,
+            explanation: q.explanation
+        });
+        batch.push({ qid: q.id, isCorrect: isCorrect });
+    }
+    recordBatch(batch);
+    displayResults(results);
+    document.getElementById('quizModal').style.display = 'none';
+    renderPractice();
+    renderMyMistakes();
+    renderPastMistakes();
+    renderPinned();
+}
+function displayResults(results) {
+    let correctCount = results.filter(r=>r.isCorrect).length;
+    let percent = Math.round(correctCount/results.length*100);
+    let html = `<div style="text-align:center; background:#e9e4f5; padding:8px; border-radius:16px;">✅ ${percent}% (${correctCount}/${results.length})</div>
+                <table class="result-table"><tr><th>#</th><th>Question</th><th>Your Answer</th><th>Correct</th><th>Result</th><th>Explanation</th></tr>`;
+    for (let i=0; i<results.length; i++) {
+        let r = results[i];
+        html += `<tr><td>${i+1}</td><td>${r.text}</td><td>${r.user}</td><td>${r.correct}</td><td>${r.isCorrect?'✅':'❌'}</td>
+                 <td>${r.explanation?`<div class="explanation-text">${r.explanation}</div>`:''}</td></tr>`;
+    }
+    html += `</table>`;
+    document.getElementById('resultContent').innerHTML = html;
+    document.getElementById('resultModal').style.display = 'flex';
+}
+function redoQuestion(qid) {
+    for (let u in ALL_UNITS) {
+        for (let c in ALL_UNITS[u].chapters) {
+            let q = ALL_UNITS[u].chapters[c].questions.find(qq=>qq.id===qid);
+            if (q) {
+                startPractice(u, c);
+                return;
+            }
+        }
+    }
+}
+function updateTimerDisplay() {
+    let m = Math.floor(timeRemaining/60);
+    let s = timeRemaining%60;
+    document.getElementById('timerDisplay').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
+
+// ==================== 标签页切换 ====================
+function initTabs() {
+    let tabs = document.querySelectorAll('.tab');
+    let panels = {
+        practice: document.getElementById('practicePanel'),
+        myMistakes: document.getElementById('myMistakesPanel'),
+        pastMistakes: document.getElementById('pastMistakesPanel'),
+        pinned: document.getElementById('pinnedPanel')
+    };
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            let target = tab.dataset.tab;
+            Object.keys(panels).forEach(p => panels[p].style.display = 'none');
+            panels[target].style.display = 'block';
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            if (target === 'myMistakes') renderMyMistakes();
+            if (target === 'pastMistakes') renderPastMistakes();
+            if (target === 'pinned') renderPinned();
+        });
+    });
+}
+
+// ==================== 登录 ====================
+document.getElementById('loginBtn').addEventListener('click', () => {
+    let name = document.getElementById('studentName').value.trim();
+    let cls = document.getElementById('studentClass').value.trim();
+    if (!name || !cls) { alert('Please enter name and class'); return; }
+    currentUser = { id: `${cls}_${name}`, name, class: cls };
+    loadUserData();
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('userLabel').innerHTML = `👋 ${name} (${cls})`;
+    renderPractice();
+    initTabs();
+    document.querySelector('.tab[data-tab="practice"]').click();
+});
+
+// 全局按钮事件
+document.getElementById('submitAllBtn').addEventListener('click', () => submitAll());
+document.getElementById('closeResultBtn').addEventListener('click', () => document.getElementById('resultModal').style.display = 'none');
+document.getElementById('closeModalIcon').addEventListener('click', () => {
+    if (confirm('Exit practice? Unsaved answers lost.')) {
+        if (timerInterval) clearInterval(timerInterval);
+        document.getElementById('quizModal').style.display = 'none';
+    }
+});
+document.getElementById('prevBtn').addEventListener('click', () => {
+    if (currentQIndex > 0) { currentQIndex--; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); }
+});
+document.getElementById('nextBtn').addEventListener('click', () => {
+    if (currentQIndex < currentQuestions.length-1) { currentQIndex++; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); }
+});
+</script>
+</body>
+</html>
