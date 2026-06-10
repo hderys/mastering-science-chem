@@ -1,10 +1,10 @@
-// 自動轉換自 chem_question.xlsx (支援 subunit)
+// 自動生成，請勿手動編輯
 const ALL_UNITS = {
-  "C_0": {
-    "name": "Chemistry - Terminology (術語考核)",
-    "subunits": {
-      "C_0_5": {
-        "name": "Basic Terms",
+  "0": {
+    "name": "📖 Terminology (跨單元詞彙)",
+    "chapters": {
+      "5": {
+        "name": "Ch5 Atomic Structure [Terms]",
         "questions": [
           {
             "id": "C05G001",
@@ -50,8 +50,8 @@ const ALL_UNITS = {
           }
         ]
       },
-      "C_0_7": {
-        "name": "Bonding Terms",
+      "7": {
+        "name": "Ch7 Ionic Bond and metallic bond [Terms]",
         "questions": [
           {
             "id": "C07G003",
