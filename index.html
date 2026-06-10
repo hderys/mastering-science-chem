@@ -254,10 +254,7 @@ function recordBatch(answers) {
     }
     saveUserData();
 }
-function getChapterMastery(chapterId) {
-    let parts = chapterId.split('_');
-    let unit = parseInt(parts[0]);
-    let chapter = parseInt(parts[1]);
+function getChapterMastery(unit, chapter) {
     let questions = ALL_UNITS[unit]?.chapters[chapter]?.questions || [];
     if (questions.length === 0) return null;
     let correct = 0;
@@ -304,7 +301,7 @@ function renderPractice() {
         if (Object.keys(chapters).length === 0) continue;
         html += `<div class="unit-group"><div class="unit-title">${unitObj.name}</div>`;
         for (let ch in chapters) {
-            let mastery = getChapterMastery(`${unit}_${ch}`);
+            let mastery = getChapterMastery(unit, ch);
             let masteryText = mastery !== null ? `✅ ${mastery}%` : '📖 Not started';
             html += `
                 <div class="chapter-item">
