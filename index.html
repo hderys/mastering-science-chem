@@ -9,599 +9,1949 @@
         body {
             background: #f5f0ff;
             font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-            padding: 20px;
+            padding: 16px;
+            min-height: 100vh;
         }
-        :root {
-            --deep-purple: #4a1d8c;
-            --deep-purple-light: #7c3aed;
-            --gold: #fbbf24;
+        .orientation-warning {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #4a1d8c;
+            color: white;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 10000;
+            text-align: center;
+            font-size: 1.2rem;
         }
+        @media (max-width: 768px) and (orientation: portrait) {
+            .orientation-warning { display: flex; }
+        }
+        :root { --deep-purple: #4a1d8c; --deep-purple-light: #7c3aed; --gold: #fbbf24; }
         .container { max-width: 1200px; margin: 0 auto; }
         .card {
             background: white;
-            border-radius: 28px;
-            padding: 1.2rem;
-            margin-bottom: 1.2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-radius: 24px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
         .btn {
             border: none;
             background: var(--deep-purple);
             color: white;
-            padding: 0.4rem 1rem;
+            padding: 0.3rem 0.8rem;
             border-radius: 40px;
             font-weight: 600;
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: clamp(0.6rem, 3vw, 0.8rem);
         }
-        .btn-outline {
-            background: white;
-            color: var(--deep-purple);
-            border: 1px solid var(--deep-purple);
-        }
+        .btn-outline { background: white; color: var(--deep-purple); border: 1px solid var(--deep-purple); }
         .btn-danger { background: #dc2626; }
-        .btn-small { padding: 0.25rem 0.8rem; font-size: 0.75rem; }
-        .btn-success { background: #10b981; }
-        .unit-group { margin-bottom: 1.5rem; }
-        .unit-title {
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: #2e0f5a;
-            border-left: 5px solid var(--deep-purple);
-            padding-left: 12px;
-            margin-bottom: 0.8rem;
+        .btn-small { padding: 0.2rem 0.6rem; font-size: 0.65rem; }
+        .btn-icon { background: none; border: none; font-size: clamp(0.8rem, 4vw, 1rem); cursor: pointer; padding: 4px 6px; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .difficulty-btn {
+            background: #e9e4f5; color: #2e0f5a; border: none; padding: 0.3rem 0.8rem; border-radius: 40px; cursor: pointer; font-size: 0.75rem;
         }
+        .difficulty-btn.active { background: var(--deep-purple); color: white; }
+        .difficulty-btn.locked { opacity: 0.5; cursor: not-allowed; position: relative; }
+        .difficulty-btn.locked::after { content: "🔒"; font-size: 0.7rem; margin-left: 4px; }
+        .dev-btn { background: #f59e0b; color: white; border: none; padding: 0.3rem 0.8rem; border-radius: 40px; cursor: pointer; font-size: 0.7rem; }
+        .progress-bar-container { width: 80px; height: 12px; background: #aaa; border-radius: 20px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: #10b981; width: 0%; border-radius: 20px; }
+        .mastery-wrapper { display: flex; align-items: center; gap: 6px; min-width: 100px; }
+        .unit-group { margin-bottom: 0.5rem; }
+        .unit-header {
+            background: #f9f7ff; border-radius: 20px; padding: 0.5rem 0.7rem; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: bold; font-size: clamp(0.85rem, 4vw, 1rem); color: #2e0f5a;
+        }
+        .unit-header-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .unit-toggle { font-size: 0.9rem; }
+        .chapters-container { margin-left: 1rem; margin-top: 0.3rem; display: none; }
+        .chapters-container.open { display: block; }
         .chapter-item {
-            background: #f9f7ff;
-            border-radius: 20px;
-            padding: 0.8rem;
-            margin-bottom: 0.8rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0.5rem;
+            background: #fefcff; border-radius: 12px; padding: 0.35rem 0.6rem; margin-bottom: 0.25rem;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.3rem;
+            border-left: 3px solid var(--deep-purple-light);
         }
-        .chapter-info { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-        .progress-badge {
-            background: #e9e4f5;
-            padding: 0.2rem 0.7rem;
-            border-radius: 40px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            color: var(--deep-purple);
-        }
-        .nav-tabs {
-            display: flex;
-            gap: 0.8rem;
-            margin-bottom: 1.2rem;
-            border-bottom: 2px solid #e0d6f5;
-            padding-bottom: 0.5rem;
-        }
+        .chapter-name { font-size: clamp(0.65rem, 3.5vw, 0.8rem); font-weight: 500; flex: 2; min-width: 100px; }
+        .chapter-actions { display: flex; gap: 0.3rem; align-items: center; }
+        .nav-tabs { display: flex; gap: 0.3rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
         .tab {
-            background: none;
-            border: none;
-            padding: 0.4rem 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            border-radius: 40px;
+            background: none; border: none; padding: 0.3rem 0.7rem; font-weight: 600; cursor: pointer;
+            border-radius: 40px; font-size: clamp(0.65rem, 3.5vw, 0.8rem);
         }
         .tab.active { background: var(--deep-purple); color: white; }
         .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;
         }
         .modal-content {
-            background: white;
-            width: 95%;
-            max-width: 650px;
-            border-radius: 28px;
-            padding: 1rem;
-            max-height: 90%;
-            overflow-y: auto;
-            position: relative;
+            background: white; width: 95%; max-width: 800px; height: auto; max-height: 95vh;
+            border-radius: 28px; padding: 0.6rem; display: flex; flex-direction: column; overflow: hidden;
         }
-        .close-icon {
-            position: absolute;
-            top: 8px;
-            right: 12px;
-            font-size: 24px;
-            cursor: pointer;
-        }
-        .option-btn {
-            display: block;
-            width: 100%;
-            text-align: left;
-            background: #f3f0ff;
-            margin: 0.4rem 0;
-            padding: 0.6rem;
-            border-radius: 60px;
-            border: none;
-            cursor: pointer;
-        }
-        .option-btn.selected {
-            background: var(--deep-purple-light);
-            color: white;
-        }
-        .timer {
-            font-size: 1.1rem;
-            font-weight: bold;
-            text-align: center;
-            background: #2e0f5a;
-            color: white;
-            padding: 4px;
-            border-radius: 40px;
-            margin-bottom: 10px;
-        }
-        .question-nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-bottom: 12px;
-            justify-content: center;
-        }
-        .q-nav-btn {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: #e9e4f5;
-            border: none;
-            cursor: pointer;
-        }
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.3rem; flex-shrink: 0; }
+        .quiz-difficulty { font-size: clamp(0.65rem, 3vw, 0.75rem); padding: 2px 6px; border-radius: 20px; background: #e9e4f5; color: #2e0f5a; }
+        .quiz-counter { font-size: clamp(0.65rem, 3.5vw, 0.8rem); color: #666; }
+        .quiz-timer { font-size: clamp(0.7rem, 3.5vw, 0.85rem); font-weight: bold; background: #2e0f5a; color: white; padding: 2px 8px; border-radius: 40px; }
+        .question-nav { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 0.5rem; justify-content: center; flex-shrink: 0; }
+        .q-nav-btn { width: clamp(24px, 5vw, 28px); height: clamp(24px, 5vw, 28px); border-radius: 50%; background: #e9e4f5; border: none; cursor: pointer; font-size: clamp(0.55rem, 2.5vw, 0.7rem); }
         .q-nav-btn.current { background: var(--deep-purple); color: white; }
         .q-nav-btn.answered { background: #10b981; color: white; }
         .q-nav-btn.unanswered { background: #fbbf24; }
-        .result-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.8rem; }
-        .result-table th, .result-table td { border: 1px solid #ddd; padding: 6px; vertical-align: top; }
-        .explanation-text { background: #fff3cd; padding: 4px; margin-top: 4px; border-radius: 6px; }
-        .nav-buttons { display: flex; justify-content: space-between; margin-top: 12px; gap: 8px; }
+        .quiz-body { flex: 1; margin-bottom: 0.4rem; min-height: 0; overflow-y: visible; display: flex; flex-direction: column; }
+        .question-text { font-size: clamp(0.75rem, 4vw, 0.9rem); font-weight: 500; margin-bottom: 0.5rem; line-height: 1.3; word-break: break-word; }
+        .option-btn {
+            display: block; width: 100%; text-align: left; background: #f3f0ff; margin: 0.2rem 0;
+            padding: clamp(0.25rem, 2vw, 0.4rem); border-radius: 60px; border: none; cursor: pointer;
+            font-size: clamp(0.65rem, 3vw, 0.8rem); word-break: break-word; white-space: normal; line-height: 1.3;
+        }
+        .option-btn.selected { background: var(--deep-purple-light); color: white; }
+        .quiz-footer { display: flex; justify-content: space-between; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.3rem; padding-top: 0.4rem; border-top: 1px solid #e0d6f5; flex-shrink: 0; }
+        .result-container { overflow-y: auto; flex: 1; }
+        .result-summary-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; background: #e9e4f5; padding: 6px 10px; border-radius: 40px; }
+        .result-progress { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .result-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+        .big-progress-bar { width: 180px; height: 16px; background: #aaa; border-radius: 20px; overflow: hidden; }
+        .big-progress-fill { height: 100%; width: 0%; border-radius: 20px; }
+        .result-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.7rem; display: table; }
+        .result-table th, .result-table td { border: 1px solid #ddd; padding: 4px 4px; vertical-align: middle; text-align: center; }
+        .result-table th:nth-child(2) { text-align: left; }
+        .result-table td:nth-child(2) { text-align: left; }
+        .result-row-correct { background-color: #d4edda; }
+        .result-row-wrong { background-color: #f8d7da; }
+        .btn-explain { background: none; border: none; cursor: pointer; font-size: 0.9rem; }
+        .history-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; overflow-x: auto; display: block; }
+        .history-table th, .history-table td { border: 1px solid #ddd; padding: 6px 4px; text-align: center; white-space: nowrap; }
+        .history-table th { background: #e9e4f5; }
+        .export-btn { margin-bottom: 12px; background: #10b981; }
+        .achievement-progress { background: #e9e4f5; border-radius: 20px; padding: 8px 12px; margin-bottom: 16px; }
+        .achievement-bar { background: #ddd; border-radius: 20px; height: 12px; margin-top: 6px; overflow: hidden; }
+        .achievement-fill { background: linear-gradient(90deg, #fbbf24, #f59e0b); width: 0%; height: 100%; border-radius: 20px; }
+        .achievement-category { margin-bottom: 16px; }
+        .achievement-category-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid #e0d6f5; }
+        .achievement-unit-group { margin-bottom: 8px; }
+        .achievement-unit-header { background: #f9f7ff; border-radius: 12px; padding: 6px 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: bold; }
+        .achievement-chapters { margin-left: 1rem; margin-top: 4px; display: none; }
+        .achievement-chapters.open { display: block; }
+        .achievement-item { background: #fefcff; border-radius: 10px; padding: 6px 10px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; border-left: 3px solid var(--deep-purple-light); }
+        .achievement-date { font-size: 0.65rem; color: #888; }
+        .unlock-card {
+            position: fixed; top: 20%; left: 50%; transform: translateX(-50%) translateY(-20px);
+            background: linear-gradient(135deg, #4a1d8c, #7c3aed); color: white; padding: 16px 24px;
+            border-radius: 28px; text-align: center; z-index: 10001; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: slideDownFade 4s ease-in-out forwards; pointer-events: auto; cursor: pointer; min-width: 280px;
+        }
+        @keyframes slideDownFade {
+            0% { opacity: 0; transform: translateX(-50%) translateY(-40px); }
+            10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+        }
         @media (max-width: 640px) {
+            body { padding: 10px; }
+            .unit-header { padding: 0.4rem 0.5rem; }
             .chapter-item { flex-direction: column; align-items: stretch; }
-            .chapter-info { justify-content: space-between; }
+            .modal-content { width: 98%; padding: 0.5rem; }
+            .q-nav-btn { width: 22px; height: 22px; font-size: 0.5rem; }
+            .option-btn { padding: 0.2rem; font-size: 0.65rem; }
+            .result-table th, .result-table td { padding: 3px 2px; font-size: 0.6rem; }
+            .big-progress-bar { width: 120px; height: 12px; }
+            .mastery-wrapper { min-width: 80px; }
+            .result-summary-bar { flex-direction: column; align-items: stretch; }
+            .quiz-header { flex-direction: column; align-items: flex-start; }
+            .unlock-card { font-size: 0.7rem; padding: 12px 16px; min-width: 240px; }
         }
     </style>
-    <script charset="UTF-8" src="chem_questions.js?v=2"></script>
 </head>
 <body>
+<div class="orientation-warning">
+    <div style="font-size: 3rem;">🔄</div>
+    <p>請將手機橫置以獲得最佳體驗</p>
+    <p style="font-size: 0.9rem; margin-top: 0.5rem;">Please rotate your device to landscape</p>
+</div>
 <div id="loginScreen" style="max-width: 400px; margin: 80px auto;" class="card">
-    <h2 style="color: var(--deep-purple);">🧪 Mastering Science</h2>
-    <p>Master science, one step at a time</p>
-    <input type="text" id="studentName" placeholder="Name" style="width:100%; padding:8px; margin:10px 0; border-radius:40px; border:1px solid #ccc;">
-    <input type="text" id="studentClass" placeholder="Class" style="width:100%; padding:8px; margin-bottom:10px; border-radius:40px; border:1px solid #ccc;">
-    <button class="btn" id="loginBtn" style="width:100%;">Start Learning</button>
+    <h2 style="color: var(--deep-purple); font-size: clamp(1.2rem, 6vw, 1.6rem);">🧪 Mastering Science</h2>
+    <div style="margin: 8px 0 16px; line-height: 1.3;"><div>一步步掌握科學概念</div><div>Master science, one step at a time</div></div>
+    <input type="text" id="studentName" placeholder="姓名 / Name" style="width:100%; padding:8px; margin-bottom:8px; border-radius:40px; border:1px solid #ccc;">
+    <input type="text" id="studentClass" placeholder="班級 / Class" style="width:100%; padding:8px; margin-bottom:8px; border-radius:40px; border:1px solid #ccc;">
+    <button class="btn" id="loginBtn" style="width:100%;">開始學習 / Start Learning</button>
 </div>
 
 <div id="mainApp" style="display:none;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-        <h1 style="color: var(--deep-purple);">📘 Mastering Science</h1>
-        <span id="userLabel"></span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; flex-wrap:wrap; gap:0.4rem;">
+        <h1 style="color: var(--deep-purple); font-size: clamp(1.1rem, 6vw, 1.4rem);">📘 Mastering Science</h1>
+        <span id="userLabel" style="font-size: clamp(0.7rem, 4vw, 0.85rem);"></span>
     </div>
     <div class="nav-tabs">
-        <button class="tab active" data-tab="practice">📖 Practice</button>
-        <button class="tab" data-tab="myMistakes">❌ My Mistakes</button>
-        <button class="tab" data-tab="pastMistakes">🕒 Past Mistakes</button>
-        <button class="tab" data-tab="pinned">⭐ Pinned</button>
+        <button class="tab active" data-tab="practice">📖 練習 / Practice</button>
+        <button class="tab" data-tab="myMistakes">❌ 我的錯題 / My Mistakes</button>
+        <button class="tab" data-tab="pastMistakes">🕒 錯題歷程 / Past Mistakes</button>
+        <button class="tab" data-tab="pinned">⭐ 收藏 / Pinned</button>
+        <button class="tab" data-tab="history">📋 做題紀錄 / History</button>
+        <button class="tab" data-tab="achievements">🏆 我的成就 / Achievements</button>
     </div>
     <div id="practicePanel"></div>
     <div id="myMistakesPanel" style="display:none;"></div>
     <div id="pastMistakesPanel" style="display:none;"></div>
     <div id="pinnedPanel" style="display:none;"></div>
+    <div id="historyPanel" style="display:none;"></div>
+    <div id="achievementsPanel" style="display:none;"></div>
 </div>
 
-<!-- 练习模态框 -->
-<div id="quizModal" class="modal">
-    <div class="modal-content">
-        <span class="close-icon" id="closeModalIcon">&times;</span>
-        <div class="timer" id="timerDisplay">--:--</div>
-        <div class="question-nav" id="questionNav"></div>
-        <h3 id="modalQuestionText"></h3>
-        <div id="modalImageArea"></div>
-        <div id="modalOptions"></div>
-        <div class="nav-buttons">
-            <button id="prevBtn" class="btn btn-outline btn-small">◀ Previous</button>
-            <button id="nextBtn" class="btn btn-outline btn-small">Next ▶</button>
-        </div>
-        <button id="submitAllBtn" class="btn btn-success" style="margin-top:10px; width:100%;">Submit All</button>
-    </div>
-</div>
+<div id="settingsModal" class="modal"><div class="modal-content"><h3>練習設定</h3><div class="settings-panel"><div>⭐ 難度偏好:</div><div id="difficultySelector"><button id="diff-easy" class="difficulty-btn active">★ 1 星</button><button id="diff-medium" class="difficulty-btn locked">★★★ 3 星 🔒</button><button id="diff-hard" class="difficulty-btn locked">★★★★★ 5 星 🔒</button></div><div>📊 題目數量:</div><div id="countSelector"><button id="count-10" class="difficulty-btn active">10 題</button><button id="count-20" class="difficulty-btn locked">20 題 🔒</button><button id="count-36" class="difficulty-btn locked">36 題 (DSE模式) 🔒</button></div><div>🔥 特殊模式:</div><div><button id="trial-mode" class="difficulty-btn locked">5** 試煉模式 🔒</button></div><button id="devUnlockBtn" class="dev-btn">🔓 一鍵解鎖 (開發模式)</button><div style="display:flex; gap:1rem; justify-content:center; margin-top:0.8rem;"><button id="startPracticeBtn" class="btn">開始</button><button id="cancelSettingsBtn" class="btn btn-outline">取消</button></div></div></div></div>
 
-<!-- 成绩总表 -->
-<div id="resultModal" class="modal">
-    <div class="modal-content">
-        <h3>Result Summary</h3>
-        <div id="resultContent"></div>
-        <button id="closeResultBtn" class="btn" style="margin-top:1rem;">Close</button>
-    </div>
-</div>
+<div id="explainModal" class="modal"><div class="modal-content"><h3>📖 題目與題解</h3><div id="explainContent"></div><button id="closeExplainBtn" class="btn">返回成績總表</button></div></div>
+<div id="quizModal" class="modal"><div class="modal-content"><div class="quiz-header"><span class="quiz-difficulty" id="quizDifficulty"></span><span class="quiz-counter" id="quizCounter">0 / 0</span><span class="quiz-timer" id="timerDisplay">--:--</span></div><div class="question-nav" id="questionNav"></div><div class="quiz-body"><div class="question-text" id="modalQuestionText"></div><div id="modalImageArea"></div><div id="modalOptions"></div></div><div class="quiz-footer"><button id="prevBtn" class="btn btn-outline">◀ 上一題</button><button id="nextBtn" class="btn btn-outline">下一題 ▶</button><button id="submitAllBtn" class="btn btn-success">提交所有答案</button></div></div></div>
+<div id="resultModal" class="modal"><div class="modal-content"><h3>成績總表</h3><div id="resultContent" class="result-container"></div><button id="closeResultBtn" class="btn">關閉</button></div></div>
+<div id="imageZoomModal" class="modal"><div class="modal-content"><img id="zoomImage" src=""><button id="closeZoomBtn" class="btn">關閉</button></div></div>
 
 <script>
-// ==================== 全局变量 ====================
+document.addEventListener('wheel', function(e) { if(e.ctrlKey) e.preventDefault(); }, { passive: false });
+document.addEventListener('keydown', function(e) { if(e.ctrlKey && (e.key==='+'||e.key==='-'||e.key==='='||e.key==='_')) e.preventDefault(); });
+
+window.ALL_UNITS = {
+  "2": {
+    "name": "⚛️ Microscopic World I",
+    "chapters": {
+      "5": {
+        "name": "5 Atomic Structure",
+        "questions": [
+          {
+            "id": "C25G001",
+            "text": "Proton 的中文是？",
+            "options": [
+              "A. 質子",
+              "B. 中子",
+              "C. 電子",
+              "D. 原子核"
+            ],
+            "correct": "A",
+            "explanation": "Proton = 質子",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G002",
+            "text": "Electron 的中文是？",
+            "options": [
+              "A. 質子",
+              "B. 中子",
+              "C. 電子",
+              "D. 離子"
+            ],
+            "correct": "C",
+            "explanation": "Electron = 電子",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G004",
+            "text": "Nucleus 的中文是？",
+            "options": [
+              "A. 質子",
+              "B. 中子",
+              "C. 電子",
+              "D. 原子核"
+            ],
+            "correct": "D",
+            "explanation": "Nucleus = 原子核",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G005",
+            "text": "Atom 的中文是？",
+            "options": [
+              "A. 原子",
+              "B. 離子",
+              "C. 中子",
+              "D. 粒子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G006",
+            "text": "Chemical symbol 的中文是？",
+            "options": [
+              "A. 化學符號",
+              "B. 同位素",
+              "C. 質量數",
+              "D. 原子序"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G007",
+            "text": "Electron diagram 的中文是？",
+            "options": [
+              "A. 電子結構圖",
+              "B. 電子層",
+              "C. 電子排佈",
+              "D. 化學符號"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G008",
+            "text": "Electron shell 的中文是？",
+            "options": [
+              "A. 電子層",
+              "B. 電子結構圖",
+              "C. 電子排佈",
+              "D. 族"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G009",
+            "text": "Electronic arrangement / electronic configuration 的中文是？",
+            "options": [
+              "A. 電子排佈",
+              "B. 電子結構圖",
+              "C. 電子層",
+              "D. 族"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G010",
+            "text": "Mass number 的中文是？",
+            "options": [
+              "A. 質量數",
+              "B. 原子序",
+              "C. 同位素",
+              "D. 化學符號"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G011",
+            "text": "Isotope 的中文是？",
+            "options": [
+              "A. 同位素",
+              "B. 質量數",
+              "C. 原子序",
+              "D. 化學符號"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G012",
+            "text": "Metal 的中文是？",
+            "options": [
+              "A. 金屬",
+              "B. 非金屬",
+              "C. 半金屬",
+              "D. 質量"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G013",
+            "text": "Non-metal 的中文是？",
+            "options": [
+              "A. 非金屬",
+              "B. 金屬",
+              "C. 原子核",
+              "D. 中子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G014",
+            "text": "Semi-metal / metalloid 的中文是？",
+            "options": [
+              "A. 半金屬",
+              "B. 非金屬",
+              "C. 金屬",
+              "D. 次原子粒子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G015",
+            "text": "Relative atomic mass 的中文是？",
+            "options": [
+              "A. 相對原子質量",
+              "B. 相對同位素質量",
+              "C. 質量數",
+              "D. 次原子粒子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G016",
+            "text": "Relative isotopic mass 的中文是？",
+            "options": [
+              "A. 相對同位素質量",
+              "B. 相對原子質量",
+              "C. 質量數",
+              "D. 次原子粒子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25G017",
+            "text": "Subatomic particle 的中文是？",
+            "options": [
+              "A. 次原子粒子",
+              "B. 原子序",
+              "C. 化學符號",
+              "D. 原子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C25A001",
+            "text": "Which of the following elements is a semi-metal?",
+            "options": [
+              "A. Phosphorus",
+              "B. Boron",
+              "C. Aluminium",
+              "D. Lithium "
+            ],
+            "correct": "B",
+            "explanation": "B and Si are semimetals in first 20 elements.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A002",
+            "text": "Which of the following substances is a non-metal liquid element at room conditions?",
+            "options": [
+              "A. Bromine",
+              "B. Chlorine",
+              "C. Mercury",
+              "D. Water"
+            ],
+            "correct": "A",
+            "explanation": "Mercury is liquid METAL<br>Water is NOT an element.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A003",
+            "text": "Which of the following is the correct chemical symbol for copper?",
+            "options": [
+              "A. Ca",
+              "B. Co",
+              "C. Cr",
+              "D. Cu"
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A004",
+            "text": "Which of the following statements about an atom are correct?<br>(1) An atom is mostly empty space.<br>(2) Electrons are found outside the nucleus in an atom.<br>(3) All atoms contain protons, neutrons and electrons.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "Hydrogen atom may have no neutrons.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C25A005",
+            "text": "Which of the following combinations about an atom with a mass number of 45 is correct?<br>Number of protons / Number of neutrons / Number of electrons",
+            "options": [
+              "A. 10 / 10 / 35",
+              "B. 23 / 22 / 22",
+              "C. 22 / 23 / 22",
+              "D. 20 / 20 / 20"
+            ],
+            "correct": "C",
+            "explanation": "Mass number = No. of proton + No. of neutron;<br>For an atom, no of proton = no. of electron",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A006",
+            "text": "Which of the following statements concerning the nucleus of an atom is/are correct?<br>(1)  The nucleus of an atom contains protons and electrons packed tightly together.<br>(2)  The nucleus of an atom for a certain element is different from that for other elements.<br>(3)  The nucleus of an oxygen atom is about 8 times heavier than that of a hydrogen atom.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "B",
+            "explanation": "Nucleus contains protons and NEUTRONs.<br>Relative atomic mass of O is 16 while that of H is 1.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C25B001",
+            "text": "Which of the following elements is a semi-metal?",
+            "options": [
+              "A. Beryllium",
+              "B. Silicon",
+              "C. Phosphorus",
+              "D. Chlorine"
+            ],
+            "correct": "B",
+            "explanation": "Beryllium is a metal while phosphorus and chlorine are non-metals.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25B002",
+            "text": "Which of the following groups of elements are all non-metals?",
+            "options": [
+              "A. B, Si, Ne, Ar",
+              "B. Be, Mg, Al, Li",
+              "C. C, N, P, S",
+              "D. O, F, Cl, Be"
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25B003",
+            "text": "Which of the following statements about metals are INCORRECT?<br>(1)\tThey are poor conductors of electricity.<br>(2)\tThey are all solids at room conditions.<br>(3)\tThey usually have low densities.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "Mercury is a liquid at room conditions.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C25B004",
+            "text": "Which of the following statements about non-metals is correct?",
+            "options": [
+              "A. They are either gases or liquids at room conditions.",
+              "B. They are poor conductors of electricity.",
+              "C. They are poor conductors of heat.",
+              "D. They are malleable."
+            ],
+            "correct": "C",
+            "explanation": "Graphite (a form of carbon) is a good conductor of electricity.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25B005",
+            "text": "Which of the following statements about subatomic particles is INCORRECT?",
+            "options": [
+              "A. Neutrons are electrically neutral.",
+              "B. A proton and a neutron have about the same mass.",
+              "C. All atoms contain protons, neutrons and electrons.",
+              "D. The mass of an atom is concentrated at the nucleus."
+            ],
+            "correct": "C",
+            "explanation": "A hydrogen atom does not contain any neutron.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25B006",
+            "text": "Which of the following statements about the structure of an atom is INCORRECT?",
+            "options": [
+              "A. The nucleus is composed of electrons and neutrons.",
+              "B. Most of the space in an atom is empty.",
+              "C. Electrons move around the nucleus at a high speed.",
+              "D. Neutrons and protons are much heavier than electrons."
+            ],
+            "correct": "A",
+            "explanation": "The nucleus is composed of protons and neutrons.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25B007",
+            "text": "The atomic number and mass number of an element 𝐿 are 15 and 31 respectively. The atom has",
+            "options": [
+              "A. 16 electrons, 16 protons and 15 neutrons.",
+              "B. 15 electrons, 16 protons and 15 neutrons.",
+              "C. 16 electrons, 15 protons and 16 neutrons.",
+              "D. 15 electrons, 15 protons and 16 neutrons."
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C25B008",
+            "text": "Which of the following statements about isotopes is/are correct?<br>(1)\tThey have the same electronic arrangement.<br>(2)\tThey have the same mass number.<br>(3)\tThey have the same chemical properties.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "C",
+            "explanation": "Isotopes have the same atomic number but different mass numbers. They have the same electronic arrangement and the same chemical properties.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C25B009",
+            "text": "The relative atomic masses of elements are seldom whole numbers because",
+            "options": [
+              "A. atoms of some elements have different atomic numbers.",
+              "B. atoms of some elements have different masses.",
+              "C. atoms of some elements have different numbers of electrons.",
+              "D. atoms of some elements can form ions."
+            ],
+            "correct": "B",
+            "explanation": "Relative atomic mass of an element is the weighted average of the relative isotopic masses of all the naturally occurring isotopes of that element on the 12C = 12.00 scale.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C25B010",
+            "text": "Element 𝑀 has two isotopes, ¹⁰⁴𝑀 and ¹⁰⁶𝑀. The relative atomic mass of 𝑀 is 104.4. What is the relative abundance of ¹⁰⁶𝑀?",
+            "options": [
+              "A. 0.1",
+              "B. 0.2",
+              "C. 0.3",
+              "D. 0.4"
+            ],
+            "correct": "B",
+            "explanation": "Let the relative abundance of ¹⁰⁶𝑀 be 𝑦.<br>104 × (1 - 𝑦%) + 106 × 𝑦% = 104.4<br>𝑦 = 20%",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C25B011",
+            "text": "Which of the following statements concerning a ₈O atom and a ₉F atom is correct?",
+            "options": [
+              "A. They have the same number of occupied electron shells.",
+              "B. They have the same number of neutrons.",
+              "C. They have the same number of protons.",
+              "D. They have the same number of electrons."
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25B012",
+            "text": "Which of the following pairs of elements has/have the same number of occupied electron shells in their atoms?<br>(1)\t Aluminium and argon<br>(2)\t Silicon and calcium<br>(3)\t Boron and oxygen",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "C",
+            "explanation": "The electronic arrangements of aluminium and argon are 2, 8, 3 and 2, 8, 8 respectively. They both have three occupied electron shells. The electronic arrangements of boron and oxygen are 2, 3 and 2, 6 respectively. Both have two occupied electron shells. However, the electronic arrangements of silicon and calcium are 2, 8, 4 and 2, 8, 8, 2 respectively. They have different numbers of occupied electron shells.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C25B013",
+            "text": "Which of the following statements concerning carbon are correct?<br>(1)\t The electronic arrangement of carbon is 2, 4.<br>(2)\t The relative atomic mass of carbon is exactly 12.<br>(3)\t It has six electrons.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "B",
+            "explanation": "(2) is incorrect because carbon has more than one isotopes.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C25B014",
+            "text": "Which of the following pairs of elements has/have the same number of outermost shell electrons?<br>(1)\t Hydrogen and potassium<br>(2)\t Sodium and magnesium<br>(3)\t Oxygen and argon",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "A",
+            "explanation": "Both hydrogen and potassium have one outermost shell electron.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          }
+        ]
+      },
+      "7": {
+        "name": "7 Ionic Bond and metallic bond",
+        "questions": [
+          {
+            "id": "C27G003",
+            "text": "Ionic bond 的中文是？",
+            "options": [
+              "A. 共價鍵",
+              "B. 離子鍵",
+              "C. 金屬鍵",
+              "D. 氫鍵"
+            ],
+            "correct": "B",
+            "explanation": "Ionic bond = 離子鍵",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          }
+        ]
+      },
+      "6": {
+        "name": "6 Periodic Table",
+        "questions": [
+          {
+            "id": "C26G018",
+            "text": "Atomic number 的中文是？",
+            "options": [
+              "A. 原子序",
+              "B. 質量數",
+              "C. 同位素",
+              "D. 化學符號"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B001",
+            "text": "Elements in the same period of the Periodic Table have",
+            "options": [
+              "A. similar chemical properties.",
+              "B. similar physical properties.",
+              "C. the same number of occupied electron shells in their atoms.",
+              "D. the same number of electrons in the outermost shell of their atoms."
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B002",
+            "text": "Which of the following combinations is INCORRECT?",
+            "options": [
+              "A. Beryllium - Two outermost shell electrons",
+              "B. Beryllium - Two occupied electron shells",
+              "C. Oxygen - Two outermost shell electrons",
+              "D. Oxygen - Two occupied electron shells"
+            ],
+            "correct": "C",
+            "explanation": "There are six outermost shell electrons in an oxygen atom.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B003",
+            "text": "Which of the following combinations is INCORRECT?",
+            "options": [
+              "A. Sodium - Alkali metals",
+              "B. Argon - Noble gases",
+              "C. Fluorine - Halogens",
+              "D. Aluminium - Alkaline earth metals"
+            ],
+            "correct": "D",
+            "explanation": "Aluminium is a Group III metal.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B004",
+            "text": "The chemical properties of an element depend on",
+            "options": [
+              "A. the number of neutrons in its atom.",
+              "B. its relative atomic mass.",
+              "C. the number of occupied electron shells in its atom.",
+              "D. the number of electrons in the outermost shell in its atom."
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B005",
+            "text": "Which of the following pairs of atoms show similar chemical properties?",
+            "options": [
+              "A. ₈¹⁶𝑋 and ₄⁸𝑌",
+              "B. ₁₀²⁰𝑋 and ₂₀³⁹𝑌",
+              "C. ₇¹⁴𝑋 and ₁₅³⁰𝑌",
+              "D. ₁²𝑋 and ₂⁴𝑌"
+            ],
+            "correct": "C",
+            "explanation": "For ₇¹⁴𝑋 and ₁₅³⁰𝑌, the electronic arrangements of 𝑋 and 𝑌 are 2, 5 and 2, 8, 5 respectively. They have the same number of outermost shell electrons and so have similar chemical properties.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26B006",
+            "text": "Which of the following statements about elements in the same group is/are correct?<br>(1)\t They have the same number of electrons in the outermost shell.<br>(2)\t They have similar chemical properties.<br>(3)\t They have the same colour.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "B",
+            "explanation": "Helium has only two outermost shell electrons. This is different from other members in Group 0.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C26B007",
+            "text": "Aluminium and sulphur both belong to Period 3. Which of the following statements concerning aluminium and sulphur are INCORRECT?<br>(1)\t They have the same number of outermost shell electrons.<br>(2)\t They have similar physical properties.<br>(3)\t They have the same atomic number.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "Aluminium has three outermost shell electrons while sulphur has six outermost shell electrons. The atomic numbers of aluminium and sulphur are 13 and 16 respectively.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C26B008",
+            "text": "In the Periodic Table, sodium, magnesium and aluminium are all",
+            "options": [
+              "A. Group I elements.",
+              "B. Period 3 elements.",
+              "C. alkali metals.",
+              "D. alkaline earth metals."
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B009",
+            "text": "The atomic number of 𝑋 is 18. Which of the following elements has similar chemical properties to 𝑋?",
+            "options": [
+              "A. Oxygen",
+              "B. Calcium",
+              "C. Neon",
+              "D. Nitrogen"
+            ],
+            "correct": "C",
+            "explanation": "𝑋 has an electronic arrangement of 2, 8, 8. Hence, 𝑋 is a noble gas.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B010",
+            "text": "Which of the following statements about the Periodic Table are correct?<br>(1)\tElements are arranged in increasing order of the number of protons.<br>(2)\tElements belonging to the same group generally have the same outermost shell electrons in their atoms.<br>(3)\tMetals are on the right-hand side of the table and non-metals are on the left-hand side.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "Across a period, the elements change from metals through semi-metals to non-metals. Therefore, metals are on the left-hand side while non-metals are on the right-hand side.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C26B011",
+            "text": "𝑋 and 𝑌 are two noble gases in the Periodic Table. If the number of protons in 𝑋 is 𝑎, the number of protons in 𝑌 could be",
+            "options": [
+              "A. 𝑎 - 2",
+              "B. 𝑎 + 8",
+              "C. 𝑎 + 10",
+              "D. 𝑎 - 16"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B012",
+            "text": "Oxygen and sulphur have similar chemical properties because their atoms have the same",
+            "options": [
+              "A. electronic arrangement.",
+              "B. atomic structure.",
+              "C. number of electron shells.",
+              "D. number of outermost shell electrons."
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B013",
+            "text": "Which of the following statements about sodium and potassium is correct?",
+            "options": [
+              "A. They are in the same period of the Periodic Table.",
+              "B. They burn with the same flame colour.",
+              "C. They have the same reactivity.",
+              "D. They react similarly with water."
+            ],
+            "correct": "D",
+            "explanation": "Both sodium and potassium are Group I metals. They have similar chemical properties but different reactivities since sodium is at a higher position in the group.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B014",
+            "text": "Which of the following statements about Group I elements are INCORRECT?<br>(1)\t All of them are hard.<br>(2)\t All of them react with water.<br>(3)\t The number of outermost shell electrons increases down the group.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "B",
+            "explanation": "The number of outermost shell electrons remains the same down the group.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C26B015",
+            "text": "Which of the following statements about lithium and potassium are correct?<br>(1)\t Lithium is less reactive than potassium.<br>(2)\t Lithium has fewer electrons than potassium.<br>(3)\t When they are added to water, they both float on water.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C26B016",
+            "text": "Rubidium is an element in Group I of the Periodic Table. Which of the following is/are the expected observation(s) when a small piece of rubidium is added to a trough of water containing methyl orange?<br>(1)\t The small piece of rubidium catches fire.<br>(2)\t The piece of rubidium sinks into water.<br>(3)\t The resultant solution in the trough is yellow in colour.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "C",
+            "explanation": "Rubidium is below potassium in the Periodic Table. It reacts with water even more vigorously than potassium. Group I metals have low densities so they float on water surface. After the reaction, alkaline rubidium hydroxide is produced. Methyl orange turns yellow.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C26B017",
+            "text": "Strontium is a Group II element below calcium in the Periodic Table. Which of the following statements about strontium is/are correct?<br>(1)\t It reacts with oxygen to form an ionic compound.<br>(2)\t It reacts with water less vigorously than calcium.<br>(3)\t It is a solid at room temperature and pressure.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "C",
+            "explanation": "The reactivity of Group II elements increases down the group. Hence, strontium reacts with water more vigorously than calcium.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C26B018",
+            "text": "Which of the following statements about halogens is correct?",
+            "options": [
+              "A. They have the same colour.",
+              "B. They have the same physical state at room conditions.",
+              "C. Their reactivity increases down the group.",
+              "D. They react with metals to form ionic compounds."
+            ],
+            "correct": "D",
+            "explanation": "At room conditions, fluorine is a pale yellow gas, chlorine is a greenish yellow gas, bromine is a reddish brown liquid and iodine is a black solid. The reactivity of halogens decreases down the group.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26B019",
+            "text": "Which of the following statements about Group VII elements of the Periodic Table is/are correct?<br>(1)\t The number of electrons of the elements increases down the group.<br>(2)\t The reactivity of the elements increases down the group.<br>(3)\t The boiling points of the elements decrease down the group.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "A",
+            "explanation": "The reactivity of halogens decreases down the group. As the molecular sizes increase down the group, the van der Waals’ forces between the molecules are stronger.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C26B020",
+            "text": "Which of the following statements about iodine is INCORRECT?",
+            "options": [
+              "A. It is a black solid at room conditions.",
+              "B. It sublimes when heated.",
+              "C. It conducts electricity.",
+              "D. It is less reactive than bromine."
+            ],
+            "correct": "C",
+            "explanation": "As iodine is a non-metal, it cannot conduct electricity.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B021",
+            "text": "An unknown element has two outermost shell electrons. Which of the following statements about this element are INCORRECT?<br>(1)\t It must conduct electricity.<br>(2)\t It must be a metal.<br>(3)\t It has at least two protons.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "Helium is a non-metal with two outermost shell electrons. It does not conduct electricity.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C26B022",
+            "text": "Which of the following statements about noble gases is/are correct?<br>(1)\t They do not have any reactions with other elements.<br>(2)\t They are colourless gases at room conditions.<br>(3)\t They have octet structure.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "B",
+            "explanation": "Some noble gases (e.g. xenon) react with fluorine. Helium has a duplet structure.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C26B023",
+            "text": "Which of the following statements about helium is INCORRECT?",
+            "options": [
+              "A. It is less dense than air.",
+              "B. It belongs to Group 0 in the Periodic Table.",
+              "C. Its atom has an octet structure.",
+              "D. It does not burn."
+            ],
+            "correct": "C",
+            "explanation": "A helium atom has two outermost shell electrons only.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B024",
+            "text": "Argon, but not air, is used to fill a light bulb because",
+            "options": [
+              "A. argon has a higher density than air.",
+              "B. argon can increase the brightness of the light bulb.",
+              "C. argon is cheaper than air.",
+              "D. argon does not react with the filament in the light bulb."
+            ],
+            "correct": "D",
+            "explanation": "Oxygen in air reacts with the filament and destroys the filament quickly.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26B025",
+            "text": "Which of the following statements about the Periodic Table is correct?",
+            "options": [
+              "A. The elements are arranged according to the order of increasing mass number.",
+              "B. Calcium is an example of transition metal.",
+              "C. All elements in Group 0 have an octet structure.",
+              "D. Elements in Group I should be stored under paraffin oil."
+            ],
+            "correct": "D",
+            "explanation": "The elements are arranged according to the order of increasing atomic number. Calcium is an alkaline earth metal. Helium has a duplet structure. As Group I metals react with air readily, they should be stored under paraffin oil.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26B026",
+            "text": "Non-metal elements 𝑋 and 𝑌 are in the same group of the Periodic Table. Element 𝑋 has a greater atomic number. Which of the following statements are correct?<br>(1)\tAtomic size of 𝑋 is smaller than that of 𝑌.<br>(2)\t𝑋 is less reactive than 𝑌.<br>(3)\t𝑋 and 𝑌 have different physical properties.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "C",
+            "explanation": "As 𝑋 has a greater atomic number, its position in the group is lower than that of 𝑌. Hence, 𝑋 has more occupied electron shells than 𝑌 and thus a larger size. The reactivity of the same group of non-metals decreases down the group.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C26B027",
+            "text": "Caesium is a Group I element. Which of the following statements about caesium is INCORRECT?",
+            "options": [
+              "A. It is a silvery solid.",
+              "B. It conducts electricity.",
+              "C. It is less reactive than sodium.",
+              "D. It reacts explosively with water."
+            ],
+            "correct": "C",
+            "explanation": "Caesium is below sodium in Group I. Caesium is more reactive than sodium.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26B028",
+            "text": "Francium is a Group I element below potassium in the Periodic Table. Which of the following statements concerning francium and potassium are correct?<br>(1)\t Francium has more occupied electron shells than potassium.<br>(2)\t Francium reacts more vigorously with water than potassium.<br>(3)\t Francium is a silvery metal when freshly cut.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C26B029",
+            "text": "Astatine is a Group VII element below iodine in the Periodic Table. Which of the following statements are correct?<br>(1)\t Astatine is less reactive than fluorine.<br>(2)\t Astatine and iodine have similar chemical properties.<br>(3)\t Astatine and iodine have the same number of occupied electron shells.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "Astatine has one more occupied electron shell than iodine.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C26B030",
+            "text": "To which group does the atom ₁₅³¹P belong to?",
+            "options": [
+              "A. Group III",
+              "B. Group IV",
+              "C. Group V",
+              "D. Group VI"
+            ],
+            "correct": "C",
+            "explanation": "The electronic arrangement of phosphorus is 2, 8, 5.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A001",
+            "text": "In the Periodic Table, elements are arranged in <br>order of increasing",
+            "options": [
+              "A. mass number.",
+              "B. atomic number.",
+              "C. atomic weight.",
+              "D. number of neutrons in the atoms. "
+            ],
+            "correct": "B",
+            "explanation": "In the Periodic Table, elements are arranged in <br>order of increasing NUMBER of PROTON, that is, atomic number.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A002",
+            "text": "Atomic numbers of four elements, 𝑊, 𝑋, 𝑌 and 𝑍 are 7, 11, 15 and 20 respectively.  Which of the following elements could be in the same group of the Periodic Table?",
+            "options": [
+              "A. 𝑊 and 𝑋 ",
+              "B. 𝑊 and 𝑌 ",
+              "C. 𝑋 and 𝑍 ",
+              "D. 𝑌 and 𝑍 "
+            ],
+            "correct": "B",
+            "explanation": "The electronic arrangement of 𝑊 = 2, 5; 𝑋 = 2, 8, 1; 𝑌 = 2, 8, 5; 𝑍 = 2, 8, 8, 2. Elements in the same group have the same outermost shell electrons.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A003",
+            "text": "Comparing the elements in the third period of the Periodic Table, from sodium to argon, which of the following statements are correct?<br>(1)   The elements change from metals to semi-metals and then to non-metals.<br>(2)   They show a gradual increase in the number of protons in their atoms.<br>(3)   They show a gradual increase in the number of electron shells occupied by the electrons in their atoms.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "Number of electron shells remains unchanged when it is across the Period.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C26A004",
+            "text": "The electronic arrangement of element 𝑋 is 2, 8, 18, 8, 2. 𝑋 may have similar chemical properties to that of",
+            "options": [
+              "A. iodine.",
+              "B. potassium.",
+              "C. calcium.",
+              "D. helium."
+            ],
+            "correct": "C",
+            "explanation": "Both 𝑋 and calcium are Group II elements.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A005",
+            "text": "Which of the following statements concerning Group 0 elements is INCORRECT?",
+            "options": [
+              "A. They are called noble gases.",
+              "B. They are chemically unreactive.",
+              "C.  They all have eight electrons in the outermost <br>shell.",
+              "D.  Their relative atomic masses increase down <br>the group."
+            ],
+            "correct": "C",
+            "explanation": "Helium only has TWO electrons in the outermost electron shell.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26G001",
+            "text": "Alkali metal 是第幾族的元素？",
+            "options": [
+              "A. 第1族",
+              "B. 第2族",
+              "C. 第7族",
+              "D. 第0族"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G002",
+            "text": "Alkaline earth metal 是第幾族的元素？",
+            "options": [
+              "A. 第2族",
+              "B. 第1族",
+              "C. 第7族",
+              "D. 第0族"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G003",
+            "text": "Halogen 是第幾族的元素？",
+            "options": [
+              "A. 第7族",
+              "B. 第2族",
+              "C. 第1族",
+              "D. 第0族"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G004",
+            "text": "Noble gas是第幾族的元素？",
+            "options": [
+              "A. 第0族",
+              "B. 第2族",
+              "C. 第7族",
+              "D. 第1族"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G005",
+            "text": "Duplet 的中文是？",
+            "options": [
+              "A. 電子偶",
+              "B. 八隅體",
+              "C. 第2族",
+              "D. 第2周期"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G006",
+            "text": "Group 的中文是？",
+            "options": [
+              "A. 族",
+              "B. 周期",
+              "C. 黃金",
+              "D. 活性"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G007",
+            "text": "Octet 的中文是？",
+            "options": [
+              "A. 八隅體",
+              "B. 電子偶",
+              "C. 氧氣",
+              "D. 活性"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G008",
+            "text": "Octet rule 的中文是？",
+            "options": [
+              "A. 八隅體規則",
+              "B. 電子偶",
+              "C. 過渡元素",
+              "D. 元素周期表"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G009",
+            "text": "Period 的中文是？",
+            "options": [
+              "A. 周期",
+              "B. 族",
+              "C. 活性",
+              "D. 八隅體"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G010",
+            "text": "Periodic Table 的中文是？",
+            "options": [
+              "A. 元素周期表",
+              "B. 周期",
+              "C. 過渡元素",
+              "D. 八隅體規則"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G011",
+            "text": "Reactivity 的中文是？",
+            "options": [
+              "A. 活性",
+              "B. 族",
+              "C. 周期",
+              "D. 八隅體"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G012",
+            "text": "Transition element 的中文是？",
+            "options": [
+              "A. 過渡元素",
+              "B. 元素周期表",
+              "C. 八隅體規則",
+              "D. 非金屬"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          }
+        ]
+      }
+    }
+  }
+};
+
 let currentUser = null;
-let userData = { latestStatus: {}, allAttempts: [], favorites: [] };
-let currentChapterId = null;
-let currentQuestions = [];
-let currentOptionsMapping = [];
-let currentAnswers = [];
-let currentQIndex = 0;
-let timerInterval = null;
-let timeRemaining = 0;
+let userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
+let currentUnit = null, currentChapter = null, currentQuestions = [], currentOptionsMapping = [], currentAnswers = [], currentQIndex = 0;
+let timerInterval = null, timeRemaining = 0, pendingUnit = null, pendingChapter = null, lastResults = null;
+let selectedDifficulty = 1, selectedCount = 10, isTrialMode = false;
+let showOnlyWrong = false, showAnswers = false;
 
-// ==================== 辅助函数 ====================
-function saveUserData() {
-    if (!currentUser) return;
-    localStorage.setItem(`ms_chem_${currentUser.id}`, JSON.stringify(userData));
-}
+const ACHIEVEMENTS = { star1: { name: "一星完成", icon: "✅" }, star3: { name: "三星解鎖", icon: "🔥" }, star5: { name: "五星解鎖", icon: "💎" }, trial: { name: "試煉完成", icon: "⚔️" }, perfect: { name: "完美一課", icon: "🌟" }, dse: { name: "DSE模擬完成", icon: "📝" }, speed: { name: "速度之星", icon: "⚡" } };
+
+function saveUserData() { if(!currentUser) return; localStorage.setItem(`ms_chem_${currentUser.id}`, JSON.stringify(userData)); }
 function loadUserData() {
-    if (!currentUser) return;
+    if(!currentUser) return;
     const raw = localStorage.getItem(`ms_chem_${currentUser.id}`);
-    if (raw) userData = JSON.parse(raw);
-    else userData = { latestStatus: {}, allAttempts: [], favorites: [] };
-    if (!userData.latestStatus) userData.latestStatus = {};
-    if (!userData.allAttempts) userData.allAttempts = [];
-    if (!userData.favorites) userData.favorites = [];
+    if(raw) userData = JSON.parse(raw);
+    else userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
     saveUserData();
 }
-function recordBatch(answers) {
-    for (let a of answers) {
-        userData.latestStatus[a.qid] = a.isCorrect;
-        userData.allAttempts.push({ qid: a.qid, isCorrect: a.isCorrect, timestamp: Date.now() });
-    }
-    saveUserData();
-}
-function getChapterMastery(unit, chapter) {
-    let questions = ALL_UNITS[unit]?.chapters[chapter]?.questions || [];
-    if (questions.length === 0) return null;
-    let correct = 0;
-    for (let q of questions) if (userData.latestStatus[q.id] === true) correct++;
-    return Math.round((correct / questions.length) * 100);
-}
-function getCurrentWrong() {
-    let wrong = [];
-    for (let u in ALL_UNITS) {
-        for (let c in ALL_UNITS[u].chapters) {
-            for (let q of ALL_UNITS[u].chapters[c].questions) {
-                if (userData.latestStatus[q.id] === false) {
-                    wrong.push({ ...q, unitName: ALL_UNITS[u].name, chapterName: ALL_UNITS[u].chapters[c].name });
-                }
-            }
-        }
-    }
-    return wrong;
-}
-function getPastWrong() {
-    const wrongQids = new Set();
-    for (let att of userData.allAttempts) if (!att.isCorrect) wrongQids.add(att.qid);
-    let past = [];
-    for (let u in ALL_UNITS) {
-        for (let c in ALL_UNITS[u].chapters) {
-            for (let q of ALL_UNITS[u].chapters[c].questions) {
-                if (wrongQids.has(q.id)) past.push({ ...q, unitName: ALL_UNITS[u].name, chapterName: ALL_UNITS[u].chapters[c].name });
-            }
-        }
-    }
-    return past;
-}
-function shuffle(arr) { for (let i=arr.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function recordBatch(answers) { for(let a of answers) { userData.latestStatus[a.qid] = a.isCorrect; userData.allAttempts.push({ qid: a.qid, isCorrect: a.isCorrect, timestamp: Date.now() }); } saveUserData(); }
+function getUnitMastery(unit) { let total=0,correct=0; for(let ch in window.ALL_UNITS[unit].chapters) for(let q of window.ALL_UNITS[unit].chapters[ch].questions) { total++; if(userData.latestStatus[q.id]===true) correct++; } return total===0?0:Math.round(correct/total*100); }
+function getChapterTotalQuestions(unit, chapter) { return window.ALL_UNITS[unit]?.chapters[chapter]?.questions.length || 0; }
+function getChapterMastery(unit, chapter) { let qs=window.ALL_UNITS[unit]?.chapters[chapter]?.questions||[]; if(qs.length===0) return 0; let correct=0; for(let q of qs) if(userData.latestStatus[q.id]===true) correct++; return Math.round(correct/qs.length*100); }
+function getChapterDifficultyMastery(unit,chapter,level) { let qs=window.ALL_UNITS[unit]?.chapters[chapter]?.questions||[]; let total=0,correct=0; for(let q of qs) if(q.difficulty_level===level) { total++; if(userData.latestStatus[q.id]===true) correct++; } return total===0?0:Math.round(correct/total*100); }
+function shuffleArray(arr) { for(let i=arr.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function updateTimerDisplay() { let m=Math.floor(timeRemaining/60), s=timeRemaining%60; document.getElementById('timerDisplay').innerText=`${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
 
-// ==================== UI 渲染 ====================
-function renderPractice() {
-    const container = document.getElementById('practicePanel');
-    if (!container) return;
-    if (!window.ALL_UNITS) { container.innerHTML = '<div class="card">题库未载入，请检查 chem_questions.js</div>'; return; }
-    let html = '';
-    for (let unit in ALL_UNITS) {
-        let unitObj = ALL_UNITS[unit];
-        let chapters = unitObj.chapters;
-        if (Object.keys(chapters).length === 0) continue;
-        html += `<div class="unit-group"><div class="unit-title">${unitObj.name}</div>`;
-        for (let ch in chapters) {
-            let mastery = getChapterMastery(unit, ch);
-            let masteryText = mastery !== null ? `✅ ${mastery}%` : '📖 Not started';
-            html += `
-                <div class="chapter-item">
-                    <div class="chapter-info">
-                        <strong>${chapters[ch].name}</strong>
-                        <span class="progress-badge">${masteryText}</span>
-                    </div>
-                    <div class="chapter-actions">
-                        <button class="btn btn-outline btn-small practice-chapter" data-unit="${unit}" data-chapter="${ch}">✏️ Practice</button>
-                        <button class="btn btn-danger btn-small clear-chapter" data-unit="${unit}" data-chapter="${ch}">🗑️ Reset</button>
-                    </div>
-                </div>
-            `;
-        }
-        html += `</div>`;
+function showUnlockCard(title,message,date) {
+    let card=document.createElement('div'); card.className='unlock-card';
+    card.innerHTML=`<div style="font-size:1.5rem;">🎉</div><div style="font-weight:bold; margin:4px 0;">${title}</div><div style="font-size:0.8rem;">${message}</div><div style="font-size:0.7rem; margin-top:6px;">獲得日期：${date}</div>`;
+    card.onclick=()=>card.remove(); document.body.appendChild(card); setTimeout(()=>{ if(card.parentNode) card.remove(); },4000);
+}
+
+function checkAndUnlockAchievements(unit,chapter,accuracy,questionCount,isPerfect,isDSE,isSpeed) {
+    let today=new Date().toISOString().slice(0,10), key=`${unit}_${chapter}`;
+    if(!userData.achievements[key]) userData.achievements[key]={};
+    let s1=getChapterDifficultyMastery(unit,chapter,0), s3=getChapterDifficultyMastery(unit,chapter,1), s5=getChapterDifficultyMastery(unit,chapter,2);
+    if(s1>=80 && !userData.achievements[key].star1) { userData.achievements[key].star1={ unlocked:true, date:today }; showUnlockCard("成就解鎖！",`✅ ${ACHIEVEMENTS.star1.icon} ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成`,today); }
+    if(s3>=80 && !userData.achievements[key].star3) { userData.achievements[key].star3={ unlocked:true, date:today }; showUnlockCard("成就解鎖！",`🔥 ${ACHIEVEMENTS.star3.icon} ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖`,today); }
+    if(s5>=80 && !userData.achievements[key].star5) { userData.achievements[key].star5={ unlocked:true, date:today }; showUnlockCard("成就解鎖！",`💎 ${ACHIEVEMENTS.star5.icon} ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖`,today); }
+    if(isTrialMode && accuracy>=80 && !userData.achievements[key].trial) { userData.achievements[key].trial={ unlocked:true, date:today }; showUnlockCard("成就解鎖！",`⚔️ ${ACHIEVEMENTS.trial.icon} ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成`,today); }
+    if(isPerfect && !userData.achievements.perfect) { userData.achievements.perfect={ unlocked:true, date:today }; showUnlockCard("成就解鎖！","🌟 完美一課 - 單次練習全部答對！",today); }
+    if(isDSE && !userData.achievements.dse) { userData.achievements.dse={ unlocked:true, date:today }; showUnlockCard("成就解鎖！","📝 DSE模擬完成 - 完成36題模式！",today); }
+    if(isSpeed && !userData.achievements.speed) { userData.achievements.speed={ unlocked:true, date:today }; showUnlockCard("成就解鎖！","⚡ 速度之星 - 提前50%時間完成練習！",today); }
+    saveUserData();
+}
+
+function addPracticeHistory(unit,chapter,difficultyName,questionCount,correctCount,accuracy,mode,timeSpentPercent) {
+    let now=new Date(), date=now.toISOString().slice(0,10), time=now.toTimeString().slice(0,5);
+    let unitObj=window.ALL_UNITS[unit], chapterName=unitObj?unitObj.chapters[chapter].name:chapter, unitName=unitObj?unitObj.name:unit;
+    userData.practiceHistory.unshift({ id:Date.now(), date, time, unitId:unit, unitName, chapterId:chapter, chapterName, difficulty:difficultyName, questionCount, correctCount, accuracy, mode });
+    if(userData.practiceHistory.length>100) userData.practiceHistory=userData.practiceHistory.slice(0,100);
+    saveUserData();
+    if(timeSpentPercent!==undefined && timeSpentPercent<=50) checkAndUnlockAchievements(unit,chapter,accuracy,questionCount,false,false,true);
+}
+
+function selectQuestionsByDifficultyAndCount(questions, count, preference, isTrial) {
+    if(isTrial) {
+        let sorted=[...questions];
+        sorted.sort((a,b)=>{
+            if(a.difficulty_level!==b.difficulty_level) return b.difficulty_level-a.difficulty_level;
+            let aWrong=userData.latestStatus[a.id]===false, bWrong=userData.latestStatus[b.id]===false;
+            if(aWrong!==bWrong) return aWrong?-1:1;
+            return 0;
+        });
+        return sorted.slice(0,Math.min(count,50));
     }
-    container.innerHTML = html;
-    // 绑定事件
-    document.querySelectorAll('.practice-chapter').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            let unit = btn.dataset.unit;
-            let chapter = btn.dataset.chapter;
-            startPractice(unit, chapter);
-        });
+    let candidates=[];
+    for(let q of questions) {
+        let include=false;
+        if(preference==0) include=(q.difficulty_level==0||q.difficulty_level==1);
+        else if(preference==1) include=true;
+        else include=(q.difficulty_level==2||q.difficulty_level==3);
+        if(include) candidates.push(q);
+    }
+    if(candidates.length<count) candidates=[...questions];
+    let withStatus=candidates.map(q=>{ let s=userData.latestStatus[q.id]; return { q, isAttempted:s!==undefined, isCorrect:s===true }; });
+    withStatus.sort((a,b)=>{
+        if(a.isAttempted!==b.isAttempted) return a.isAttempted?1:-1;
+        if(a.isAttempted && b.isAttempted && a.isCorrect!==b.isCorrect) return a.isCorrect?1:-1;
+        return 0;
     });
-    document.querySelectorAll('.clear-chapter').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            let unit = btn.dataset.unit;
-            let chapter = btn.dataset.chapter;
-            if (confirm(`Clear all progress for ${ALL_UNITS[unit].chapters[chapter].name}?`)) {
-                let questions = ALL_UNITS[unit].chapters[chapter].questions;
-                for (let q of questions) delete userData.latestStatus[q.id];
-                userData.allAttempts = userData.allAttempts.filter(att => !questions.some(q => q.id === att.qid));
-                saveUserData();
-                renderPractice();
-                renderMyMistakes();
-                renderPastMistakes();
-                renderPinned();
-            }
-        });
-    });
+    return withStatus.slice(0,count).map(item=>item.q);
+}
+
+function toggleUnit(unitId) { let c=document.getElementById(`chapters-${unitId}`), t=document.getElementById(`toggle-${unitId}`); if(c.classList.contains('open')){ c.classList.remove('open'); t.textContent='▶'; }else{ c.classList.add('open'); t.textContent='▼'; } }
+function toggleAchievementUnit(unitId) { let c=document.getElementById(`achievement-chapters-${unitId}`), t=document.getElementById(`achievement-toggle-${unitId}`); if(c.classList.contains('open')){ c.classList.remove('open'); t.textContent='▶'; }else{ c.classList.add('open'); t.textContent='▼'; } }
+function toggleMistakeChapter(chapterKey,type) { let c=document.getElementById(`${type}-${chapterKey}`), t=document.getElementById(`${type}-toggle-${chapterKey}`); if(c.classList.contains('open')){ c.classList.remove('open'); t.textContent='▶'; }else{ c.classList.add('open'); t.textContent='▼'; } }
+
+function renderPractice() {
+    const container=document.getElementById('practicePanel');
+    if(!container) return;
+    if(!window.ALL_UNITS) { container.innerHTML='<div class="card">題庫未載入</div>'; return; }
+    let html='';
+    for(let unit in window.ALL_UNITS) {
+        let unitObj=window.ALL_UNITS[unit], chapters=unitObj.chapters;
+        if(Object.keys(chapters).length===0) continue;
+        let mastery=getUnitMastery(unit);
+        html+=`<div class="unit-group"><div class="unit-header" onclick="toggleUnit('${unit}')"><div class="unit-header-left"><span class="unit-toggle" id="toggle-${unit}">▶</span><span>${unitObj.name}</span></div><div class="mastery-wrapper"><div class="progress-bar-container"><div class="progress-bar-fill" style="width:${mastery}%;"></div></div><span style="font-size:0.65rem;">完成度 ${mastery}%</span></div></div><div class="chapters-container" id="chapters-${unit}">`;
+        for(let ch in chapters) {
+            let chMastery=getChapterMastery(unit,ch), chTotal=getChapterTotalQuestions(unit,ch);
+            html+=`<div class="chapter-item"><span class="chapter-name">${chapters[ch].name} (${chTotal} 題)</span><div class="mastery-wrapper"><div class="progress-bar-container"><div class="progress-bar-fill" style="width:${chMastery}%;"></div></div><span style="font-size:0.65rem;">完成度 ${chMastery}%</span></div><div class="chapter-actions"><button class="btn btn-small practice-chapter" data-unit="${unit}" data-chapter="${ch}">✏️ 練習</button><button class="btn btn-danger btn-small clear-chapter" data-unit="${unit}" data-chapter="${ch}">🗑️ 重置</button></div></div>`;
+        }
+        html+=`</div></div>`;
+    }
+    container.innerHTML=html;
+    document.querySelectorAll('.practice-chapter').forEach(btn=>btn.addEventListener('click',(e)=>{
+        e.stopPropagation(); pendingUnit=btn.dataset.unit; pendingChapter=btn.dataset.chapter; updateSettingsUnlockStatus(); document.getElementById('settingsModal').style.display='flex';
+    }));
+    document.querySelectorAll('.clear-chapter').forEach(btn=>btn.addEventListener('click',(e)=>{
+        e.stopPropagation(); let unit=btn.dataset.unit, chapter=btn.dataset.chapter;
+        if(confirm(`確定清空「${window.ALL_UNITS[unit].chapters[chapter].name}」的所有練習紀錄？`)){
+            let qs=window.ALL_UNITS[unit].chapters[chapter].questions;
+            for(let q of qs) delete userData.latestStatus[q.id];
+            userData.allAttempts=userData.allAttempts.filter(att=>!qs.some(q=>q.id===att.qid));
+            saveUserData(); renderPractice(); renderMyMistakes(); renderPastMistakes(); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
+        }
+    }));
+}
+
+function updateSettingsUnlockStatus() {
+    if(!pendingUnit||!pendingChapter) return;
+    let s1=getChapterDifficultyMastery(pendingUnit,pendingChapter,0), s3=getChapterDifficultyMastery(pendingUnit,pendingChapter,1), s5=getChapterDifficultyMastery(pendingUnit,pendingChapter,2);
+    let star3Unlocked=s1>=80, star5Unlocked=star3Unlocked&&s3>=80, countUnlocked=s1>=80, trialUnlocked=s5>=80;
+    let dM=document.getElementById('diff-medium'), dH=document.getElementById('diff-hard'), c20=document.getElementById('count-20'), c36=document.getElementById('count-36'), tM=document.getElementById('trial-mode');
+    if(star3Unlocked){ dM.classList.remove('locked'); dM.disabled=false; }else{ dM.classList.add('locked'); dM.disabled=true; }
+    if(star5Unlocked){ dH.classList.remove('locked'); dH.disabled=false; }else{ dH.classList.add('locked'); dH.disabled=true; }
+    if(countUnlocked){ c20.classList.remove('locked'); c20.disabled=false; c36.classList.remove('locked'); c36.disabled=false; }else{ c20.classList.add('locked'); c20.disabled=true; c36.classList.add('locked'); c36.disabled=true; }
+    if(trialUnlocked){ tM.classList.remove('locked'); tM.disabled=false; }else{ tM.classList.add('locked'); tM.disabled=true; }
 }
 
 function renderMyMistakes() {
-    const container = document.getElementById('myMistakesPanel');
-    let wrong = getCurrentWrong();
-    if (wrong.length===0) { container.innerHTML='<div class="card">✨ No wrong questions.</div>'; return; }
-    let html = '<div class="card"><h3>My Mistakes</h3>';
-    wrong.forEach(q => {
-        let isFav = userData.favorites.includes(q.id);
-        html += `<div class="chapter-item"><div><strong>[${q.unitName} / ${q.chapterName}]</strong> ${q.text}</div>
-                 <div><span class="star ${isFav?'active':''}" data-qid="${q.id}">${isFav?'★':'☆'}</span>
-                 <button class="btn btn-outline btn-small redo-q" data-qid="${q.id}">Redo</button></div></div>`;
-    });
-    html += '</div>';
-    container.innerHTML = html;
-    attachStarAndRedo();
+    let wrongByChapter={};
+    for(let u in window.ALL_UNITS) for(let c in window.ALL_UNITS[u].chapters) for(let q of window.ALL_UNITS[u].chapters[c].questions) if(userData.latestStatus[q.id]===false) { if(!wrongByChapter[c]) wrongByChapter[c]=[]; wrongByChapter[c].push({...q, chapterName:window.ALL_UNITS[u].chapters[c].name }); }
+    let container=document.getElementById('myMistakesPanel');
+    if(Object.keys(wrongByChapter).length===0){ container.innerHTML='<div class="card">✨ 目前沒有錯題</div>'; return; }
+    let html='<div class="card"><h3>我的錯題</h3>';
+    for(let ch in wrongByChapter) {
+        html+=`<div class="mistake-chapter-group"><div class="mistake-chapter-header" onclick="toggleMistakeChapter('${ch}','my')"><span>📖 ${wrongByChapter[ch][0].chapterName}</span><span class="unit-toggle" id="my-toggle-${ch}">▶</span></div><div class="mistake-questions" id="my-${ch}">`;
+        for(let q of wrongByChapter[ch]) {
+            let isFav=userData.favorites.includes(q.id);
+            html+=`<div class="mistake-question-item"><span>${q.text}</span><div><span class="btn-icon star ${isFav?'active':''}" data-qid="${q.id}" style="color:${isFav?'#fbbf24':'#ccc'}">★</span><button class="btn-icon redo-q" data-qid="${q.id}">🔄 重做</button></div></div>`;
+        }
+        html+=`</div></div>`;
+    }
+    html+='</div>';
+    container.innerHTML=html;
+    attachMistakeEvents();
 }
 function renderPastMistakes() {
-    const container = document.getElementById('pastMistakesPanel');
-    let past = getPastWrong();
-    if (past.length===0) { container.innerHTML='<div class="card">📭 No past mistakes.</div>'; return; }
-    let html = '<div class="card"><h3>Past Mistakes</h3>';
-    past.forEach(q => {
-        let isFav = userData.favorites.includes(q.id);
-        html += `<div class="chapter-item"><div><strong>[${q.unitName} / ${q.chapterName}]</strong> ${q.text}</div>
-                 <div><span class="star ${isFav?'active':''}" data-qid="${q.id}">${isFav?'★':'☆'}</span>
-                 <button class="btn btn-outline btn-small redo-q" data-qid="${q.id}">Redo</button></div></div>`;
-    });
-    html += '</div>';
-    container.innerHTML = html;
-    attachStarAndRedo();
+    let wrongQids=new Set(); for(let att of userData.allAttempts) if(!att.isCorrect) wrongQids.add(att.qid);
+    let pastByChapter={};
+    for(let u in window.ALL_UNITS) for(let c in window.ALL_UNITS[u].chapters) for(let q of window.ALL_UNITS[u].chapters[c].questions) if(wrongQids.has(q.id)) { if(!pastByChapter[c]) pastByChapter[c]=[]; pastByChapter[c].push({...q, chapterName:window.ALL_UNITS[u].chapters[c].name }); }
+    let container=document.getElementById('pastMistakesPanel');
+    if(Object.keys(pastByChapter).length===0){ container.innerHTML='<div class="card">📭 尚無錯題歷程</div>'; return; }
+    let html='<div class="card"><h3>錯題歷程</h3>';
+    for(let ch in pastByChapter) {
+        html+=`<div class="mistake-chapter-group"><div class="mistake-chapter-header" onclick="toggleMistakeChapter('${ch}','past')"><span>📖 ${pastByChapter[ch][0].chapterName}</span><span class="unit-toggle" id="past-toggle-${ch}">▶</span></div><div class="mistake-questions" id="past-${ch}">`;
+        for(let q of pastByChapter[ch]) {
+            let isFav=userData.favorites.includes(q.id);
+            html+=`<div class="mistake-question-item"><span>${q.text}</span><div><span class="btn-icon star ${isFav?'active':''}" data-qid="${q.id}" style="color:${isFav?'#fbbf24':'#ccc'}">★</span><button class="btn-icon redo-q" data-qid="${q.id}">🔄 重做</button></div></div>`;
+        }
+        html+=`</div></div>`;
+    }
+    html+='</div>';
+    container.innerHTML=html;
+    attachMistakeEvents();
 }
 function renderPinned() {
-    const container = document.getElementById('pinnedPanel');
-    let favs = userData.favorites;
-    if (favs.length===0) { container.innerHTML='<div class="card">⭐ No pinned questions.</div>'; return; }
-    let html = '<div class="card"><h3>Pinned Questions</h3>';
-    favs.forEach(qid => {
-        let found = null, unitName='', chapterName='';
-        for (let u in ALL_UNITS) {
-            for (let c in ALL_UNITS[u].chapters) {
-                let q = ALL_UNITS[u].chapters[c].questions.find(qq=>qq.id===qid);
-                if (q) { found=q; unitName=ALL_UNITS[u].name; chapterName=ALL_UNITS[u].chapters[c].name; break; }
-            }
-            if(found) break;
-        }
-        if(found) html += `<div class="chapter-item"><div><strong>[${unitName} / ${chapterName}]</strong> ${found.text}</div>
-                           <button class="btn btn-outline btn-small redo-q" data-qid="${qid}">Redo</button></div>`;
-    });
-    html += '</div>';
-    container.innerHTML = html;
-    document.querySelectorAll('.redo-q').forEach(btn => btn.addEventListener('click', (e) => redoQuestion(btn.dataset.qid)));
-}
-function attachStarAndRedo() {
-    document.querySelectorAll('.star').forEach(star => {
-        star.addEventListener('click', (e) => {
-            let qid = star.dataset.qid;
-            if (userData.favorites.includes(qid)) userData.favorites = userData.favorites.filter(id=>id!==qid);
-            else userData.favorites.push(qid);
-            saveUserData();
-            renderMyMistakes(); renderPastMistakes(); renderPinned();
-        });
-    });
-    document.querySelectorAll('.redo-q').forEach(btn => {
-        btn.addEventListener('click', (e) => redoQuestion(btn.dataset.qid));
-    });
-}
-
-// ==================== 练习逻辑 ====================
-function startPractice(unit, chapter) {
-    let questions = ALL_UNITS[unit]?.chapters[chapter]?.questions;
-    if (!questions || questions.length===0) return;
-    currentChapterId = `${unit}_${chapter}`;
-    currentQuestions = [...questions];
-    currentOptionsMapping = currentQuestions.map(q => {
-        let texts = q.options.map(opt => opt.replace(/^[A-D]\.\s*/, ''));
-        let shuffled = shuffle([...texts]);
-        let letters = ['A','B','C','D'];
-        let map = {};
-        for (let i=0;i<4;i++) map[letters[i]] = shuffled[i];
-        let correctText = q.options.find(opt=>opt.startsWith(q.correct)).replace(/^[A-D]\.\s*/, '');
-        let correctLetter = null;
-        for (let [l,t] of Object.entries(map)) if(t===correctText) { correctLetter=l; break; }
-        return { letterToText: map, correctLetter };
-    });
-    currentAnswers = new Array(questions.length).fill(null);
-    currentQIndex = 0;
-    timeRemaining = questions.length * 90;
-    updateTimerDisplay();
-    if (timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-        if (timeRemaining <= 0) submitAll();
-        else { timeRemaining--; updateTimerDisplay(); }
-    }, 1000);
-    showQuizModal();
-}
-
-function showQuizModal() {
-    renderQuizNav();
-    renderCurrentQuestion();
-    document.getElementById('quizModal').style.display = 'flex';
-}
-function renderQuizNav() {
-    let nav = document.getElementById('questionNav');
-    let html = '';
-    for (let i=0; i<currentQuestions.length; i++) {
-        let cls = '';
-        if (i===currentQIndex) cls='current';
-        else if (currentAnswers[i]!==null) cls='answered';
-        else cls='unanswered';
-        html += `<button class="q-nav-btn ${cls}" data-idx="${i}">${i+1}</button>`;
+    let container=document.getElementById('pinnedPanel');
+    if(userData.favorites.length===0){ container.innerHTML='<div class="card">⭐ 尚無收藏題目</div>'; return; }
+    let html='<div class="card"><h3>收藏題目</h3>';
+    for(let qid of userData.favorites) {
+        let found=null, chapterName='';
+        for(let u in window.ALL_UNITS) for(let c in window.ALL_UNITS[u].chapters) { let q=window.ALL_UNITS[u].chapters[c].questions.find(qq=>qq.id===qid); if(q){ found=q; chapterName=window.ALL_UNITS[u].chapters[c].name; break; } }
+        if(found) html+=`<div class="mistake-question-item"><span><strong>${chapterName}</strong> ${found.text}</span><button class="btn-icon redo-q" data-qid="${qid}">🔄 重做</button></div>`;
     }
-    nav.innerHTML = html;
-    document.querySelectorAll('.q-nav-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            currentQIndex = parseInt(btn.dataset.idx);
-            renderQuizNav();
-            renderCurrentQuestion();
-            updateNavButtons();
-        });
+    html+='</div>';
+    container.innerHTML=html;
+    document.querySelectorAll('.redo-q').forEach(btn=>btn.addEventListener('click',(e)=>redoQuestion(btn.dataset.qid)));
+}
+function attachMistakeEvents() {
+    document.querySelectorAll('.star').forEach(star=>star.addEventListener('click',(e)=>{ let qid=star.dataset.qid; if(userData.favorites.includes(qid)) userData.favorites=userData.favorites.filter(id=>id!==qid); else userData.favorites.push(qid); saveUserData(); renderMyMistakes(); renderPastMistakes(); renderPinned(); }));
+    document.querySelectorAll('.redo-q').forEach(btn=>btn.addEventListener('click',(e)=>redoQuestion(btn.dataset.qid)));
+}
+function renderHistory() {
+    let container=document.getElementById('historyPanel');
+    if(!userData.practiceHistory||userData.practiceHistory.length===0){ container.innerHTML='<div class="card">📋 暫無做題紀錄</div>'; return; }
+    let html=`<div class="card"><div style="display:flex; justify-content:space-between;"><h3>📋 做題紀錄</h3><button id="exportHistoryBtn" class="btn export-btn">📥 匯出 CSV</button></div><div style="overflow-x:auto;"><table class="history-table"><thead><tr><th>日期</th><th>時間</th><th>單元</th><th>章節</th><th>星級</th><th>題數</th><th>正確率</th><th>模式</th></tr></thead><tbody>`;
+    for(let h of userData.practiceHistory) html+=`<tr><td>${h.date}</td><td>${h.time}</td><td>${h.unitName}</td><td>${h.chapterName}</td><td>${h.difficulty}</td><td>${h.questionCount}</td><td>${h.accuracy}%</td><td>${h.mode==='trial'?'試煉':'一般'}</td></tr>`;
+    html+=`</tbody></table></div></div>`;
+    container.innerHTML=html;
+    document.getElementById('exportHistoryBtn')?.addEventListener('click',()=>{
+        let csv=[["日期","時間","單元","章節","星級","題數","正確數","正確率","模式"]];
+        for(let h of userData.practiceHistory) csv.push([h.date,h.time,h.unitName,h.chapterName,h.difficulty,h.questionCount,h.correctCount,`${h.accuracy}%`,h.mode==='trial'?'試煉':'一般']);
+        let blob=new Blob(["\uFEFF"+csv.map(r=>r.join(",")).join("\n")],{type:"text/csv;charset=utf-8;"});
+        let link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=`mastering_science_history_${currentUser.name}.csv`; link.click(); URL.revokeObjectURL(link.href);
     });
 }
-function renderCurrentQuestion() {
-    let q = currentQuestions[currentQIndex];
-    let map = currentOptionsMapping[currentQIndex];
-    document.getElementById('modalQuestionText').innerHTML = `Question ${currentQIndex+1}/${currentQuestions.length}<br>${q.text}`;
-    let optsDiv = document.getElementById('modalOptions');
-    optsDiv.innerHTML = '';
-    for (let letter of ['A','B','C','D']) {
-        let btn = document.createElement('button');
-        btn.className = 'option-btn';
-        if (currentAnswers[currentQIndex] === letter) btn.classList.add('selected');
-        btn.textContent = `${letter}. ${map.letterToText[letter]}`;
-        btn.addEventListener('click', () => {
-            currentAnswers[currentQIndex] = letter;
-            renderCurrentQuestion();
-            renderQuizNav();
-        });
-        optsDiv.appendChild(btn);
+function renderAchievements() {
+    let container=document.getElementById('achievementsPanel'), totalUnlocked=0, totalPossible=0, achievementsHtml='';
+    for(let unit in window.ALL_UNITS) {
+        let unitObj=window.ALL_UNITS[unit], chapters=unitObj.chapters, hasUnlocked=false, unitHtml='';
+        for(let ch in chapters) {
+            let key=`${unit}_${ch}`, ach=userData.achievements[key]||{};
+            let s1=ach.star1?.unlocked||false, s3=ach.star3?.unlocked||false, s5=ach.star5?.unlocked||false, t=ach.trial?.unlocked||false;
+            totalPossible+=4; if(s1) totalUnlocked++; if(s3) totalUnlocked++; if(s5) totalUnlocked++; if(t) totalUnlocked++;
+            if(s1||s3||s5||t) hasUnlocked=true;
+            unitHtml+=`<div class="achievement-item"><div><span class="achievement-badge">${s1?'✅':'🔒'}</span> ${chapters[ch].name} - 一星完成</div><div class="achievement-date">${s1?ach.star1.date:'未解鎖'}</div></div><div class="achievement-item"><div><span class="achievement-badge">${s3?'🔥':'🔒'}</span> ${chapters[ch].name} - 三星解鎖</div><div class="achievement-date">${s3?ach.star3.date:'未解鎖'}</div></div><div class="achievement-item"><div><span class="achievement-badge">${s5?'💎':'🔒'}</span> ${chapters[ch].name} - 五星解鎖</div><div class="achievement-date">${s5?ach.star5.date:'未解鎖'}</div></div><div class="achievement-item"><div><span class="achievement-badge">${t?'⚔️':'🔒'}</span> ${chapters[ch].name} - 試煉完成</div><div class="achievement-date">${t?ach.trial.date:'未解鎖'}</div></div>`;
+        }
+        if(hasUnlocked) achievementsHtml+=`<div class="achievement-unit-group"><div class="achievement-unit-header" onclick="toggleAchievementUnit('${unit}')"><span>📖 ${unitObj.name}</span><span class="unit-toggle" id="achievement-toggle-${unit}">▶</span></div><div class="achievement-chapters" id="achievement-chapters-${unit}">${unitHtml}</div></div>`;
+    }
+    let perf=userData.achievements.perfect?.unlocked||false, dse=userData.achievements.dse?.unlocked||false, spd=userData.achievements.speed?.unlocked||false;
+    totalPossible+=3; if(perf) totalUnlocked++; if(dse) totalUnlocked++; if(spd) totalUnlocked++;
+    let percent=totalPossible>0?Math.round(totalUnlocked/totalPossible*100):0;
+    let specialHtml=`<div class="achievement-category"><div class="achievement-category-title">🎯 特殊成就</div><div class="achievement-item"><div><span class="achievement-badge">${perf?'🌟':'🔒'}</span> 完美一課</div><div class="achievement-date">${perf?userData.achievements.perfect.date:'未解鎖'}</div></div><div class="achievement-item"><div><span class="achievement-badge">${dse?'📝':'🔒'}</span> DSE模擬完成</div><div class="achievement-date">${dse?userData.achievements.dse.date:'未解鎖'}</div></div><div class="achievement-item"><div><span class="achievement-badge">${spd?'⚡':'🔒'}</span> 速度之星</div><div class="achievement-date">${spd?userData.achievements.speed.date:'未解鎖'}</div></div></div>`;
+    let html=`<div class="card"><div class="achievement-progress"><div style="display:flex; justify-content:space-between;"><span>🏆 總解鎖進度</span><span>${totalUnlocked} / ${totalPossible} (${percent}%)</span></div><div class="achievement-bar"><div class="achievement-fill" style="width:${percent}%;"></div></div></div>${achievementsHtml}${specialHtml}</div>`;
+    container.innerHTML=html;
+}
+
+function startPracticeWithSettings() {
+    let unit=pendingUnit, chapter=pendingChapter;
+    let allQuestions=[...window.ALL_UNITS[unit].chapters[chapter].questions], total=allQuestions.length, count=selectedCount;
+    if(count>total) count=total; if(count<1) count=1;
+    let selectedQuestions=selectQuestionsByDifficultyAndCount(allQuestions,count,selectedDifficulty,isTrialMode);
+    selectedQuestions=shuffleArray(selectedQuestions);
+    currentUnit=unit; currentChapter=chapter; currentQuestions=selectedQuestions;
+    currentOptionsMapping=currentQuestions.map(q=>{
+        if(q.sf===0){
+            let letters=['A','B','C','D'], map={};
+            for(let i=0;i<4;i++){ let optText=q.options[i].substring(3); map[letters[i]]=optText; }
+            return { letterToText:map, correctLetter:q.correct };
+        }else{
+            let texts=q.options.map(opt=>opt.replace(/^[A-D]\.\s*/,'')), shuffled=shuffleArray([...texts]), letters=['A','B','C','D'], map={};
+            for(let i=0;i<4;i++) map[letters[i]]=shuffled[i];
+            let correctText=q.options.find(opt=>opt.startsWith(q.correct)).replace(/^[A-D]\.\s*/,''), correctLetter=null;
+            for(let [l,t] of Object.entries(map)) if(t===correctText){ correctLetter=l; break; }
+            return { letterToText:map, correctLetter };
+        }
+    });
+    currentAnswers=new Array(selectedQuestions.length).fill(null); currentQIndex=0;
+    let timePerQuestion=selectedDifficulty==0?108:(selectedDifficulty==2?75:90);
+    timeRemaining=selectedQuestions.length*timePerQuestion; updateTimerDisplay();
+    if(timerInterval) clearInterval(timerInterval);
+    timerInterval=setInterval(()=>{ if(timeRemaining<=0) submitAll(); else{ timeRemaining--; updateTimerDisplay(); } },1000);
+    document.getElementById('settingsModal').style.display='none'; showQuizModal();
+}
+
+function showExplainModal(question,userLetter,correctLetter,userText,correctText,isCorrect){
+    let opts='<div class="explain-options">';
+    for(let opt of question.options){
+        let l=opt[0], t=opt.substring(3), isUser=(l===userLetter), isCor=(l===correctLetter);
+        let cls='explain-option-normal';
+        if(isCor) cls='explain-option-correct';
+        else if(isUser&&!isCor) cls='explain-option-wrong';
+        opts+=`<div class="${cls}">${l}. ${t}</div>`;
+    }
+    opts+='</div>';
+    let ansClass=isCorrect?'answer-correct':'answer-wrong';
+    let ansHtml=`<div class="answer-comparison"><span>你的答案: <span class="${ansClass}">${userLetter}</span></span><span>正解: <span class="${ansClass}">${correctLetter}</span></span></div>`;
+    let html=`<div style="margin-bottom:0.8rem;"><strong>題目:</strong> ${question.text}</div>${opts}<div style="margin:0.8rem 0; padding:0.4rem; background:#f0f0f0; border-radius:12px;"><strong>📖 題解:</strong> ${question.explanation||'無'}</div>${ansHtml}`;
+    document.getElementById('explainContent').innerHTML=html; document.getElementById('explainModal').style.display='flex';
+}
+function showQuizModal(){ renderQuizNav(); renderCurrentQuestion(); document.getElementById('quizModal').style.display='flex'; }
+function renderQuizNav(){
+    let nav=document.getElementById('questionNav'), html='';
+    for(let i=0;i<currentQuestions.length;i++){
+        let cls=''; if(i===currentQIndex) cls='current'; else if(currentAnswers[i]!==null) cls='answered'; else cls='unanswered';
+        html+=`<button class="q-nav-btn ${cls}" data-idx="${i}">${i+1}</button>`;
+    }
+    nav.innerHTML=html; document.getElementById('quizCounter').innerHTML=`${currentQIndex+1} / ${currentQuestions.length}`;
+    document.querySelectorAll('.q-nav-btn').forEach(btn=>btn.addEventListener('click',(e)=>{ currentQIndex=parseInt(btn.dataset.idx); renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); }));
+}
+function renderCurrentQuestion(){
+    let q=currentQuestions[currentQIndex], map=currentOptionsMapping[currentQIndex];
+    document.getElementById('modalQuestionText').innerHTML=q.text;
+    document.getElementById('quizDifficulty').innerHTML=q.difficulty;
+    let imgArea=document.getElementById('modalImageArea');
+    if(q.imageUrl){ imgArea.innerHTML=`<img src="${q.imageUrl}" class="quiz-image" id="quizImageThumb">`; document.getElementById('quizImageThumb')?.addEventListener('click',()=>{ document.getElementById('zoomImage').src=q.imageUrl; document.getElementById('imageZoomModal').style.display='flex'; }); }
+    else imgArea.innerHTML='';
+    let opts=document.getElementById('modalOptions'); opts.innerHTML='';
+    for(let l of ['A','B','C','D']){
+        let btn=document.createElement('button'); btn.className='option-btn';
+        if(currentAnswers[currentQIndex]===l) btn.classList.add('selected');
+        btn.textContent=`${l}. ${map.letterToText[l]}`;
+        btn.addEventListener('click',()=>{ currentAnswers[currentQIndex]=l; renderCurrentQuestion(); renderQuizNav(); });
+        opts.appendChild(btn);
     }
     updateNavButtons();
 }
-function updateNavButtons() {
-    let prev = document.getElementById('prevBtn');
-    let next = document.getElementById('nextBtn');
-    prev.disabled = (currentQIndex === 0);
-    next.disabled = (currentQIndex === currentQuestions.length-1);
-}
-function submitAll() {
-    if (timerInterval) clearInterval(timerInterval);
-    let results = [];
-    let batch = [];
-    for (let i=0; i<currentQuestions.length; i++) {
-        let q = currentQuestions[i];
-        let map = currentOptionsMapping[i];
-        let userLetter = currentAnswers[i];
-        let isCorrect = (userLetter === map.correctLetter);
-        let userText = userLetter ? map.letterToText[userLetter] : '(No answer)';
-        let correctText = map.letterToText[map.correctLetter];
-        results.push({
-            text: q.text,
-            user: userText,
-            correct: correctText,
-            isCorrect: isCorrect,
-            explanation: q.explanation
-        });
-        batch.push({ qid: q.id, isCorrect: isCorrect });
+function updateNavButtons(){ let prev=document.getElementById('prevBtn'), next=document.getElementById('nextBtn'); prev.disabled=(currentQIndex===0); next.disabled=(currentQIndex===currentQuestions.length-1); }
+function submitAll(){
+    if(timerInterval) clearInterval(timerInterval);
+    let results=[], batch=[], correctCount=0;
+    for(let i=0;i<currentQuestions.length;i++){
+        let q=currentQuestions[i], map=currentOptionsMapping[i], userLetter=currentAnswers[i];
+        let isCorrect=(userLetter===map.correctLetter);
+        if(isCorrect) correctCount++;
+        let userText=userLetter?map.letterToText[userLetter]:'(未作答)', correctText=map.letterToText[map.correctLetter];
+        results.push({ question:q, userLetter:userLetter||'?', correctLetter:map.correctLetter, userText, correctText, isCorrect, qid:q.id });
+        batch.push({ qid:q.id, isCorrect });
     }
     recordBatch(batch);
-    displayResults(results);
-    document.getElementById('quizModal').style.display = 'none';
-    renderPractice();
-    renderMyMistakes();
-    renderPastMistakes();
-    renderPinned();
+    let accuracy=Math.round(correctCount/currentQuestions.length*100);
+    let diffName=selectedDifficulty==0?"★ 1星":(selectedDifficulty==1?"★★★ 3星":"★★★★★ 5星");
+    let mode=isTrialMode?'trial':'normal';
+    let expectedTime=currentQuestions.length*(selectedDifficulty==0?108:(selectedDifficulty==2?75:90));
+    let timeSpent=Math.round((expectedTime-timeRemaining)/expectedTime*100);
+    addPracticeHistory(currentUnit,currentChapter,diffName,currentQuestions.length,correctCount,accuracy,mode,timeSpent);
+    let isPerfect=(accuracy===100&&currentQuestions.length>=10), isDSE=(selectedCount===36), isSpeed=(timeSpent<=50);
+    checkAndUnlockAchievements(currentUnit,currentChapter,accuracy,currentQuestions.length,isPerfect,isDSE,isSpeed);
+    lastResults=results; displayResults(results);
+    document.getElementById('quizModal').style.display='none';
+    renderPractice(); renderMyMistakes(); renderPastMistakes(); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
 }
-function displayResults(results) {
-    let correctCount = results.filter(r=>r.isCorrect).length;
-    let percent = Math.round(correctCount/results.length*100);
-    let html = `<div style="text-align:center; background:#e9e4f5; padding:8px; border-radius:16px;">✅ ${percent}% (${correctCount}/${results.length})</div>
-                <table class="result-table"><tr><th>#</th><th>Question</th><th>Your Answer</th><th>Correct</th><th>Result</th><th>Explanation</th></tr>`;
-    for (let i=0; i<results.length; i++) {
-        let r = results[i];
-        html += `<tr><td>${i+1}</td><td>${r.text}</td><td>${r.user}</td><td>${r.correct}</td><td>${r.isCorrect?'✅':'❌'}</td>
-                 <td>${r.explanation?`<div class="explanation-text">${r.explanation}</div>`:''}</td></tr>`;
+function displayResults(results){
+    let correct=results.filter(r=>r.isCorrect).length, percent=Math.round(correct/results.length*100);
+    let color=percent<40?'#dc2626':percent<70?'#f59e0b':'#10b981';
+    let html=`<div class="result-summary-bar"><div class="result-progress"><span>✅ ${percent}% (${correct}/${results.length})</span><div class="big-progress-bar"><div class="big-progress-fill" style="width:${percent}%; background:${color};"></div></div></div><div class="result-buttons"><button id="toggleWrongBtn" class="btn btn-small">❌ 只顯示錯題</button><button id="toggleAnswersBtn" class="btn btn-small">📋 顯示答案</button></div></div><table class="result-table"><thead><tr><th>題號</th><th>題目</th>${showAnswers?'<th>你的答案</th><th>正解</th>':''}<th>結果</th><th></th></tr></thead><tbody>`;
+    for(let i=0;i<results.length;i++){
+        let r=results[i]; let rowClass=r.isCorrect?'result-row-correct':'result-row-wrong'; let icon=r.isCorrect?'✅':'❌';
+        html+=`<tr class="${rowClass}"><td>${i+1}</td><td style="text-align:left">${r.question.text}</td>${showAnswers?`<td>${r.userLetter}</td><td>${r.correctLetter}</td>`:''}<td>${icon}</td><td><button class="btn-explain" data-idx="${i}">📖</button></td></tr>`;
     }
-    html += `</table>`;
-    document.getElementById('resultContent').innerHTML = html;
-    document.getElementById('resultModal').style.display = 'flex';
+    html+=`</tbody></table>`;
+    document.getElementById('resultContent').innerHTML=html; document.getElementById('resultModal').style.display='flex';
+    document.getElementById('toggleWrongBtn')?.addEventListener('click',()=>{ showOnlyWrong=!showOnlyWrong; displayResults(lastResults); });
+    document.getElementById('toggleAnswersBtn')?.addEventListener('click',()=>{ showAnswers=!showAnswers; displayResults(lastResults); });
+    document.querySelectorAll('.btn-explain').forEach(btn=>btn.addEventListener('click',(e)=>{ let idx=parseInt(btn.dataset.idx), r=lastResults[idx]; document.getElementById('resultModal').style.display='none'; showExplainModal(r.question,r.userLetter,r.correctLetter,r.userText,r.correctText,r.isCorrect); }));
 }
-function redoQuestion(qid) {
-    for (let u in ALL_UNITS) {
-        for (let c in ALL_UNITS[u].chapters) {
-            let q = ALL_UNITS[u].chapters[c].questions.find(qq=>qq.id===qid);
-            if (q) {
-                startPractice(u, c);
-                return;
-            }
-        }
-    }
+function redoQuestion(qid){
+    for(let u in window.ALL_UNITS) for(let c in window.ALL_UNITS[u].chapters){ let idx=window.ALL_UNITS[u].chapters[c].questions.findIndex(q=>q.id===qid); if(idx!==-1){ pendingUnit=u; pendingChapter=c; updateSettingsUnlockStatus(); document.getElementById('settingsModal').style.display='flex'; window._singleRedoQid=qid; return; } }
 }
-function updateTimerDisplay() {
-    let m = Math.floor(timeRemaining/60);
-    let s = timeRemaining%60;
-    document.getElementById('timerDisplay').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+function initTabs(){
+    let tabs=document.querySelectorAll('.tab'), panels={ practice:document.getElementById('practicePanel'), myMistakes:document.getElementById('myMistakesPanel'), pastMistakes:document.getElementById('pastMistakesPanel'), pinned:document.getElementById('pinnedPanel'), history:document.getElementById('historyPanel'), achievements:document.getElementById('achievementsPanel') };
+    tabs.forEach(tab=>tab.addEventListener('click',()=>{ let target=tab.dataset.tab; Object.keys(panels).forEach(p=>panels[p].style.display='none'); panels[target].style.display='block'; tabs.forEach(t=>t.classList.remove('active')); tab.classList.add('active'); if(target==='myMistakes') renderMyMistakes(); if(target==='pastMistakes') renderPastMistakes(); if(target==='pinned') renderPinned(); if(target==='history') renderHistory(); if(target==='achievements') renderAchievements(); }));
 }
 
-// ==================== 标签页切换 ====================
-function initTabs() {
-    let tabs = document.querySelectorAll('.tab');
-    let panels = {
-        practice: document.getElementById('practicePanel'),
-        myMistakes: document.getElementById('myMistakesPanel'),
-        pastMistakes: document.getElementById('pastMistakesPanel'),
-        pinned: document.getElementById('pinnedPanel')
-    };
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            let target = tab.dataset.tab;
-            Object.keys(panels).forEach(p => panels[p].style.display = 'none');
-            panels[target].style.display = 'block';
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            if (target === 'myMistakes') renderMyMistakes();
-            if (target === 'pastMistakes') renderPastMistakes();
-            if (target === 'pinned') renderPinned();
-        });
-    });
-}
-
-// ==================== 登录 ====================
-document.getElementById('loginBtn').addEventListener('click', () => {
-    let name = document.getElementById('studentName').value.trim();
-    let cls = document.getElementById('studentClass').value.trim();
-    if (!name || !cls) { alert('Please enter name and class'); return; }
-    currentUser = { id: `${cls}_${name}`, name, class: cls };
-    loadUserData();
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-    document.getElementById('userLabel').innerHTML = `👋 ${name} (${cls})`;
-    renderPractice();
-    initTabs();
-    document.querySelector('.tab[data-tab="practice"]').click();
-});
-
-// 全局按钮事件
-document.getElementById('submitAllBtn').addEventListener('click', () => submitAll());
-document.getElementById('closeResultBtn').addEventListener('click', () => document.getElementById('resultModal').style.display = 'none');
-document.getElementById('closeModalIcon').addEventListener('click', () => {
-    if (confirm('Exit practice? Unsaved answers lost.')) {
-        if (timerInterval) clearInterval(timerInterval);
-        document.getElementById('quizModal').style.display = 'none';
-    }
-});
-document.getElementById('prevBtn').addEventListener('click', () => {
-    if (currentQIndex > 0) { currentQIndex--; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); }
-});
-document.getElementById('nextBtn').addEventListener('click', () => {
-    if (currentQIndex < currentQuestions.length-1) { currentQIndex++; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); }
+document.addEventListener('DOMContentLoaded',function(){
+    document.getElementById('diff-easy').addEventListener('click',()=>{ selectedDifficulty=0; document.getElementById('diff-easy').classList.add('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode=false; });
+    document.getElementById('diff-medium').addEventListener('click',()=>{ if(document.getElementById('diff-medium').disabled) return; selectedDifficulty=1; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.add('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode=false; });
+    document.getElementById('diff-hard').addEventListener('click',()=>{ if(document.getElementById('diff-hard').disabled) return; selectedDifficulty=2; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.add('active'); isTrialMode=false; });
+    document.getElementById('count-10').addEventListener('click',()=>{ selectedCount=10; document.getElementById('count-10').classList.add('active'); document.getElementById('count-20').classList.remove('active'); document.getElementById('count-36').classList.remove('active'); });
+    document.getElementById('count-20').addEventListener('click',()=>{ if(document.getElementById('count-20').disabled) return; selectedCount=20; document.getElementById('count-10').classList.remove('active'); document.getElementById('count-20').classList.add('active'); document.getElementById('count-36').classList.remove('active'); });
+    document.getElementById('count-36').addEventListener('click',()=>{ if(document.getElementById('count-36').disabled) return; selectedCount=36; document.getElementById('count-10').classList.remove('active'); document.getElementById('count-20').classList.remove('active'); document.getElementById('count-36').classList.add('active'); });
+    document.getElementById('trial-mode').addEventListener('click',()=>{ if(document.getElementById('trial-mode').disabled) return; isTrialMode=true; selectedDifficulty=2; selectedCount=50; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.add('active'); document.getElementById('count-10').classList.remove('active'); document.getElementById('count-20').classList.remove('active'); document.getElementById('count-36').classList.remove('active'); });
+    document.getElementById('devUnlockBtn').addEventListener('click',()=>{ if(!pendingUnit||!pendingChapter) return; let qs=window.ALL_UNITS[pendingUnit].chapters[pendingChapter].questions; for(let q of qs) if(q.difficulty_level===0) userData.latestStatus[q.id]=true; saveUserData(); updateSettingsUnlockStatus(); alert('開發模式：1星題目已全部標記為正確！'); });
+    document.getElementById('loginBtn').addEventListener('click',()=>{ let name=document.getElementById('studentName').value.trim(), cls=document.getElementById('studentClass').value.trim(); if(!name||!cls){ alert('請輸入姓名與班級'); return; } currentUser={ id:`${cls}_${name}`, name, class:cls }; loadUserData(); document.getElementById('loginScreen').style.display='none'; document.getElementById('mainApp').style.display='block'; document.getElementById('userLabel').innerHTML=`👋 ${name} (${cls})`; renderPractice(); initTabs(); document.querySelector('.tab[data-tab="practice"]').click(); });
+    document.getElementById('startPracticeBtn').addEventListener('click',()=>{ if(window._singleRedoQid){ let qid=window._singleRedoQid; window._singleRedoQid=null; let unit=pendingUnit, chapter=pendingChapter, allQs=[...window.ALL_UNITS[unit].chapters[chapter].questions], targetQ=allQs.find(q=>q.id===qid); if(targetQ){ currentUnit=unit; currentChapter=chapter; currentQuestions=[targetQ]; currentOptionsMapping=currentQuestions.map(q=>{ let letters=['A','B','C','D'], map={}; for(let i=0;i<4;i++){ let optText=q.options[i].substring(3); map[letters[i]]=optText; } return { letterToText:map, correctLetter:q.correct }; }); currentAnswers=new Array(1).fill(null); currentQIndex=0; timeRemaining=90; updateTimerDisplay(); if(timerInterval) clearInterval(timerInterval); timerInterval=setInterval(()=>{ if(timeRemaining<=0) submitAll(); else{ timeRemaining--; updateTimerDisplay(); } },1000); document.getElementById('settingsModal').style.display='none'; showQuizModal(); } }else startPracticeWithSettings(); });
+    document.getElementById('cancelSettingsBtn').addEventListener('click',()=>document.getElementById('settingsModal').style.display='none');
+    document.getElementById('closeExplainBtn').addEventListener('click',()=>{ document.getElementById('explainModal').style.display='none'; if(lastResults) displayResults(lastResults); });
+    document.getElementById('submitAllBtn').addEventListener('click',()=>submitAll());
+    document.getElementById('closeResultBtn').addEventListener('click',()=>document.getElementById('resultModal').style.display='none');
+    document.getElementById('closeZoomBtn').addEventListener('click',()=>document.getElementById('imageZoomModal').style.display='none');
+    document.getElementById('prevBtn').addEventListener('click',()=>{ if(currentQIndex>0){ currentQIndex--; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
+    document.getElementById('nextBtn').addEventListener('click',()=>{ if(currentQIndex<currentQuestions.length-1){ currentQIndex++; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
+    document.getElementById('studentName').addEventListener('keypress',e=>{ if(e.key==='Enter') document.getElementById('loginBtn').click(); });
+    document.getElementById('studentClass').addEventListener('keypress',e=>{ if(e.key==='Enter') document.getElementById('loginBtn').click(); });
 });
 </script>
 </body>
