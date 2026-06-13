@@ -48,7 +48,7 @@
         }
         
         /* ========== 基礎樣式 ========== */
-        :root { --deep-purple: #4a1d8c; --deep-purple-light: #7c3aed; --red: #dc2626; }
+        :root { --deep-purple: #4a1d8c; --deep-purple-light: #7c3aed; --red: #dc2626; --success-bg: #d4edda; --locked-bg: #f5f5f5; }
         .card {
             background: white;
             border-radius: 24px;
@@ -241,7 +241,7 @@
         .chapter-name { font-size: clamp(0.65rem, 3.5vw, 0.8rem); font-weight: 500; flex: 2; min-width: 100px; }
         .chapter-actions { display: flex; gap: 0.3rem; align-items: center; }
         
-        /* 進度條 - 固定寬度 */
+        /* 進度條 */
         .mastery-wrapper {
             display: flex;
             align-items: center;
@@ -369,6 +369,40 @@
             margin-top: 2px;
         }
         
+        /* 積分和排名 */
+        .points-rank-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #4a1d8c, #7c3aed);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 20px;
+            margin-bottom: 16px;
+        }
+        .points-box {
+            text-align: center;
+        }
+        .points-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        .points-label {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+        .rank-box {
+            text-align: center;
+        }
+        .rank-number {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+        .rank-label {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+        
         /* 浮動解鎖卡片 */
         .unlock-cards-container {
             position: fixed;
@@ -428,6 +462,21 @@
         .history-table th, .history-table td { border: 1px solid #ddd; padding: 6px 4px; text-align: center; white-space: nowrap; }
         .export-btn { background: #10b981; margin-bottom: 12px; }
         
+        /* 章節摺疊 */
+        .collapsible {
+            cursor: pointer;
+            user-select: none;
+        }
+        .collapsible:hover {
+            opacity: 0.8;
+        }
+        .collapsible-content {
+            display: block;
+        }
+        .collapsible-content.collapsed {
+            display: none;
+        }
+        
         @media (max-width: 640px) {
             body { padding: 8px; }
             .unit-header { padding: 0.4rem 0.5rem; }
@@ -437,6 +486,8 @@
             .progress-bar-container { width: 80px; }
             .settings-two-columns { flex-direction: column; gap: 0.8rem; }
             .unlock-card { min-width: 220px; padding: 10px 16px; font-size: 0.8rem; }
+            .points-number { font-size: 1.2rem; }
+            .rank-number { font-size: 1rem; }
         }
     </style>
 </head>
@@ -1151,6 +1202,294 @@ window.ALL_UNITS = {
             ],
             "correct": "B",
             "explanation": "Ionic bond = 離子鍵",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G001",
+            "text": "Anion 的中文是？",
+            "options": [
+              "A. 負離子",
+              "B. 正離子",
+              "C. 化學式",
+              "D. 電解質"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G002",
+            "text": "Cation 的中文是？",
+            "options": [
+              "A. 正離子",
+              "B. 負離子",
+              "C. 化學式",
+              "D. 電解質"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G003",
+            "text": "Chemical bond 的中文是？",
+            "options": [
+              "A. 化學鍵",
+              "B. 離子鍵",
+              "C. 金屬鍵",
+              "D. 共價鍵"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G004",
+            "text": "Conductor 的中文是？",
+            "options": [
+              "A. 導電體",
+              "B. 電解質",
+              "C. 非導電體",
+              "D. 化學式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G005",
+            "text": "Delocalized electron 的中文是？",
+            "options": [
+              "A. 離域電子",
+              "B. 離子",
+              "C. 靜電吸引力",
+              "D. 電子轉移"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G006",
+            "text": "Electrolyte 的中文是？",
+            "options": [
+              "A. 電解質",
+              "B. 導電體",
+              "C. 非導電體",
+              "D. 化學式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G007",
+            "text": " ‘Dot-and-cross’ diagram 的中文是？",
+            "options": [
+              "A. 點叉圖",
+              "B. 靜電吸引力",
+              "C. 電子轉移",
+              "D. 離域電子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G008",
+            "text": "Formula 的中文是？",
+            "options": [
+              "A. 化學式",
+              "B. 電解質",
+              "C. 負離子",
+              "D. 正離子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G009",
+            "text": "Ion 的中文是？",
+            "options": [
+              "A. 離子",
+              "B. 離域電子",
+              "C. 分子",
+              "D. 原子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G010",
+            "text": "Ionic bond 的中文是？",
+            "options": [
+              "A. 離子鍵",
+              "B. 化學鍵",
+              "C. 金屬鍵",
+              "D. 共價鍵"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G011",
+            "text": "Ionic compound 的中文是？",
+            "options": [
+              "A. 離子化合物",
+              "B. 離子鍵",
+              "C. 靜電吸引力",
+              "D. 離域電子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G012",
+            "text": "Metallic bond 的中文是？",
+            "options": [
+              "A. 金屬鍵",
+              "B. 化學鍵",
+              "C. 離子鍵",
+              "D. 共價鍵"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G013",
+            "text": "Migration of ion 的中文是？",
+            "options": [
+              "A. 離子的遷移",
+              "B. 電子轉移",
+              "C. 離子化合物",
+              "D. 靜電吸引力"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G014",
+            "text": "Non-conductor 的中文是？",
+            "options": [
+              "A. 非導電體",
+              "B. 電解質",
+              "C. 導電體",
+              "D. 化學式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G015",
+            "text": "Monoatomic ion 的中文是？",
+            "options": [
+              "A. 單原子離子",
+              "B. 多原子離子",
+              "C. 離子化合物",
+              "D. 靜電吸引力"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G016",
+            "text": "Polyatomic ion 的中文是？",
+            "options": [
+              "A. 多原子離子",
+              "B. 單原子離子",
+              "C. 離子化合物",
+              "D. 靜電吸引力"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G017",
+            "text": "Transfer of electron 的中文是？",
+            "options": [
+              "A. 電子轉移",
+              "B. 離子的遷移",
+              "C. 離子化合物",
+              "D. 靜電吸引力"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G018",
+            "text": "Electrostatic attraction 的中文是？",
+            "options": [
+              "A. 靜電吸引力",
+              "B. 離域電子",
+              "C. 離子化合物",
+              "D. 電子轉移"
+            ],
+            "correct": "A",
+            "explanation": "",
             "imageUrl": null,
             "difficulty": "🌐 Translate",
             "difficulty_level": 0,
@@ -1932,6 +2271,256 @@ window.ALL_UNITS = {
         ]
       }
     }
+  },
+  "3": {
+    "name": "🔩 Metals",
+    "chapters": {
+      "10": {
+        "name": "10 Occurrence and extraction of metals",
+        "questions": [
+          {
+            "id": "C310G001",
+            "text": "Carbon reduction 的中文是？",
+            "options": [
+              "A. 碳還原作用",
+              "B. 二氧化碳",
+              "C. 保護",
+              "D. 化學鍵"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C310G002",
+            "text": "Conserving 的中文是？",
+            "options": [
+              "A. 保護",
+              "B. 電解",
+              "C. 提取 ",
+              "D. 導電體"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C310G003",
+            "text": "Electrolysis 的中文是？",
+            "options": [
+              "A. 電解",
+              "B. 提取 ",
+              "C. 保護",
+              "D. 電子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C310G004",
+            "text": "Extraction 的中文是？",
+            "options": [
+              "A. 提取 ",
+              "B. 電解",
+              "C. 保護",
+              "D. 電子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C310G005",
+            "text": "Metal ore 的中文是？",
+            "options": [
+              "A. 金屬礦石",
+              "B. 金屬鍵",
+              "C. 碳還原作用",
+              "D. 離子的遷移"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C310G006",
+            "text": "Reuse 的中文是？",
+            "options": [
+              "A. 再用",
+              "B. 減少",
+              "C. 循環再造",
+              "D. 替代"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C310G007",
+            "text": "Reduce 的中文是？",
+            "options": [
+              "A. 減少",
+              "B. 再用",
+              "C. 循環再造",
+              "D. 替代"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C310G008",
+            "text": "Recycle 的中文是？",
+            "options": [
+              "A. 循環再造",
+              "B. 再用",
+              "C. 減少",
+              "D. 替代"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C310A001",
+            "text": "Which of the following statements about aluminium are correct? <br> (1)  It is the most abundant metal in the Earth’s crust.<br> (2)  It is corrosion resistant.<br> (3)  It is commonly used to make window frames.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C310A002",
+            "text": "Which of the following combinations about the <br>use of metals is correct?",
+            "options": [
+              "A. Silver - Thermometer",
+              "B. Titanium - Overhead power cables",
+              "C. Copper - Electri wires",
+              "D. Iron - Aircraft bodies"
+            ],
+            "correct": "C",
+            "explanation": "Mercury is used to make thermometers. Aluminium is used to make overhead power cables and aircraft bodies.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C310A003",
+            "text": "Which of the following metals can be found as free element in nature? <br> (1)  Gold   (2)  Mercury   (3)  Copper",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "A",
+            "explanation": "Ore of mercury is cinnabar, while copper pyrite is the ore of copper.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C310A004",
+            "text": "Which of the following methods can be used to <br>extract iron from iron(III) oxide?",
+            "options": [
+              "A. Heating iron(III) oxide in the absence of air",
+              "B. Heating iron(III) oxide in the presence of air",
+              "C.  Heating iron(III) oxide with carbon at a high temperature.",
+              "D. Heating iron(III) oxide with carbon dioxide at a high temperature."
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C310A005",
+            "text": "In which of the following processes can the metal be extracted?<br> (1)  Heating mercury(II) oxide alone<br> (2)  Heating silver oxide alone<br> (3)   Heating a mixture of zinc oxide and carbon powder",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C310A006",
+            "text": "Which of the following metals is/are extracted by <br>electrolysis? <br> (1)  Lead   (2)  Calcium  (3)  Sodium",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "D",
+            "explanation": "Reactive metals such as aluminium, calcium, sodium, etc can be extracted from the molten ores by electrolysis.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C310A007",
+            "text": "Which of the following is one of the reasons for the fact that aluminium is more expensive than iron?",
+            "options": [
+              "A. Iron is more reactive than aluminium.",
+              "B. Iron exists as free element in nature.",
+              "C.  Iron is more abundant than aluminium in the <br>Earth’s crust.",
+              "D.  The extraction cost of iron is lower than that <br>of aluminium."
+            ],
+            "correct": "D",
+            "explanation": "The extraction of aluminium by electrolysis is an expensive method. It is because a large amount of electricity is used.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          }
+        ]
+      }
+    }
   }
 };
 
@@ -1942,6 +2531,55 @@ let timerInterval = null, timeRemaining = 0, pendingUnit = null, pendingChapter 
 let selectedDifficulty = 1, selectedCount = 10, isTrialMode = false;
 let showOnlyWrong = false, showAnswers = false;
 
+// 成就積分對應表
+const ACHIEVEMENT_POINTS = {
+    'firstPractice': 10,
+    'tenQuestions': 25,
+    'fiveHundred': 50,
+    'thousand': 100,
+    'perfectLesson': 50,
+    'dseComplete': 50,
+    'speedStar': 50,
+    'consecutive20': 100,
+    'allChaptersMaster': 200,
+    'fiveStarStreak': 200,
+    'mistakeEraser': 50,
+    'collector': 25,
+    'weekChallenge': 100,
+    'star1': 10,
+    'star3': 25,
+    'star5': 50,
+    'trial': 50,
+    'blankPaper': -10,
+    'downwardTrend': -10
+};
+
+function calculateTotalPoints(achievements) {
+    let total = 0;
+    for(let key in achievements) {
+        if(achievements[key]?.unlocked) {
+            total += ACHIEVEMENT_POINTS[key] || 0;
+        }
+    }
+    return total;
+}
+
+function calculateClassRank(userId, userPoints) {
+    let classmates = [];
+    for(let i=0; i<localStorage.length; i++) {
+        let key = localStorage.key(i);
+        if(key && key.startsWith('ms_chem_') && key.includes(currentUser.class)) {
+            let data = JSON.parse(localStorage.getItem(key));
+            let points = calculateTotalPoints(data.achievements || {});
+            let uid = key.replace('ms_chem_', '');
+            classmates.push({ id: uid, points: points });
+        }
+    }
+    classmates.sort((a,b) => b.points - a.points);
+    let rank = classmates.findIndex(c => c.id === userId) + 1;
+    return { rank: rank, total: classmates.length };
+}
+
 function saveUserData() { if(!currentUser) return; localStorage.setItem(`ms_chem_${currentUser.id}`, JSON.stringify(userData)); }
 function loadUserData() {
     if(!currentUser) return;
@@ -1950,7 +2588,7 @@ function loadUserData() {
     else userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
     if(!userData.practiceHistory) userData.practiceHistory = [];
     if(!userData.achievements) userData.achievements = {};
-    if(!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [] };
+    if(!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
     if(!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
     saveUserData();
 }
@@ -1962,11 +2600,14 @@ function getChapterDifficultyMastery(unit,chapter,level) { let qs=window.ALL_UNI
 function shuffleArray(arr) { for(let i=arr.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
 function updateTimerDisplay() { let m=Math.floor(timeRemaining/60), s=timeRemaining%60; document.getElementById('timerDisplay').innerText=`${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
 
-function showUnlockCard(title, message, date) {
+function showUnlockCard(title, message, date, points) {
     let container = document.getElementById('unlockCardsContainer');
     let card = document.createElement('div');
     card.className = 'unlock-card';
-    card.innerHTML = `<div style="font-size:1.2rem;">🎉</div><div style="font-weight:bold;">${title}</div><div>${message}</div><div style="font-size:0.65rem; margin-top:4px;">${date}</div>`;
+    let pointsText = '';
+    if(points > 0) pointsText = `<div style="font-size:0.7rem; margin-top:4px;">🏆 +${points} 積分</div>`;
+    else if(points < 0) pointsText = `<div style="font-size:0.7rem; margin-top:4px;">⚠️ ${points} 積分</div>`;
+    card.innerHTML = `<div style="font-size:1.2rem;">🎉</div><div style="font-weight:bold;">${title}</div><div>${message}</div>${pointsText}<div style="font-size:0.65rem; margin-top:4px;">${date}</div>`;
     container.appendChild(card);
     setTimeout(() => { if(card.parentNode) card.remove(); }, 4200);
 }
@@ -1974,74 +2615,89 @@ function showUnlockCard(title, message, date) {
 function showUnlockCardsSequentially(cards) {
     for(let i=0; i<cards.length; i++) {
         setTimeout(() => {
-            showUnlockCard(cards[i].title, cards[i].message, cards[i].date);
+            showUnlockCard(cards[i].title, cards[i].message, cards[i].date, cards[i].points);
         }, i * 500);
     }
 }
 
-function checkAndUnlockAchievements(unit,chapter,accuracy,questionCount,isPerfect,isDSE,isSpeed,currentTotalQuestions,newUnlocks,consecutiveCorrectCount) {
+function addPenaltyAchievement(name, icon, points, desc) {
+    let today = new Date().toISOString().slice(0,10);
+    let key = name;
+    if(!userData.achievements[key]) {
+        userData.achievements[key] = { unlocked: true, date: today, points: points, isPenalty: true };
+        saveUserData();
+        showUnlockCard("⚠️ 警示", `${icon} ${name} - ${desc}`, today, points);
+    }
+}
+
+function checkAndUnlockAchievements(unit,chapter,accuracy,questionCount,isPerfect,isDSE,isSpeed,currentTotalQuestions,newUnlocks,consecutiveCorrectCount,isBlankPaper,previousAccuracy) {
     let today = new Date().toISOString().slice(0,10);
     let key = `${unit}_${chapter}`;
     if(!userData.achievements[key]) userData.achievements[key]={};
     let s1=getChapterDifficultyMastery(unit,chapter,0), s3=getChapterDifficultyMastery(unit,chapter,1), s5=getChapterDifficultyMastery(unit,chapter,2);
     
+    if(isBlankPaper) {
+        addPenaltyAchievement('blankPaper', '📄', -10, '提交空白答案卷');
+    }
+    
+    if(previousAccuracy !== null && previousAccuracy - accuracy > 20) {
+        addPenaltyAchievement('downwardTrend', '📉', -10, '連續兩次正確率下降超過20%');
+    }
+    
     if(s1>=80 && !userData.achievements[key].star1) {
         userData.achievements[key].star1 = { unlocked:true, date:today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成`, date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成`, date: today, points: ACHIEVEMENT_POINTS.star1 });
     }
     if(s3>=80 && !userData.achievements[key].star3) {
         userData.achievements[key].star3 = { unlocked:true, date:today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖`, date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖`, date: today, points: ACHIEVEMENT_POINTS.star3 });
     }
     if(s5>=80 && !userData.achievements[key].star5) {
         userData.achievements[key].star5 = { unlocked:true, date:today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖`, date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖`, date: today, points: ACHIEVEMENT_POINTS.star5 });
     }
     if(isTrialMode && accuracy>=80 && !userData.achievements[key].trial) {
         userData.achievements[key].trial = { unlocked:true, date:today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成`, date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成`, date: today, points: ACHIEVEMENT_POINTS.trial });
     }
     
-    // 全局成就
     let totalQ = userData.stats.totalQuestionsAnswered;
     let clearedMistakes = userData.allAttempts.filter(a => a.isCorrect === true && userData.latestStatus[a.qid] === true).length;
     
     if(!userData.achievements.firstPractice && userData.practiceHistory.length === 1) {
         userData.achievements.firstPractice = { unlocked: true, date: today, progress: 1, target: 1 };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🎯 初試啼聲 - 完成第一次練習", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🎯 初試啼聲 - 完成第一次練習", date: today, points: ACHIEVEMENT_POINTS.firstPractice });
     }
     if(totalQ >= 100 && !userData.achievements.tenQuestions) {
         userData.achievements.tenQuestions = { unlocked: true, date: today, progress: totalQ, target: 100 };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📝 十題達人 - 累積完成100題", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📝 十題達人 - 累積完成100題", date: today, points: ACHIEVEMENT_POINTS.tenQuestions });
     }
     if(totalQ >= 500 && !userData.achievements.fiveHundred) {
         userData.achievements.fiveHundred = { unlocked: true, date: today, progress: totalQ, target: 500 };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚔️ 百題斬 - 累積完成500題", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚔️ 百題斬 - 累積完成500題", date: today, points: ACHIEVEMENT_POINTS.fiveHundred });
     }
     if(totalQ >= 1000 && !userData.achievements.thousand) {
         userData.achievements.thousand = { unlocked: true, date: today, progress: totalQ, target: 1000 };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "👑 千題之王 - 累積完成1000題", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "👑 千題之王 - 累積完成1000題", date: today, points: ACHIEVEMENT_POINTS.thousand });
     }
     if(isPerfect && !userData.achievements.perfectLesson) {
         userData.achievements.perfectLesson = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🌟 完美一課 - 單次練習10題以上全對", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🌟 完美一課 - 單次練習10題以上全對", date: today, points: ACHIEVEMENT_POINTS.perfectLesson });
     }
     if(isDSE && !userData.achievements.dseComplete) {
         userData.achievements.dseComplete = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📝 DSE模擬完成 - 完成36題模式", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📝 DSE模擬完成 - 完成36題模式", date: today, points: ACHIEVEMENT_POINTS.dseComplete });
     }
     if(isSpeed && !userData.achievements.speedStar) {
         userData.achievements.speedStar = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚡ 速度之星 - 提前50%時間完成練習", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚡ 速度之星 - 提前50%時間完成練習", date: today, points: ACHIEVEMENT_POINTS.speedStar });
     }
     
-    // 連續答對王
     if(consecutiveCorrectCount >= 20 && !userData.achievements.consecutive20) {
         userData.achievements.consecutive20 = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🔥 連續答對王 - 連續答對20題", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🔥 連續答對王 - 連續答對20題", date: today, points: ACHIEVEMENT_POINTS.consecutive20 });
     }
     
-    // 全科目制霸
     let allChaptersDone = true;
     for(let u in window.ALL_UNITS) {
         for(let c in window.ALL_UNITS[u].chapters) {
@@ -2050,30 +2706,26 @@ function checkAndUnlockAchievements(unit,chapter,accuracy,questionCount,isPerfec
     }
     if(allChaptersDone && !userData.achievements.allChaptersMaster) {
         userData.achievements.allChaptersMaster = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🏆 全科目制霸 - 所有章節完成度達80%", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🏆 全科目制霸 - 所有章節完成度達80%", date: today, points: ACHIEVEMENT_POINTS.allChaptersMaster });
     }
     
-    // 五星連珠
     let recentPractices = userData.practiceHistory.slice(0, 5);
     let allPerfect = recentPractices.length >= 5 && recentPractices.every(p => p.accuracy === 100);
     if(allPerfect && !userData.achievements.fiveStarStreak) {
         userData.achievements.fiveStarStreak = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⭐ 五星連珠 - 連續5次練習正確率100%", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⭐ 五星連珠 - 連續5次練習正確率100%", date: today, points: ACHIEVEMENT_POINTS.fiveStarStreak });
     }
     
-    // 錯題剋星
     if(clearedMistakes >= 50 && !userData.achievements.mistakeEraser) {
         userData.achievements.mistakeEraser = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🗑️ 錯題剋星 - 從錯題本清除50道錯題", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🗑️ 錯題剋星 - 從錯題本清除50道錯題", date: today, points: ACHIEVEMENT_POINTS.mistakeEraser });
     }
     
-    // 收藏家
     if(userData.favorites.length >= 50 && !userData.achievements.collector) {
         userData.achievements.collector = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📚 收藏家 - 收藏50道題目", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📚 收藏家 - 收藏50道題目", date: today, points: ACHIEVEMENT_POINTS.collector });
     }
     
-    // 一週挑戰
     let lastDate = userData.stats.lastPracticeDate;
     if(lastDate) {
         let last = new Date(lastDate);
@@ -2093,26 +2745,29 @@ function checkAndUnlockAchievements(unit,chapter,accuracy,questionCount,isPerfec
     
     if(userData.stats.dailyPracticeDates.length >= 7 && !userData.achievements.weekChallenge) {
         userData.achievements.weekChallenge = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📅 一週挑戰 - 連續7天完成至少一次練習", date: today });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📅 一週挑戰 - 連續7天完成至少一次練習", date: today, points: ACHIEVEMENT_POINTS.weekChallenge });
     }
     
     saveUserData();
 }
 
-function addPracticeHistory(unit,chapter,difficultyName,questionCount,correctCount,accuracy,mode,timeSpentPercent,consecutiveCorrectCount) {
+function addPracticeHistory(unit,chapter,difficultyName,questionCount,correctCount,accuracy,mode,timeSpentPercent,consecutiveCorrectCount,isBlankPaper) {
     let now=new Date(), date=now.toISOString().slice(0,10), time=now.toTimeString().slice(0,5);
     let unitObj=window.ALL_UNITS[unit], chapterName=unitObj?unitObj.chapters[chapter].name:chapter, unitName=unitObj?unitObj.name:unit;
     userData.practiceHistory.unshift({ id:Date.now(), date, time, unitId:unit, unitName, chapterId:chapter, chapterName, difficulty:difficultyName, questionCount, correctCount, accuracy, mode });
     if(userData.practiceHistory.length>100) userData.practiceHistory=userData.practiceHistory.slice(0,100);
     
     let totalQuestions = (userData.stats?.totalQuestionsAnswered || 0) + questionCount;
-    if(!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [] };
+    if(!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
     userData.stats.totalQuestionsAnswered = totalQuestions;
     userData.stats.totalCorrect = (userData.stats.totalCorrect || 0) + correctCount;
+    
+    let previousAccuracy = userData.stats.lastAccuracy;
+    userData.stats.lastAccuracy = accuracy;
     saveUserData();
     
     let newUnlocks = [];
-    checkAndUnlockAchievements(unit,chapter,accuracy,questionCount,accuracy===100&&questionCount>=10,selectedCount===36,timeSpentPercent<=50,totalQuestions,newUnlocks,consecutiveCorrectCount);
+    checkAndUnlockAchievements(unit,chapter,accuracy,questionCount,accuracy===100&&questionCount>=10,selectedCount===36,timeSpentPercent<=50,totalQuestions,newUnlocks,consecutiveCorrectCount,isBlankPaper,previousAccuracy);
     if(newUnlocks.length > 0) {
         showUnlockCardsSequentially(newUnlocks);
     }
@@ -2150,6 +2805,17 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
 function toggleUnit(unitId) { let c=document.getElementById(`chapters-${unitId}`), t=document.getElementById(`toggle-${unitId}`); if(c.classList.contains('open')){ c.classList.remove('open'); t.textContent='▶'; }else{ c.classList.add('open'); t.textContent='▼'; } }
 function toggleAchievementUnit(unitId) { let c=document.getElementById(`achievement-chapters-${unitId}`), t=document.getElementById(`achievement-toggle-${unitId}`); if(c.classList.contains('open')){ c.classList.remove('open'); t.textContent='▶'; }else{ c.classList.add('open'); t.textContent='▼'; } }
 function toggleMistakeChapter(chapterKey,type) { let c=document.getElementById(`${type}-${chapterKey}`), t=document.getElementById(`${type}-toggle-${chapterKey}`); if(c.classList.contains('open')){ c.classList.remove('open'); t.textContent='▶'; }else{ c.classList.add('open'); t.textContent='▼'; } }
+
+function toggleCollapsible(id) {
+    let el = document.getElementById(id);
+    if(el) {
+        if(el.classList.contains('collapsed')) {
+            el.classList.remove('collapsed');
+        } else {
+            el.classList.add('collapsed');
+        }
+    }
+}
 
 function renderPractice() {
     const container=document.getElementById('practicePanel');
@@ -2258,8 +2924,8 @@ function renderHistory() {
     for(let h of userData.practiceHistory) {
         html+=`<tr><td>${h.date}</td><td>${h.time}</td><td>${h.unitName}</td><td>${h.chapterName}</td><td>${h.questionCount}</td><td>${h.accuracy}%</td><td>${h.mode==='trial'?'試煉':'一般'}</td></tr>`;
     }
-    html+='</tbody></table></div></div>';
-    container.innerHTML=html;
+    html+='</tbody></td></div></div>';
+container.innerHTML=html;
     document.getElementById('exportHistoryBtn')?.addEventListener('click',()=>{
         let csv=[["日期","時間","單元","章節","題數","正確數","正確率","模式"]];
         for(let h of userData.practiceHistory) csv.push([h.date,h.time,h.unitName,h.chapterName,h.questionCount,h.correctCount,`${h.accuracy}%`,h.mode==='trial'?'試煉':'一般']);
@@ -2269,57 +2935,73 @@ function renderHistory() {
 }
 
 function renderAchievements() {
-    let container=document.getElementById('achievementsPanel');
+    let container = document.getElementById('achievementsPanel');
     let allAchievements = [];
     
+    // 計算章節總數
+    let totalChapters = 0;
+    for(let u in window.ALL_UNITS) {
+        totalChapters += Object.keys(window.ALL_UNITS[u].chapters).length;
+    }
+    
+    // 章節成就
     for(let unit in window.ALL_UNITS) {
-        let unitObj=window.ALL_UNITS[unit];
+        let unitObj = window.ALL_UNITS[unit];
         for(let ch in unitObj.chapters) {
             let key = `${unit}_${ch}`;
             let ach = userData.achievements[key] || {};
             let chapterName = unitObj.chapters[ch].name;
             let types = [
-                { name: '一星完成', icon: '✅', unlocked: ach.star1?.unlocked || false, date: ach.star1?.date || null, needHint: '需一星80%' },
-                { name: '三星解鎖', icon: '🔥', unlocked: ach.star3?.unlocked || false, date: ach.star3?.date || null, needHint: '需三星80%' },
-                { name: '五星解鎖', icon: '💎', unlocked: ach.star5?.unlocked || false, date: ach.star5?.date || null, needHint: '需五星80%' },
-                { name: '試煉完成', icon: '⚔️', unlocked: ach.trial?.unlocked || false, date: ach.trial?.date || null, needHint: '需試煉模式80%' }
+                { id: 'star1', name: '一星完成', icon: '✅', unlocked: ach.star1?.unlocked || false, date: ach.star1?.date || null, needHint: '需一星80%', points: ACHIEVEMENT_POINTS.star1 },
+                { id: 'star3', name: '三星解鎖', icon: '🔥', unlocked: ach.star3?.unlocked || false, date: ach.star3?.date || null, needHint: '需三星80%', points: ACHIEVEMENT_POINTS.star3 },
+                { id: 'star5', name: '五星解鎖', icon: '💎', unlocked: ach.star5?.unlocked || false, date: ach.star5?.date || null, needHint: '需五星80%', points: ACHIEVEMENT_POINTS.star5 },
+                { id: 'trial', name: '試煉完成', icon: '⚔️', unlocked: ach.trial?.unlocked || false, date: ach.trial?.date || null, needHint: '需試煉模式80%', points: ACHIEVEMENT_POINTS.trial }
             ];
             for(let t of types) {
                 allAchievements.push({
                     category: 'chapter',
                     unitName: unitObj.name,
                     chapterName: chapterName,
+                    id: t.id,
                     name: t.name,
                     icon: t.icon,
                     unlocked: t.unlocked,
                     date: t.date,
-                    needHint: t.needHint
+                    needHint: t.needHint,
+                    points: t.points,
+                    isCumulative: false
                 });
             }
         }
     }
     
     let totalQ = userData.stats?.totalQuestionsAnswered || 0;
+    
+    // 特殊成就（含扣分）
     let specials = [
-        { name: '初試啼聲', icon: '🎯', unlocked: userData.achievements.firstPractice?.unlocked || false, date: userData.achievements.firstPractice?.date || null, desc: '完成第一次練習', progress: userData.achievements.firstPractice?.progress || totalQ, target: 1, showProgress: true },
-        { name: '十題達人', icon: '📝', unlocked: userData.achievements.tenQuestions?.unlocked || false, date: userData.achievements.tenQuestions?.date || null, desc: '累積完成100題', progress: totalQ, target: 100, showProgress: true },
-        { name: '百題斬', icon: '⚔️', unlocked: userData.achievements.fiveHundred?.unlocked || false, date: userData.achievements.fiveHundred?.date || null, desc: '累積完成500題', progress: totalQ, target: 500, showProgress: true },
-        { name: '千題之王', icon: '👑', unlocked: userData.achievements.thousand?.unlocked || false, date: userData.achievements.thousand?.date || null, desc: '累積完成1000題', progress: totalQ, target: 1000, showProgress: true },
-        { name: '完美一課', icon: '🌟', unlocked: userData.achievements.perfectLesson?.unlocked || false, date: userData.achievements.perfectLesson?.date || null, desc: '單次練習10題以上全對' },
-        { name: 'DSE模擬完成', icon: '📝', unlocked: userData.achievements.dseComplete?.unlocked || false, date: userData.achievements.dseComplete?.date || null, desc: '完成一次36題模式' },
-        { name: '速度之星', icon: '⚡', unlocked: userData.achievements.speedStar?.unlocked || false, date: userData.achievements.speedStar?.date || null, desc: '提前50%時間完成練習' },
-        { name: '連續答對王', icon: '🔥', unlocked: userData.achievements.consecutive20?.unlocked || false, date: userData.achievements.consecutive20?.date || null, desc: '連續答對20題' },
-        { name: '全科目制霸', icon: '🏆', unlocked: userData.achievements.allChaptersMaster?.unlocked || false, date: userData.achievements.allChaptersMaster?.date || null, desc: '所有章節完成度達80%' },
-        { name: '五星連珠', icon: '⭐', unlocked: userData.achievements.fiveStarStreak?.unlocked || false, date: userData.achievements.fiveStarStreak?.date || null, desc: '連續5次練習正確率100%' },
-        { name: '錯題剋星', icon: '🗑️', unlocked: userData.achievements.mistakeEraser?.unlocked || false, date: userData.achievements.mistakeEraser?.date || null, desc: '從錯題本清除50道錯題' },
-        { name: '收藏家', icon: '📚', unlocked: userData.achievements.collector?.unlocked || false, date: userData.achievements.collector?.date || null, desc: '收藏50道題目' },
-        { name: '一週挑戰', icon: '📅', unlocked: userData.achievements.weekChallenge?.unlocked || false, date: userData.achievements.weekChallenge?.date || null, desc: '連續7天完成至少一次練習' }
+        { id: 'firstPractice', name: '初試啼聲', icon: '🎯', unlocked: userData.achievements.firstPractice?.unlocked || false, date: userData.achievements.firstPractice?.date || null, desc: '完成第一次練習', progress: userData.achievements.firstPractice?.progress || totalQ, target: 1, showProgress: true, isCumulative: true, points: ACHIEVEMENT_POINTS.firstPractice },
+        { id: 'tenQuestions', name: '十題達人', icon: '📝', unlocked: userData.achievements.tenQuestions?.unlocked || false, date: userData.achievements.tenQuestions?.date || null, desc: '累積完成100題', progress: totalQ, target: 100, showProgress: true, isCumulative: true, points: ACHIEVEMENT_POINTS.tenQuestions },
+        { id: 'fiveHundred', name: '百題斬', icon: '⚔️', unlocked: userData.achievements.fiveHundred?.unlocked || false, date: userData.achievements.fiveHundred?.date || null, desc: '累積完成500題', progress: totalQ, target: 500, showProgress: true, isCumulative: true, points: ACHIEVEMENT_POINTS.fiveHundred },
+        { id: 'thousand', name: '千題之王', icon: '👑', unlocked: userData.achievements.thousand?.unlocked || false, date: userData.achievements.thousand?.date || null, desc: '累積完成1000題', progress: totalQ, target: 1000, showProgress: true, isCumulative: true, points: ACHIEVEMENT_POINTS.thousand },
+        { id: 'perfectLesson', name: '完美一課', icon: '🌟', unlocked: userData.achievements.perfectLesson?.unlocked || false, date: userData.achievements.perfectLesson?.date || null, desc: '單次練習10題以上全對', isCumulative: false, points: ACHIEVEMENT_POINTS.perfectLesson },
+        { id: 'dseComplete', name: 'DSE模擬完成', icon: '📝', unlocked: userData.achievements.dseComplete?.unlocked || false, date: userData.achievements.dseComplete?.date || null, desc: '完成一次36題模式', isCumulative: false, points: ACHIEVEMENT_POINTS.dseComplete },
+        { id: 'speedStar', name: '速度之星', icon: '⚡', unlocked: userData.achievements.speedStar?.unlocked || false, date: userData.achievements.speedStar?.date || null, desc: '提前50%時間完成練習', isCumulative: false, points: ACHIEVEMENT_POINTS.speedStar },
+        { id: 'consecutive20', name: '連續答對王', icon: '🔥', unlocked: userData.achievements.consecutive20?.unlocked || false, date: userData.achievements.consecutive20?.date || null, desc: '連續答對20題', isCumulative: false, points: ACHIEVEMENT_POINTS.consecutive20 },
+        { id: 'allChaptersMaster', name: '全科目制霸', icon: '🏆', unlocked: userData.achievements.allChaptersMaster?.unlocked || false, date: userData.achievements.allChaptersMaster?.date || null, desc: '所有章節完成度達80%', isCumulative: false, points: ACHIEVEMENT_POINTS.allChaptersMaster },
+        { id: 'fiveStarStreak', name: '五星連珠', icon: '⭐', unlocked: userData.achievements.fiveStarStreak?.unlocked || false, date: userData.achievements.fiveStarStreak?.date || null, desc: '連續5次練習正確率100%', isCumulative: false, points: ACHIEVEMENT_POINTS.fiveStarStreak },
+        { id: 'mistakeEraser', name: '錯題剋星', icon: '🗑️', unlocked: userData.achievements.mistakeEraser?.unlocked || false, date: userData.achievements.mistakeEraser?.date || null, desc: '從錯題本清除50道錯題', isCumulative: false, points: ACHIEVEMENT_POINTS.mistakeEraser },
+        { id: 'collector', name: '收藏家', icon: '📚', unlocked: userData.achievements.collector?.unlocked || false, date: userData.achievements.collector?.date || null, desc: '收藏50道題目', isCumulative: false, points: ACHIEVEMENT_POINTS.collector },
+        { id: 'weekChallenge', name: '一週挑戰', icon: '📅', unlocked: userData.achievements.weekChallenge?.unlocked || false, date: userData.achievements.weekChallenge?.date || null, desc: '連續7天完成至少一次練習', isCumulative: false, points: ACHIEVEMENT_POINTS.weekChallenge },
+        { id: 'blankPaper', name: '交白卷', icon: '📄', unlocked: userData.achievements.blankPaper?.unlocked || false, date: userData.achievements.blankPaper?.date || null, desc: '提交空白答案卷', isPenalty: true, isCumulative: false, points: ACHIEVEMENT_POINTS.blankPaper },
+        { id: 'downwardTrend', name: '下滑趨勢', icon: '📉', unlocked: userData.achievements.downwardTrend?.unlocked || false, date: userData.achievements.downwardTrend?.date || null, desc: '連續兩次正確率下降超過20%', isPenalty: true, isCumulative: false, points: ACHIEVEMENT_POINTS.downwardTrend }
     ];
+    
     for(let s of specials) {
         allAchievements.push({
             category: 'special',
             unitName: '🎯 特殊成就',
             chapterName: '',
+            id: s.id,
             name: s.name,
             icon: s.icon,
             unlocked: s.unlocked,
@@ -2327,44 +3009,119 @@ function renderAchievements() {
             desc: s.desc,
             progress: s.progress,
             target: s.target,
-            showProgress: s.showProgress
+            showProgress: s.showProgress,
+            isCumulative: s.isCumulative,
+            isPenalty: s.isPenalty || false,
+            points: s.points
         });
     }
     
-    let unlockedAchievements = allAchievements.filter(a => a.unlocked);
-    let lockedAchievements = allAchievements.filter(a => !a.unlocked);
-    unlockedAchievements.sort((a,b) => (b.date || '').localeCompare(a.date || ''));
-    let sortedAchievements = [...unlockedAchievements, ...lockedAchievements];
-    let totalUnlocked = unlockedAchievements.length;
-    let totalPossible = allAchievements.length;
+    // 分組
+    let unlockedSpecials = allAchievements.filter(a => a.category === 'special' && a.unlocked && !a.isPenalty);
+    let unlockedPenalties = allAchievements.filter(a => a.category === 'special' && a.unlocked && a.isPenalty);
+    let unlockedChapters = allAchievements.filter(a => a.category === 'chapter' && a.unlocked);
+    let lockedSpecials = allAchievements.filter(a => a.category === 'special' && !a.unlocked && !a.isPenalty);
+    let lockedPenalties = allAchievements.filter(a => a.category === 'special' && !a.unlocked && a.isPenalty);
+    let lockedChapters = allAchievements.filter(a => a.category === 'chapter' && !a.unlocked);
+    
+    // 排序
+    unlockedSpecials.sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+    unlockedChapters.sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+    lockedSpecials.sort((a,b) => (b.points || 0) - (a.points || 0));
+    lockedChapters.sort((a,b) => (b.points || 0) - (a.points || 0));
+    
+    let totalUnlocked = unlockedSpecials.length + unlockedPenalties.length + unlockedChapters.length;
+    let totalPossible = specials.length + (totalChapters * 4);
     let percent = totalPossible > 0 ? Math.round(totalUnlocked / totalPossible * 100) : 0;
+    let totalPoints = calculateTotalPoints(userData.achievements);
+    let rankInfo = calculateClassRank(currentUser.id, totalPoints);
     
-    let html = `<div class="card"><div class="achievement-progress"><div style="display:flex; justify-content:space-between;"><span>🏆 總解鎖進度</span><span>${totalUnlocked} / ${totalPossible} (${percent}%)</span></div><div class="achievement-bar"><div class="achievement-fill" style="width:${percent}%;"></div></div></div>`;
+    let html = `<div class="card">
+        <div class="points-rank-bar">
+            <div class="points-box">
+                <div class="points-number">${totalPoints}</div>
+                <div class="points-label">總積分</div>
+            </div>
+            <div class="rank-box">
+                <div class="rank-number">#${rankInfo.rank} / ${rankInfo.total}</div>
+                <div class="rank-label">班級排名</div>
+            </div>
+        </div>
+        <div class="achievement-progress">
+            <div style="display:flex; justify-content:space-between;">
+                <span>🏆 總解鎖進度</span>
+                <span>${totalUnlocked} / ${totalPossible} (${percent}%)</span>
+            </div>
+            <div class="achievement-bar">
+                <div class="achievement-fill" style="width:${percent}%;"></div>
+            </div>
+        </div>`;
     
-    let currentCategory = '';
-    for(let ach of sortedAchievements) {
-        if(ach.category === 'special' && currentCategory !== 'special') {
-            html += `<h3 style="margin-top:0.8rem;">🎯 特殊成就</h3>`;
-            currentCategory = 'special';
-        } else if(ach.category === 'chapter' && currentCategory !== 'chapter') {
-            html += `<h3 style="margin-top:0.8rem;">📖 章節成就</h3>`;
-            currentCategory = 'chapter';
+    // 已獲得的特殊成就
+    if(unlockedSpecials.length > 0) {
+        html += `<h3 style="margin-top:0.5rem;">✅ 已獲得特殊成就</h3>`;
+        for(let ach of unlockedSpecials) {
+            let pointsDisplay = ach.points > 0 ? `🏆 +${ach.points}` : (ach.points < 0 ? `⚠️ ${ach.points}` : '');
+            html += `<div class="achievement-item unlocked"><div class="achievement-row"><div><span class="achievement-badge">${ach.icon}</span> <strong>${ach.name}</strong></div><div class="achievement-date">${ach.date} ${pointsDisplay}</div></div><div class="achievement-desc">${ach.desc}</div></div>`;
         }
-        
-        let dateDisplay = ach.date ? `🗓️ ${ach.date}` : (ach.unlocked ? '' : '🔒 未解鎖');
-        let descHtml = '';
-        let titleDisplay = ach.chapterName ? `${ach.chapterName} - ${ach.name}` : ach.name;
-        if(ach.showProgress && ach.progress !== undefined && ach.target !== undefined) {
-            let percentProgress = Math.min(100, Math.round(ach.progress / ach.target * 100));
-            descHtml = `<div class="progress-small"><div class="progress-small-fill" style="width:${percentProgress}%;"></div></div><div class="achievement-desc">${ach.desc} (${ach.progress}/${ach.target})</div>`;
-        } else if(ach.desc && ach.unlocked) {
-            descHtml = `<div class="achievement-desc">${ach.desc}</div>`;
-        } else if(!ach.unlocked && ach.needHint) {
-            descHtml = `<div class="achievement-desc">🔒 ${ach.needHint}</div>`;
-        }
-        
-        html += `<div class="achievement-item ${ach.unlocked ? 'unlocked' : 'locked'}"><div class="achievement-row"><div><span class="achievement-badge">${ach.unlocked ? ach.icon : '🔒'}</span> <strong>${titleDisplay}</strong></div><div class="achievement-date">${dateDisplay}</div></div>${descHtml}</div>`;
     }
+    
+    // 已獲得的扣分成就
+    if(unlockedPenalties.length > 0) {
+        html += `<h3 style="margin-top:0.8rem;">⚠️ 警示成就</h3>`;
+        for(let ach of unlockedPenalties) {
+            html += `<div class="achievement-item unlocked" style="background:#f8d7da; border-left-color:#dc2626;"><div class="achievement-row"><div><span class="achievement-badge">${ach.icon}</span> <strong>${ach.name}</strong></div><div class="achievement-date">${ach.date} ⚠️ ${ach.points}</div></div><div class="achievement-desc">${ach.desc}</div></div>`;
+        }
+    }
+    
+    // 已獲得的章節成就（可摺疊）
+    if(unlockedChapters.length > 0) {
+        html += `<h3 class="collapsible" onclick="toggleCollapsible('unlockedChaptersPanel')">📖 已獲得章節成就 ▼</h3><div id="unlockedChaptersPanel" class="collapsible-content">`;
+        let currentUnit = '';
+        for(let ach of unlockedChapters) {
+            if(ach.unitName !== currentUnit) {
+                if(currentUnit !== '') html += `</div>`;
+                currentUnit = ach.unitName;
+                html += `<div style="margin-top:0.5rem;"><strong>${currentUnit}</strong></div>`;
+            }
+            let pointsDisplay = ach.points > 0 ? `🏆 +${ach.points}` : '';
+            html += `<div class="achievement-item unlocked"><div class="achievement-row"><div><span class="achievement-badge">${ach.icon}</span> ${ach.chapterName} - ${ach.name}</div><div class="achievement-date">${ach.date} ${pointsDisplay}</div></div></div>`;
+        }
+        html += `</div></div>`;
+    }
+    
+    // 未獲得的特殊成就
+    if(lockedSpecials.length > 0) {
+        html += `<h3 style="margin-top:0.8rem;">🔒 未獲得特殊成就</h3>`;
+        for(let ach of lockedSpecials) {
+            let pointsDisplay = ach.points > 0 ? `🏆 +${ach.points}` : '';
+            let descHtml = '';
+            if(ach.isCumulative && ach.showProgress) {
+                let percentProgress = Math.min(100, Math.round(ach.progress / ach.target * 100));
+                descHtml = `<div class="progress-small"><div class="progress-small-fill" style="width:${percentProgress}%;"></div></div><div class="achievement-desc">${ach.desc} (${ach.progress}/${ach.target})</div>`;
+            } else {
+                descHtml = `<div class="achievement-desc">🔒 未解鎖</div>`;
+            }
+            html += `<div class="achievement-item locked"><div class="achievement-row"><div><span class="achievement-badge">🔒</span> <strong>${ach.name}</strong></div><div class="achievement-date">${pointsDisplay}</div></div>${descHtml}</div>`;
+        }
+    }
+    
+    // 未獲得的章節成就（可摺疊）
+    if(lockedChapters.length > 0) {
+        html += `<h3 class="collapsible" onclick="toggleCollapsible('lockedChaptersPanel')">🔒 未獲得章節成就 ▼</h3><div id="lockedChaptersPanel" class="collapsible-content">`;
+        let currentUnit = '';
+        for(let ach of lockedChapters) {
+            if(ach.unitName !== currentUnit) {
+                if(currentUnit !== '') html += `</div>`;
+                currentUnit = ach.unitName;
+                html += `<div style="margin-top:0.5rem;"><strong>${currentUnit}</strong></div>`;
+            }
+            let pointsDisplay = ach.points > 0 ? `🏆 +${ach.points}` : '';
+            html += `<div class="achievement-item locked"><div class="achievement-row"><div><span class="achievement-badge">🔒</span> ${ach.chapterName} - ${ach.name}</div><div class="achievement-date">${pointsDisplay}</div></div><div class="achievement-desc">🔒 ${ach.needHint}</div></div>`;
+        }
+        html += `</div></div>`;
+    }
+    
     html += `</div>`;
     container.innerHTML = html;
 }
@@ -2448,6 +3205,9 @@ function submitAll(){
     if(timerInterval) clearInterval(timerInterval);
     let results=[], batch=[], correctCount=0;
     let consecutiveCorrect = userData.stats.consecutiveCorrect || 0;
+    let answeredCount = currentAnswers.filter(a => a !== null).length;
+    let isBlankPaper = (answeredCount === 0);
+    
     for(let i=0;i<currentQuestions.length;i++){
         let q=currentQuestions[i], map=currentOptionsMapping[i], userLetter=currentAnswers[i];
         let isCorrect=(userLetter===map.correctLetter);
@@ -2469,7 +3229,7 @@ function submitAll(){
     let mode=isTrialMode?'trial':'normal';
     let expectedTime=currentQuestions.length*(selectedDifficulty==0?108:(selectedDifficulty==2?75:90));
     let timeSpent=Math.round((expectedTime-timeRemaining)/expectedTime*100);
-    addPracticeHistory(currentUnit,currentChapter,diffName,currentQuestions.length,correctCount,accuracy,mode,timeSpent,consecutiveCorrect);
+    addPracticeHistory(currentUnit,currentChapter,diffName,currentQuestions.length,correctCount,accuracy,mode,timeSpent,consecutiveCorrect,isBlankPaper);
     lastResults=results; displayResults(results);
     document.getElementById('quizModal').style.display='none';
     renderPractice(); renderMyMistakes(); renderPastMistakes(); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
@@ -2486,7 +3246,7 @@ function displayResults(results){
     let percent=Math.round(correct/filteredResults.length*100);
     let color=percent<40?'#dc2626':percent<70?'#f59e0b':'#10b981';
     let html = `<div class="result-summary-bar"><div class="result-progress"><span>✅ ${percent}% (${correct}/${filteredResults.length})</span><div class="big-progress-bar"><div class="big-progress-fill" style="width:${percent}%; background:${color};"></div></div></div><div class="result-buttons"><button id="toggleWrongBtn" class="btn btn-small">❌ 只顯示錯題</button><button id="toggleAnswersBtn" class="btn btn-small">📋 顯示答案</button></div></div>`;
-    html += `<table class="result-table"><thead><tr><th>題號</th><th>題目</th>${showAnswers?'<th>你的答案</th><th>正解</th>':''}<th>結果</th><th>題解</th></tr></thead><tbody>`;
+    html += `<table class="result-table"><thead><tr><th>題號</th><th>題目</th>${showAnswers?'<th>你的答案</th><th>正解</th>':''}<th>結果</th><th>題解</th></table></thead><tbody>`;
     for(let i=0;i<results.length;i++){
         if(showOnlyWrong && results[i].isCorrect) continue;
         let r=results[i]; let rowClass=r.isCorrect?'result-row-correct':'result-row-wrong'; let icon=r.isCorrect?'✅':'❌';
