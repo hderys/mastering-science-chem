@@ -50,8 +50,8 @@
         <div class="settings-two-columns">
             <div class="settings-left">
                 <div class="setting-group">
-                    <div class="setting-title" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>⭐ 難度偏好</span>
+                    <div class="difficulty-header-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+                        <span class="setting-title" style="margin-bottom: 0;">⭐ 難度偏好</span>
                         <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.7rem; font-weight: normal;">
                             <input type="checkbox" id="excludeTranslate" checked style="width: 14px; height: 14px; margin: 0; cursor: pointer;">
                             <span>排除翻譯題</span>
@@ -62,7 +62,7 @@
                         <button id="diff-medium" class="setting-btn locked"><span class="stars">★★★</span><span class="label">3 星 🔒</span></button>
                         <button id="diff-hard" class="setting-btn locked"><span class="stars">★★★★★</span><span class="label">5 星 🔒</span></button>
                     </div>
-                    <div class="setting-hint" id="diffHint">🔒 3星需1星正確率達80%解鎖</div>
+                    <div class="setting-hint" id="diffHint">🔒 3星需Basic正確率達80%解鎖</div>
                 </div>
                 <div class="setting-group">
                     <div class="setting-title">🔥 特殊模式</div>
@@ -73,12 +73,19 @@
             <div class="settings-right">
                 <div class="setting-group">
                     <div class="setting-title">📊 題目數量</div>
-                    <div class="btn-row" id="countSelector">
-                        <button id="count-10" class="setting-btn active">10 題</button>
-                        <button id="count-20" class="setting-btn locked">20 題 🔒</button>
-                        <button id="count-36" class="setting-btn locked">36 題 DSE 🔒</button>
+                    <div class="count-buttons-row">
+                        <button id="count-10" class="setting-btn active" data-count="10">10 題</button>
+                        <button id="count-20" class="setting-btn" data-count="20">20 題</button>
                     </div>
-                    <div class="setting-hint" id="countHint">🔒 20/36題需1星正確率達80%解鎖</div>
+                    <div class="count-row">
+                        <button id="count-36" class="setting-btn locked" data-count="36" disabled>36 題 🔒</button>
+                        <div class="custom-input-wrapper">
+                            <span>✏️ 自訂：</span>
+                            <input type="number" id="customCount" min="1" max="50" value="10" step="1" disabled>
+                            <span>題</span>
+                        </div>
+                    </div>
+                    <div class="setting-hint" id="countHint">🔒 36題及自訂題數需Basic正確率達80%解鎖</div>
                 </div>
                 <div>
                     <button id="devUnlockBtn" class="dev-btn-full">🔓 一鍵解鎖 (僅測試)</button>
@@ -437,8 +444,8 @@ window.ALL_UNITS = {
             "correct": "C",
             "explanation": "Mass number = No. of proton + No. of neutron;<br>For an atom, no of proton = no. of electron",
             "imageUrl": null,
-            "difficulty": "✅ Basic",
-            "difficulty_level": 1,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
             "sf": 1
           },
           {
@@ -453,8 +460,8 @@ window.ALL_UNITS = {
             "correct": "B",
             "explanation": "Nucleus contains protons and NEUTRONs.<br>Relative atomic mass of O is 16 while that of H is 1.",
             "imageUrl": null,
-            "difficulty": "📈 Advanced",
-            "difficulty_level": 2,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
             "sf": 0
           },
           {
@@ -485,13 +492,13 @@ window.ALL_UNITS = {
             "correct": "C",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "✅ Basic",
-            "difficulty_level": 1,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
             "sf": 1
           },
           {
             "id": "C25B003",
-            "text": "Which of the following statements about metals are INCORRECT?<br>(1)\tThey are poor conductors of electricity.<br>(2)\tThey are all solids at room conditions.<br>(3)\tThey usually have low densities.",
+            "text": "Which of the following statements about metals are INCORRECT?<br>(1)\t They are poor conductors of electricity.<br>(2)\t They are all solids at room conditions.<br>(3)\t They usually have low densities.",
             "options": [
               "A. (1) and (2) only",
               "B. (1) and (3) only",
@@ -501,8 +508,8 @@ window.ALL_UNITS = {
             "correct": "D",
             "explanation": "Mercury is a liquid at room conditions.",
             "imageUrl": null,
-            "difficulty": "📈 Advanced",
-            "difficulty_level": 2,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
             "sf": 0
           },
           {
@@ -517,8 +524,8 @@ window.ALL_UNITS = {
             "correct": "C",
             "explanation": "Graphite (a form of carbon) is a good conductor of electricity.",
             "imageUrl": null,
-            "difficulty": "✅ Basic",
-            "difficulty_level": 1,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
             "sf": 1
           },
           {
@@ -533,8 +540,8 @@ window.ALL_UNITS = {
             "correct": "C",
             "explanation": "A hydrogen atom does not contain any neutron.",
             "imageUrl": null,
-            "difficulty": "✅ Basic",
-            "difficulty_level": 1,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
             "sf": 1
           },
           {
@@ -549,8 +556,8 @@ window.ALL_UNITS = {
             "correct": "A",
             "explanation": "The nucleus is composed of protons and neutrons.",
             "imageUrl": null,
-            "difficulty": "✅ Basic",
-            "difficulty_level": 1,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
             "sf": 1
           },
           {
@@ -563,7 +570,7 @@ window.ALL_UNITS = {
               "D. 15 electrons, 15 protons and 16 neutrons."
             ],
             "correct": "D",
-            "explanation": "",
+            "explanation": "Atomic number = Number of proton<br>For an atom, number of electron = number of proton.<br>Mass number = number of proton + number of neutron.",
             "imageUrl": null,
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
@@ -571,7 +578,7 @@ window.ALL_UNITS = {
           },
           {
             "id": "C25B008",
-            "text": "Which of the following statements about isotopes is/are correct?<br>(1)\tThey have the same electronic arrangement.<br>(2)\tThey have the same mass number.<br>(3)\tThey have the same chemical properties.",
+            "text": "Which of the following statements about isotopes is/are correct?<br>(1)\t They have the same electronic arrangement.<br>(2)\t They have the same mass number.<br>(3)\t They have the same chemical properties.",
             "options": [
               "A. (1) only",
               "B. (2) only",
@@ -613,8 +620,8 @@ window.ALL_UNITS = {
             "correct": "B",
             "explanation": "Let the relative abundance of ¹⁰⁶𝑀 be 𝑦.<br>104 × (1 - 𝑦%) + 106 × 𝑦% = 104.4<br>𝑦 = 20%",
             "imageUrl": null,
-            "difficulty": "📈 Advanced",
-            "difficulty_level": 2,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
             "sf": 0
           },
           {
@@ -627,10 +634,10 @@ window.ALL_UNITS = {
               "D. They have the same number of electrons."
             ],
             "correct": "A",
-            "explanation": "",
+            "explanation": "Both oxygen and fluorine are in Period 2, they have two occupied electron shell.",
             "imageUrl": null,
-            "difficulty": "✅ Basic",
-            "difficulty_level": 1,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
             "sf": 1
           },
           {
@@ -661,8 +668,8 @@ window.ALL_UNITS = {
             "correct": "B",
             "explanation": "(2) is incorrect because carbon has more than one isotopes.",
             "imageUrl": null,
-            "difficulty": "🔥 Challenge",
-            "difficulty_level": 3,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
             "sf": 0
           },
           {
@@ -677,39 +684,370 @@ window.ALL_UNITS = {
             "correct": "A",
             "explanation": "Both hydrogen and potassium have one outermost shell electron.",
             "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C25A007",
+            "text": "Element 𝑋 has two isotopes, ₃₁⁶⁹𝑋 and ₃₁⁷¹𝑋.  If the relative atomic mass of 𝑋 is 69.7, what is the relative abundance of each of the two isotopes?",
+            "options": [
+              "A. 10% ₃₁⁶⁹𝑋 and 11% ₃₁⁷¹𝑋",
+              "B. 50% ₃₁⁶⁹𝑋 and 50% ₃₁⁷¹𝑋",
+              "C. 65% ₃₁⁶⁹𝑋 and 35% ₃₁⁷¹𝑋",
+              "D. 35% ₃₁⁶⁹𝑋 and 65% ₃₁⁷¹𝑋"
+            ],
+            "correct": "C",
+            "explanation": "Let the relative abundance of ⁶⁹𝑋 be 𝑦.<br>71 × (1 - 𝑦%) + 69 × 𝑦% = 69.7<br>71 - 71𝑦% + 69 𝑦% = 69.7<br>1.3 = 2𝑦%<br>𝑦 = 65%",
+            "imageUrl": null,
             "difficulty": "🔥 Challenge",
             "difficulty_level": 3,
-            "sf": 0
-          }
-        ]
-      },
-      "7": {
-        "name": "7 Ionic Bond and metallic bond",
-        "questions": [
+            "sf": 1
+          },
           {
-            "id": "C27G003",
-            "text": "Ionic bond 的中文是？",
+            "id": "C25A008",
+            "text": " The electron diagram of an atom of element 𝑄 is shown (Only the outermost shell electrons are shown.). The atomic number of 𝑄 can be:",
             "options": [
-              "A. 共價鍵",
-              "B. 離子鍵",
-              "C. 金屬鍵",
-              "D. 氫鍵"
+              "A. 5",
+              "B. 7",
+              "C. 12",
+              "D. 17"
             ],
             "correct": "B",
-            "explanation": "Ionic bond = 離子鍵",
-            "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "explanation": "With an outermost shell electron 5, it can be 2, 5; 2, 8, 5; etc. Hence the atomic number can be 7 or 15, etc.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C05A008.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
             "sf": 1
           },
           {
-            "id": "C27G001",
-            "text": "Anion 的中文是？",
+            "id": "C25A009",
+            "text": "Elements can be classified into __________, non-metals and __________.",
             "options": [
-              "A. 負離子",
-              "B. 正離子",
-              "C. 化學式",
-              "D. 電解質"
+              "A. liquids / gases",
+              "B. metals / semi-metals",
+              "C. solids / liquids",
+              "D. conductors / insulators"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A010",
+            "text": "There are only two liquid elements at room temperature: __________ and __________.",
+            "options": [
+              "A. Mercury / Bromine",
+              "B. Water / Alcohol",
+              "C. Gold / Silver",
+              "D. Oxygen / Hydrogen"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A011",
+            "text": "All __________ conduct electricity, while non-metals (except __________) do not.",
+            "options": [
+              "A. liquids / bromine",
+              "B. solids / graphite",
+              "C. metals / graphite (carbon)",
+              "D. metals / bromine"
+            ],
+            "correct": "C",
+            "explanation": "For elements, only metals and graphite conduct electricity.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A012",
+            "text": "A/an __________ is the smallest part of an element which has the chemical properties of that element.",
+            "options": [
+              "A. atom",
+              "B. molecule",
+              "C. electron",
+              "D. compound"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A013",
+            "text": "A/an __________ is a substance that is made up of only one kind of atoms.",
+            "options": [
+              "A. mixture",
+              "B. compound",
+              "C. element",
+              "D. solution"
+            ],
+            "correct": "C",
+            "explanation": "Element = Only one kind of atoms<br>Compound = More than a kind of atoms chemically joined together.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A014",
+            "text": "Different elements have different properties because they consist of different kinds of __________.",
+            "options": [
+              "A. molecules",
+              "B. compounds",
+              "C. atoms",
+              "D. electrons"
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C25A015",
+            "text": "Every element has a name and also a chemical __________.",
+            "options": [
+              "A. number",
+              "B. symbol",
+              "C. formula",
+              "D. mass"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A016",
+            "text": "An atom is made up of an extremely dense centre called the __________, inside which are protons and __________.",
+            "options": [
+              "A. centre / neutrons",
+              "B. nucleus / neutrons",
+              "C. centre / electrons",
+              "D. nucleus / electrons"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A017",
+            "text": "Around the nucleus, there is a relatively large space where __________ are found.",
+            "options": [
+              "A. electrons",
+              "B. neutrons",
+              "C. protons",
+              "D. atoms"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A018",
+            "text": "In an atom, a/an __________ is positively charged.",
+            "options": [
+              "A. electron",
+              "B. neutron",
+              "C. proton",
+              "D. subatomic particle"
+            ],
+            "correct": "C",
+            "explanation": "Proton is positively charged; neutron is neutral; while electron is negatively charged.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A019",
+            "text": "In an atom, a/an __________ is negatively charged.",
+            "options": [
+              "A. electron",
+              "B. neutron",
+              "C. proton",
+              "D. nucleus"
+            ],
+            "correct": "A",
+            "explanation": "Proton is positively charged; neutron is neutral; while electron is negatively charged.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A020",
+            "text": "In an atom, a/an __________ is neutral.",
+            "options": [
+              "A. electron",
+              "B. neutron",
+              "C. proton",
+              "D. nucleus"
+            ],
+            "correct": "B",
+            "explanation": "Proton is positively charged; neutron is neutral; while electron is negatively charged.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A021",
+            "text": "The __________ number of an atom is the number of protons in the atom.",
+            "options": [
+              "A. mass",
+              "B. atomic",
+              "C. neutron",
+              "D. electron"
+            ],
+            "correct": "B",
+            "explanation": "Atomic number = Number of proton<br>Mass number = number of proton + number of neutron.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A022",
+            "text": "The __________ number of an atom is the sum of the numbers of protons and neutrons in the atom.",
+            "options": [
+              "A. mass",
+              "B. atomic",
+              "C. neutron",
+              "D. electron"
+            ],
+            "correct": "A",
+            "explanation": "Atomic number = Number of proton<br>Mass number = number of proton + number of neutron.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A023",
+            "text": "__________ are different atoms of the same element which have the same number of __________ (and electrons) but different numbers of neutrons.",
+            "options": [
+              "A. Ions / protons",
+              "B. Isotopes / protons",
+              "C. Ions / neutrons",
+              "D. Isotopes / neutrons"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A024",
+            "text": "The mass of a/an __________ isotope is chosen as the reference standard to give the relative isotopic mass of a particular isotope of an element.",
+            "options": [
+              "A. hydrogen-1",
+              "B. oxygen-16",
+              "C. carbon-12",
+              "D. chlorine-35"
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A025",
+            "text": "The relative atomic mass of an element is the weighted average of the __________ of all the naturally occurring isotopes of that element on the ¹²C = 12.00 scale.",
+            "options": [
+              "A. atomic numbers",
+              "B. mass numbers",
+              "C. relative isotopic masses",
+              "D. neutron numbers"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A026",
+            "text": "Electrons in an atom move in orbits surrounding the nucleus of the atom. These orbits are called __________.",
+            "options": [
+              "A. electron shells",
+              "B. electron diagram",
+              "C. electron arrangement",
+              "D. electron configuration"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A027",
+            "text": "The __________ (or electronic configuration) of a sodium atom is 2,8,1.",
+            "options": [
+              "A. mass",
+              "B. electron arrangement",
+              "C. number of proton",
+              "D. isotope"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25A028",
+            "text": "The diagram below shows the nuclei of four atoms, n = number of neutrons and p = number of protons. Which two atoms are isotopes of the same element?",
+            "options": [
+              "A. 𝑃 and 𝑄",
+              "B. 𝑄 and 𝑅",
+              "C. 𝑅 and 𝑆",
+              "D. 𝑃 and 𝑆"
+            ],
+            "correct": "B",
+            "explanation": "Isotopes have the same atomic number (number of protons).",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C05A028.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C25G018",
+            "text": "Mercury 的中文是？",
+            "options": [
+              "A. 水銀",
+              "B. 溴",
+              "C. 金屬",
+              "D. 質量"
             ],
             "correct": "A",
             "explanation": "",
@@ -719,13 +1057,13 @@ window.ALL_UNITS = {
             "sf": 1
           },
           {
-            "id": "C27G002",
-            "text": "Cation 的中文是？",
+            "id": "C25G019",
+            "text": "Bromine 的中文是？",
             "options": [
-              "A. 正離子",
-              "B. 負離子",
-              "C. 化學式",
-              "D. 電解質"
+              "A. 溴",
+              "B. 水銀",
+              "C. 水",
+              "D. 酒精"
             ],
             "correct": "A",
             "explanation": "",
@@ -735,13 +1073,13 @@ window.ALL_UNITS = {
             "sf": 1
           },
           {
-            "id": "C27G003",
-            "text": "Chemical bond 的中文是？",
+            "id": "C25G020",
+            "text": "Graphite 的中文是？",
             "options": [
-              "A. 化學鍵",
-              "B. 離子鍵",
-              "C. 金屬鍵",
-              "D. 共價鍵"
+              "A. 石墨",
+              "B. 鉛",
+              "C. 黃金",
+              "D. 鑽石"
             ],
             "correct": "A",
             "explanation": "",
@@ -751,243 +1089,323 @@ window.ALL_UNITS = {
             "sf": 1
           },
           {
-            "id": "C27G004",
-            "text": "Conductor 的中文是？",
+            "id": "C25G021",
+            "text": "The element with atomic number 1 is",
             "options": [
-              "A. 導電體",
-              "B. 電解質",
-              "C. 非導電體",
-              "D. 化學式"
+              "A. H",
+              "B. He",
+              "C. Li",
+              "D. K"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G005",
-            "text": "Delocalized electron 的中文是？",
+            "id": "C25G022",
+            "text": "The element with atomic number 2 is",
             "options": [
-              "A. 離域電子",
-              "B. 離子",
-              "C. 靜電吸引力",
-              "D. 電子轉移"
+              "A. He",
+              "B. Li",
+              "C. Ar",
+              "D. H"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G006",
-            "text": "Electrolyte 的中文是？",
+            "id": "C25G023",
+            "text": "The element with atomic number 3 is",
             "options": [
-              "A. 電解質",
-              "B. 導電體",
-              "C. 非導電體",
-              "D. 化學式"
+              "A. Li",
+              "B. Be",
+              "C. Na",
+              "D. B"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G007",
-            "text": " ‘Dot-and-cross’ diagram 的中文是？",
+            "id": "C25G024",
+            "text": "The element with atomic number 4 is",
             "options": [
-              "A. 點叉圖",
-              "B. 靜電吸引力",
-              "C. 電子轉移",
-              "D. 離域電子"
+              "A. Be",
+              "B. B",
+              "C. Mg",
+              "D. C"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G008",
-            "text": "Formula 的中文是？",
+            "id": "C25G025",
+            "text": "The element with atomic number 5 is",
             "options": [
-              "A. 化學式",
-              "B. 電解質",
-              "C. 負離子",
-              "D. 正離子"
+              "A. B",
+              "B. C",
+              "C. Be",
+              "D. N"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G009",
-            "text": "Ion 的中文是？",
+            "id": "C25G026",
+            "text": "The element with atomic number 6 is",
             "options": [
-              "A. 離子",
-              "B. 離域電子",
-              "C. 分子",
-              "D. 原子"
+              "A. C",
+              "B. N",
+              "C. Si",
+              "D. O"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G010",
-            "text": "Ionic bond 的中文是？",
+            "id": "C25G027",
+            "text": "The element with atomic number 7 is",
             "options": [
-              "A. 離子鍵",
-              "B. 化學鍵",
-              "C. 金屬鍵",
-              "D. 共價鍵"
+              "A. N",
+              "B. O",
+              "C. Ni",
+              "D. F"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G011",
-            "text": "Ionic compound 的中文是？",
+            "id": "C25G028",
+            "text": "The element with atomic number 8 is",
             "options": [
-              "A. 離子化合物",
-              "B. 離子鍵",
-              "C. 靜電吸引力",
-              "D. 離域電子"
+              "A. O",
+              "B. F",
+              "C. S",
+              "D. Ne"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G012",
-            "text": "Metallic bond 的中文是？",
+            "id": "C25G029",
+            "text": "The element with atomic number 9 is",
             "options": [
-              "A. 金屬鍵",
-              "B. 化學鍵",
-              "C. 離子鍵",
-              "D. 共價鍵"
+              "A. F",
+              "B. Ne",
+              "C. Fl",
+              "D. N"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G013",
-            "text": "Migration of ion 的中文是？",
+            "id": "C25G030",
+            "text": "The element with atomic number 10 is",
             "options": [
-              "A. 離子的遷移",
-              "B. 電子轉移",
-              "C. 離子化合物",
-              "D. 靜電吸引力"
+              "A. Ne",
+              "B. Na",
+              "C. N",
+              "D. Ca"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G014",
-            "text": "Non-conductor 的中文是？",
+            "id": "C25G031",
+            "text": "The element with atomic number 11 is",
             "options": [
-              "A. 非導電體",
-              "B. 電解質",
-              "C. 導電體",
-              "D. 化學式"
+              "A. Na",
+              "B. S",
+              "C. N",
+              "D. Ne"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G015",
-            "text": "Monoatomic ion 的中文是？",
+            "id": "C25G032",
+            "text": "The element with atomic number 12 is",
             "options": [
-              "A. 單原子離子",
-              "B. 多原子離子",
-              "C. 離子化合物",
-              "D. 靜電吸引力"
+              "A. Mg",
+              "B. Al",
+              "C. Mn",
+              "D. Na"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G016",
-            "text": "Polyatomic ion 的中文是？",
+            "id": "C25G033",
+            "text": "The element with atomic number 13 is",
             "options": [
-              "A. 多原子離子",
-              "B. 單原子離子",
-              "C. 離子化合物",
-              "D. 靜電吸引力"
+              "A. Al",
+              "B. Si",
+              "C. Ar",
+              "D. Mg"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G017",
-            "text": "Transfer of electron 的中文是？",
+            "id": "C25G034",
+            "text": "The element with atomic number 14 is",
             "options": [
-              "A. 電子轉移",
-              "B. 離子的遷移",
-              "C. 離子化合物",
-              "D. 靜電吸引力"
+              "A. Si",
+              "B. P",
+              "C. S",
+              "D. Al"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           },
           {
-            "id": "C27G018",
-            "text": "Electrostatic attraction 的中文是？",
+            "id": "C25G035",
+            "text": "The element with atomic number 15 is",
             "options": [
-              "A. 靜電吸引力",
-              "B. 離域電子",
-              "C. 離子化合物",
-              "D. 電子轉移"
+              "A. P",
+              "B. S",
+              "C. Ph",
+              "D. Si"
             ],
             "correct": "A",
             "explanation": "",
             "imageUrl": null,
-            "difficulty": "🌐 Translate",
-            "difficulty_level": 0,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25G036",
+            "text": "The element with atomic number 16 is",
+            "options": [
+              "A. S",
+              "B. Cl",
+              "C. Si",
+              "D. P"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25G037",
+            "text": "The element with atomic number 17 is",
+            "options": [
+              "A. Cl",
+              "B. Ar",
+              "C. C",
+              "D. S"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25G038",
+            "text": "The element with atomic number 18 is",
+            "options": [
+              "A. Ar",
+              "B. K",
+              "C. Ag",
+              "D. Cl"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25G039",
+            "text": "The element with atomic number 19 is",
+            "options": [
+              "A. K",
+              "B. Ca",
+              "C. P",
+              "D. Ar"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C25G040",
+            "text": "The element with atomic number 20 is",
+            "options": [
+              "A. Ca",
+              "B. K",
+              "C. C",
+              "D. Cl"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           }
         ]
@@ -996,19 +1414,83 @@ window.ALL_UNITS = {
         "name": "6 Periodic Table",
         "questions": [
           {
-            "id": "C26G018",
-            "text": "Atomic number 的中文是？",
+            "id": "C26A001",
+            "text": "In the modern Periodic Table, elements are arranged in order of increasing",
             "options": [
-              "A. 原子序",
-              "B. 質量數",
-              "C. 同位素",
-              "D. 化學符號"
+              "A. mass number.",
+              "B. atomic number.",
+              "C. atomic weight.",
+              "D. number of neutrons in the atoms. "
             ],
-            "correct": "A",
-            "explanation": "",
+            "correct": "B",
+            "explanation": "In the Periodic Table, elements are arranged in <br>order of increasing NUMBER of PROTON, that is, atomic number.",
             "imageUrl": null,
             "difficulty": "✅ Basic",
             "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A002",
+            "text": "Atomic numbers of four elements, 𝑊, 𝑋, 𝑌 and 𝑍 are 7, 11, 15 and 20 respectively.  Which of the following elements could be in the same group of the Periodic Table?",
+            "options": [
+              "A. 𝑊 and 𝑋 ",
+              "B. 𝑊 and 𝑌 ",
+              "C. 𝑋 and 𝑍 ",
+              "D. 𝑌 and 𝑍 "
+            ],
+            "correct": "B",
+            "explanation": "The electronic arrangement of 𝑊 = 2, 5; 𝑋 = 2, 8, 1; 𝑌 = 2, 8, 5; 𝑍 = 2, 8, 8, 2. Elements in the same group have the same outermost shell electrons.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A003",
+            "text": "Comparing the elements in the third period of the Periodic Table, from sodium to argon, which of the following statements are correct?<br>(1)   The elements change from metals to semi-metals and then to non-metals.<br>(2)   They show a gradual increase in the number of protons in their atoms.<br>(3)   They show a gradual increase in the number of electron shells occupied by the electrons in their atoms.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "Number of electron shells remains unchanged when it is across the Period.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C26A004",
+            "text": "The electronic arrangement of element 𝑋 is 2, 8, 18, 8, 2. 𝑋 may have similar chemical properties to that of",
+            "options": [
+              "A. iodine.",
+              "B. potassium.",
+              "C. calcium.",
+              "D. helium."
+            ],
+            "correct": "C",
+            "explanation": "Both 𝑋 and calcium are Group II elements.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A005",
+            "text": "Which of the following statements concerning Group 0 elements is INCORRECT?",
+            "options": [
+              "A. They are called noble gases.",
+              "B. They are chemically unreactive.",
+              "C.  They all have eight electrons in the outermost <br>shell.",
+              "D.  Their relative atomic masses increase down <br>the group."
+            ],
+            "correct": "C",
+            "explanation": "Helium only has TWO electrons in the outermost electron shell.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
             "sf": 1
           },
           {
@@ -1492,86 +1974,6 @@ window.ALL_UNITS = {
             "sf": 1
           },
           {
-            "id": "C26A001",
-            "text": "In the Periodic Table, elements are arranged in <br>order of increasing",
-            "options": [
-              "A. mass number.",
-              "B. atomic number.",
-              "C. atomic weight.",
-              "D. number of neutrons in the atoms. "
-            ],
-            "correct": "B",
-            "explanation": "In the Periodic Table, elements are arranged in <br>order of increasing NUMBER of PROTON, that is, atomic number.",
-            "imageUrl": null,
-            "difficulty": "✅ Basic",
-            "difficulty_level": 1,
-            "sf": 1
-          },
-          {
-            "id": "C26A002",
-            "text": "Atomic numbers of four elements, 𝑊, 𝑋, 𝑌 and 𝑍 are 7, 11, 15 and 20 respectively.  Which of the following elements could be in the same group of the Periodic Table?",
-            "options": [
-              "A. 𝑊 and 𝑋 ",
-              "B. 𝑊 and 𝑌 ",
-              "C. 𝑋 and 𝑍 ",
-              "D. 𝑌 and 𝑍 "
-            ],
-            "correct": "B",
-            "explanation": "The electronic arrangement of 𝑊 = 2, 5; 𝑋 = 2, 8, 1; 𝑌 = 2, 8, 5; 𝑍 = 2, 8, 8, 2. Elements in the same group have the same outermost shell electrons.",
-            "imageUrl": null,
-            "difficulty": "✅ Basic",
-            "difficulty_level": 1,
-            "sf": 1
-          },
-          {
-            "id": "C26A003",
-            "text": "Comparing the elements in the third period of the Periodic Table, from sodium to argon, which of the following statements are correct?<br>(1)   The elements change from metals to semi-metals and then to non-metals.<br>(2)   They show a gradual increase in the number of protons in their atoms.<br>(3)   They show a gradual increase in the number of electron shells occupied by the electrons in their atoms.",
-            "options": [
-              "A. (1) and (2) only",
-              "B. (1) and (3) only",
-              "C. (2) and (3) only",
-              "D. (1), (2) and (3) "
-            ],
-            "correct": "A",
-            "explanation": "Number of electron shells remains unchanged when it is across the Period.",
-            "imageUrl": null,
-            "difficulty": "🔥 Challenge",
-            "difficulty_level": 3,
-            "sf": 0
-          },
-          {
-            "id": "C26A004",
-            "text": "The electronic arrangement of element 𝑋 is 2, 8, 18, 8, 2. 𝑋 may have similar chemical properties to that of",
-            "options": [
-              "A. iodine.",
-              "B. potassium.",
-              "C. calcium.",
-              "D. helium."
-            ],
-            "correct": "C",
-            "explanation": "Both 𝑋 and calcium are Group II elements.",
-            "imageUrl": null,
-            "difficulty": "✅ Basic",
-            "difficulty_level": 1,
-            "sf": 1
-          },
-          {
-            "id": "C26A005",
-            "text": "Which of the following statements concerning Group 0 elements is INCORRECT?",
-            "options": [
-              "A. They are called noble gases.",
-              "B. They are chemically unreactive.",
-              "C.  They all have eight electrons in the outermost <br>shell.",
-              "D.  Their relative atomic masses increase down <br>the group."
-            ],
-            "correct": "C",
-            "explanation": "Helium only has TWO electrons in the outermost electron shell.",
-            "imageUrl": null,
-            "difficulty": "📈 Advanced",
-            "difficulty_level": 2,
-            "sf": 1
-          },
-          {
             "id": "C26G001",
             "text": "Alkali metal 是第幾族的元素？",
             "options": [
@@ -1761,6 +2163,1691 @@ window.ALL_UNITS = {
             "imageUrl": null,
             "difficulty": "🌐 Translate",
             "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26G013",
+            "text": "Atomic number 的中文是？",
+            "options": [
+              "A. 原子序",
+              "B. 質量數",
+              "C. 同位素",
+              "D. 化學符號"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C26A006",
+            "text": "The following table shows the atomic numbers of five elements. Which two elements could be in the same period <br>of the Periodic Table?",
+            "options": [
+              "A. 𝑃 and 𝑄 ",
+              "B. 𝑄 and 𝑅 ",
+              "C. 𝑅 and 𝑆 ",
+              "D. 𝑆 and 𝑇 "
+            ],
+            "correct": "C",
+            "explanation": "P: Period 1<br>Q: Period 2<br>R and S: Period 3<br>T: Period 4",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C06A006.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26A007",
+            "text": "Which of the following statements concerning argon is/are correct? <br> (1)   It is a colourless gas at room temperature and <br>pressure. <br> (2)  It is used to fill balloons and airships.<br> (3)  It has an octet of electrons.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "C",
+            "explanation": "Argon is dense (consider the mass of argon and nitrogen/oxygen), hence it cannot float.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C26A008",
+            "text": "Which of the following statements concerning the elements in the same group of the Periodic Table is/are correct?<br> (1)   The elements exist in the same physical state at room temperature and pressure.<br> (2)   The elements have the same number of outermost shell electrons in their atoms (except Group 0).<br> (3)   The higher the element is located in the group, the less reactive the element is.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "B",
+            "explanation": "For (1), consider Group VII, fluorine and chlorine are gases, while bromine is liquid and iodine is solid.<br>For (3), Group VII elements' reactivity decreases down the group.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C26A009",
+            "text": "Which of the following pairs of elements would react with each other most vigorously?",
+            "options": [
+              "A. Lithium and fluorine",
+              "B. Lithium and bromine",
+              "C. Potassium and fluorine",
+              "D. Potassium and bromine"
+            ],
+            "correct": "C",
+            "explanation": "Group I elements' reactivity increases down the group while group VII elements' reactivity decreases down the group. Hence K is more reavtive than Li, while F is more reactive than Br.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26A010",
+            "text": "For elements in the main groups, the number of occupied electron shells in an atom of the element equals the __________ number of an element.",
+            "options": [
+              "A. period",
+              "B. group",
+              "C. atomic",
+              "D. mass"
+            ],
+            "correct": "A",
+            "explanation": "Group number = No. of outermost shell electrons<br>Period number = No. of occupied electron shells",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A011",
+            "text": "For elements in the main groups, the number of electrons in the outermost shell in an atom of an element equals the __________ number of an element.",
+            "options": [
+              "A. period",
+              "B. group",
+              "C. atomic",
+              "D. mass"
+            ],
+            "correct": "B",
+            "explanation": "Group number = No. of outermost shell electrons<br>Period number = No. of occupied electron shells",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A012",
+            "text": "Across a period, there is a gradual change from __________, through semi-metals and finally to __________.",
+            "options": [
+              "A. metals / non-metals",
+              "B. non-metals / metals",
+              "C. solid / gas",
+              "D. gas / solid"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A013",
+            "text": "Chemical properties of an element depend mainly on the number of __________ in the __________ shell of its atoms.",
+            "options": [
+              "A. protons / innermost",
+              "B. neutrons / outermost",
+              "C. electrons / outermost",
+              "D. electrons / nucleus"
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A014",
+            "text": "The __________ metals have __________ electron(s) in the outermost shell. They are in Group I. Reactivity of these elements __________ down the group.",
+            "options": [
+              "A. Alkaline earth / 2 / decreases",
+              "B. Alkali / 1 / increases",
+              "C. Alkali / 1 / decreases",
+              "D. Alkaline earth / 2 / increases"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26A015",
+            "text": "The __________ metals have __________ electron(s) in the outermost shell. They are in Group II. Reactivity of these elements __________ down the group.",
+            "options": [
+              "A. Alkaline earth / 2 / decreases",
+              "B. Alkali / 1 / increases",
+              "C. Alkali / 1 / decreases",
+              "D. Alkaline earth / 2 / increases"
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26A016",
+            "text": "The Group VII elements have __________ electrons in the outermost shell. They are collectively known as __________. Reactivity of these elements __________ down the group.",
+            "options": [
+              "A. 7 / noble gases / increases",
+              "B. 7 / halogens / decreases",
+              "C. 1 / halogens / increases",
+              "D. 7 / halogens / increases"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26A017",
+            "text": "The Group 0 elements (except helium) all have __________ outermost shell electrons. They are collectively known as __________.",
+            "options": [
+              "A. 2 / halogens",
+              "B. 8 / noble gases",
+              "C. 8 / transition metals",
+              "D. 1 / alkali metals"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26A018",
+            "text": "The __________ refers to the strong tendency of all atoms to attain the stable electronic arrangements of a noble gas.",
+            "options": [
+              "A. octet rule",
+              "B. Periodic Table",
+              "C. electron diagram",
+              "D. isotope"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26G014",
+            "text": "The element in Group I and Period 2 is",
+            "options": [
+              "A. lithium",
+              "B. sodium",
+              "C. beryllium",
+              "D. magnesium"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G015",
+            "text": "The element in Group II and Period 2 is",
+            "options": [
+              "A. beryllium",
+              "B. magnesium",
+              "C. boron",
+              "D. aluminium"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G016",
+            "text": "The element in Group III and Period 2 is",
+            "options": [
+              "A. boron",
+              "B. aluminium",
+              "C. carbon",
+              "D. silicon"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G017",
+            "text": "The element in Group IV and Period 2 is",
+            "options": [
+              "A. carbon",
+              "B. silicon",
+              "C. nitrogen",
+              "D. phosphorus"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G018",
+            "text": "The element in Group V and Period 2 is",
+            "options": [
+              "A. nitrogen",
+              "B. phosphorus",
+              "C. oxygen",
+              "D. sulphur"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G019",
+            "text": "The element in Group VI and Period 2 is",
+            "options": [
+              "A. oxygen",
+              "B. sulphur",
+              "C. fluorine",
+              "D. chlorine"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G020",
+            "text": "The element in Group VII and Period 2 is",
+            "options": [
+              "A. fluorine",
+              "B. chlorine",
+              "C. neon",
+              "D. argon"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G021",
+            "text": "The element in Group 0 and Period 2 is",
+            "options": [
+              "A. neon",
+              "B. argon",
+              "C. lithium",
+              "D. sodium"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G022",
+            "text": "The element in Group I and Period 3 is",
+            "options": [
+              "A. sodium",
+              "B. lithium",
+              "C. potassium",
+              "D. magnesium"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G023",
+            "text": "The element in Group II and Period 3 is",
+            "options": [
+              "A. magnesium",
+              "B. beryllium",
+              "C. calcium",
+              "D. aluminium"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G024",
+            "text": "The element in Group III and Period 3 is",
+            "options": [
+              "A. aluminium",
+              "B. boron",
+              "C. carbon",
+              "D. silicon"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G025",
+            "text": "The element in Group IV and Period 3 is",
+            "options": [
+              "A. silicon",
+              "B. carbon",
+              "C. nitrogen",
+              "D. phosphorus"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G026",
+            "text": "The element in Group V and Period 3 is",
+            "options": [
+              "A. phosphorus",
+              "B. nitrogen",
+              "C. oxygen",
+              "D. sulphur"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G027",
+            "text": "The element in Group VI and Period 3 is",
+            "options": [
+              "A. sulphur",
+              "B. oxygen",
+              "C. fluorine",
+              "D. chlorine"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G028",
+            "text": "The element in Group VII and Period 3 is",
+            "options": [
+              "A. chlorine",
+              "B. fluorine",
+              "C. neon",
+              "D. argon"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G029",
+            "text": "The element in Group 0 and Period 3 is",
+            "options": [
+              "A. argon",
+              "B. neon",
+              "C. lithium",
+              "D. sodium"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G030",
+            "text": "The element in Group I and Period 4 is",
+            "options": [
+              "A. potassium",
+              "B. sodium",
+              "C. lithium",
+              "D. calcium"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G031",
+            "text": "The element in Group II and Period 4 is",
+            "options": [
+              "A. calcium",
+              "B. magnesium",
+              "C. beryllium",
+              "D. potassium"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G032",
+            "text": "What is the group name of Group I elements?",
+            "options": [
+              "A. Alkali metals",
+              "B. Alkaline earth metals",
+              "C. Halogens",
+              "D. Noble gases"
+            ],
+            "correct": "A",
+            "explanation": "Alkali metals = Group I; Alkaline earth metals = Group II",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G033",
+            "text": "What is the group name of Group II elements?",
+            "options": [
+              "A. Alkali metals",
+              "B. Alkaline earth metals",
+              "C. Halogens",
+              "D. Noble gases"
+            ],
+            "correct": "B",
+            "explanation": "Alkali metals = Group I; Alkaline earth metals = Group II",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G034",
+            "text": "What is the group name of Group VII elements?",
+            "options": [
+              "A. Alkali metals",
+              "B. Alkaline earth metals",
+              "C. Halogens",
+              "D. Noble gases"
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G035",
+            "text": "What is the group name of Group 0 elements?",
+            "options": [
+              "A. Alkali metals",
+              "B. Alkaline earth metals",
+              "C. Halogens",
+              "D. Noble gases"
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C26G036",
+            "text": "Astatine is an element below iodine in the Periodic Table. Predict its physical state and reactivity.",
+            "options": [
+              "A. Solid, more reactive than iodine",
+              "B. Gas, more reactive than iodine",
+              "C. Solid, less reactive than iodine",
+              "D. Gas, less reactive than iodine"
+            ],
+            "correct": "C",
+            "explanation": "For Group VII elements, reactivity decreases down the group. And it changes from gas to liquid to solid down theg group.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26G037",
+            "text": "Rubidium(Rb) is a Group I element below potassium in the Periodic Table. Predict its physical state and reactivity.",
+            "options": [
+              "A. Solid, more reactive than potassium.",
+              "B. Gas, more reactive than potassium.",
+              "C. Solid, less reactive than potassium.",
+              "D. Gas, less reactive than potassium."
+            ],
+            "correct": "A",
+            "explanation": "For Group I elements, reactivity increases down the group. All group I metals are solid.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26G038",
+            "text": "Barium(Ba) is a Group II element below calcium in the Periodic Table. Predict its physical state and reactivity.",
+            "options": [
+              "A. Solid, more reactive than calcium.",
+              "B. Gas, more reactive than calcium.",
+              "C. Solid, less reactive than calcium.",
+              "D. Gas, less reactive than calcium."
+            ],
+            "correct": "A",
+            "explanation": "For Group II elements, reactivity increases down the group. All group II metals are solid.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          }
+        ]
+      },
+      "7": {
+        "name": "7 Ionic Bond and metallic bond",
+        "questions": [
+          {
+            "id": "C27G001",
+            "text": "Anion 的中文是？",
+            "options": [
+              "A. 負離子",
+              "B. 正離子",
+              "C. 化學式",
+              "D. 電解質"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G002",
+            "text": "Cation 的中文是？",
+            "options": [
+              "A. 正離子",
+              "B. 負離子",
+              "C. 化學式",
+              "D. 電解質"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G003",
+            "text": "Chemical bond 的中文是？",
+            "options": [
+              "A. 化學鍵",
+              "B. 離子鍵",
+              "C. 金屬鍵",
+              "D. 共價鍵"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G004",
+            "text": "Conductor 的中文是？",
+            "options": [
+              "A. 導電體",
+              "B. 電解質",
+              "C. 非導電體",
+              "D. 化學式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G005",
+            "text": "Delocalized electron 的中文是？",
+            "options": [
+              "A. 離域電子",
+              "B. 離子",
+              "C. 靜電吸引力",
+              "D. 電子轉移"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G006",
+            "text": "Electrolyte 的中文是？",
+            "options": [
+              "A. 電解質",
+              "B. 導電體",
+              "C. 非導電體",
+              "D. 化學式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G007",
+            "text": " ‘Dot-and-cross’ diagram 的中文是？",
+            "options": [
+              "A. 點叉圖",
+              "B. 靜電吸引力",
+              "C. 電子轉移",
+              "D. 離域電子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G008",
+            "text": "Formula 的中文是？",
+            "options": [
+              "A. 化學式",
+              "B. 電解質",
+              "C. 負離子",
+              "D. 正離子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G009",
+            "text": "Ion 的中文是？",
+            "options": [
+              "A. 離子",
+              "B. 離域電子",
+              "C. 分子",
+              "D. 原子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G010",
+            "text": "Ionic bond 的中文是？",
+            "options": [
+              "A. 共價鍵",
+              "B. 離子鍵",
+              "C. 金屬鍵",
+              "D. 氫鍵"
+            ],
+            "correct": "B",
+            "explanation": "Ionic bond = 離子鍵",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G011",
+            "text": "Ionic compound 的中文是？",
+            "options": [
+              "A. 離子化合物",
+              "B. 離子鍵",
+              "C. 靜電吸引力",
+              "D. 離域電子"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G012",
+            "text": "Metallic bond 的中文是？",
+            "options": [
+              "A. 金屬鍵",
+              "B. 化學鍵",
+              "C. 離子鍵",
+              "D. 共價鍵"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G013",
+            "text": "Migration of ion 的中文是？",
+            "options": [
+              "A. 離子的遷移",
+              "B. 電子轉移",
+              "C. 離子化合物",
+              "D. 靜電吸引力"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G014",
+            "text": "Non-conductor 的中文是？",
+            "options": [
+              "A. 非導電體",
+              "B. 電解質",
+              "C. 導電體",
+              "D. 化學式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G015",
+            "text": "Monoatomic ion 的中文是？",
+            "options": [
+              "A. 單原子離子",
+              "B. 多原子離子",
+              "C. 離子化合物",
+              "D. 靜電吸引力"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G016",
+            "text": "Polyatomic ion 的中文是？",
+            "options": [
+              "A. 多原子離子",
+              "B. 單原子離子",
+              "C. 離子化合物",
+              "D. 靜電吸引力"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G017",
+            "text": "Transfer of electron 的中文是？",
+            "options": [
+              "A. 電子轉移",
+              "B. 離子的遷移",
+              "C. 離子化合物",
+              "D. 靜電吸引力"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27G018",
+            "text": "Electrostatic attraction 的中文是？",
+            "options": [
+              "A. 靜電吸引力",
+              "B. 離域電子",
+              "C. 離子化合物",
+              "D. 電子轉移"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C27A001",
+            "text": "The diagram below shows the atomic structure of a particle. What is the symbol for the particle?",
+            "options": [
+              "A. Mg²⁺",
+              "B. F⁻",
+              "C. Na⁺",
+              "D. Ne"
+            ],
+            "correct": "A",
+            "explanation": "Proton determines the element, p = 12 hence it is Magnesium. Yet only ten electrons there, it is a magnesium ion.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C07A001.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27A002",
+            "text": "Which of the following particles have the same number of electrons as an argon atom? <br> (1)  K⁺<br> (2)  Al<br> (3)  Cl⁻",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "B",
+            "explanation": "Al: 2, 8, 3<br>K: 2, 8, 8, 1 --> K⁺: 2, 8, 8<br>Cl: 2, 8, 7 --> Cl⁻: 2, 8, 8",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C27A003",
+            "text": "The numbers of protons, neutrons and electrons in four particles are given in the following table. Which of the particles is a cation?",
+            "options": [
+              "A. 𝑊",
+              "B. 𝑋",
+              "C. 𝑌",
+              "D. 𝑍"
+            ],
+            "correct": "B",
+            "explanation": "When number of proton > number of electron, it is a cation (positive ion).",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C07A003.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C27A004",
+            "text": "Which of the following electron diagrams represents magnesium fluoride?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "A",
+            "explanation": "The ions of Mg and Cl are 2+ and 1- respectively. Hence it requires 1 Mg²⁺ and 2 F⁻. The \"2\" is underscripted only in formula.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C07A004.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C27A005",
+            "text": "Which of the following combinations is correct?",
+            "options": [
+              "A. Sodium dichromate - Na₂Cr₂O₇",
+              "B. Iron(II) oxide - Fe₂O₃",
+              "C. Potassium permanganate - K₂MnO₄",
+              "D. Copper(II) hydroxide - CuOH"
+            ],
+            "correct": "A",
+            "explanation": "Iron(II) oxide - FeO<br>Potassium permanganate - KMnO₄<br>Copper(II) hydroxide  - Cu(OH)₂",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C27A006",
+            "text": "An atom of element 𝑋 has 19 protons, 18 neutrons and 19 electrons while an atom of element 𝑌 has 8 protons, 7 neutrons and 8 electrons. Which of the following ionic compounds do the two elements form?",
+            "options": [
+              "A. 𝑋𝑌",
+              "B. 𝑋𝑌₂",
+              "C. 𝑋₂𝑌",
+              "D. 𝑋₂𝑌₃"
+            ],
+            "correct": "C",
+            "explanation": "𝑋 has 19 electrons (2, 8, 8, 1) --> Group I, while 𝑌 has 8 electrons  (2, 6) --> Group VI.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C27A007",
+            "text": "Which of the following combinations is INCORRECT?",
+            "options": [
+              "A. CrO₄²⁻(aq) - yellow",
+              "B. MnO₄⁻(aq) - purple",
+              "C. Fe²⁺(aq) - pale green",
+              "D. K⁺(aq) - white"
+            ],
+            "correct": "D",
+            "explanation": "K⁺(aq) is colourless.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27A008",
+            "text": "Which of the following is the correct description of metallic bond?",
+            "options": [
+              "A. The electrostatic attraction between protons and the ‘sea’ of delocalized electrons.",
+              "B. The electrostatic attraction between the nuclei and the ‘sea’ of negative ions.",
+              "C. The electrostatic attraction between the metal ions and the ‘sea’ of delocalized electrons.",
+              "D. The electrostatic attraction between the oppositely charged ions."
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27A009",
+            "text": "What particles are responsible for the electrical conduction of (a) metals and (b) electrolytes?",
+            "options": [
+              "A. electrons / electrons",
+              "B. electrons / cations and anions",
+              "C. cations / anions",
+              "D. cation and electrons / cations and anions"
+            ],
+            "correct": "B",
+            "explanation": "Only freely moved particles can conduct electricity.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27A010",
+            "text": "Metals can conduct electricity because",
+            "options": [
+              "A. metallic bonds are strong.",
+              "B. metallic bonds are non-directional.",
+              "C. there are delocalized electrons.",
+              "D. there are positively charged ions. "
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27A011",
+            "text": "Substances can be classified into __________, non-conductors and __________.",
+            "options": [
+              "A. metals / semi-conductors",
+              "B. conductors / insulators",
+              "C. conductors / semi-conductors",
+              "D. solids / liquids"
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27A012",
+            "text": "There are three main types of chemical bonds: __________ bonds, __________ bonds and __________ bonds.",
+            "options": [
+              "A. ionic / covalent / metallic",
+              "B. strong / weak / hydrogen",
+              "C. primary / secondary / tertiary",
+              "D. single / double / triple"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27A013",
+            "text": "Atoms of elements may become more stable by gaining or losing __________ in order to get the electronic arrangement of the nearest __________.",
+            "options": [
+              "A. protons / metal",
+              "B. neutrons / halogen",
+              "C. electrons / noble gas",
+              "D. electrons / alkali metal"
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27A014",
+            "text": "Positively charged ions are called __________ while negatively charged ions are called __________.",
+            "options": [
+              "A. anions / cations",
+              "B. cations / anions",
+              "C. protons / electrons",
+              "D. electrons / protons"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27A015",
+            "text": "A __________ ion is derived from a single atom. A __________ ion is derived from a group of atoms.",
+            "options": [
+              "A. monatomic / polyatomic",
+              "B. simple / complex",
+              "C. single / multiple",
+              "D. atomic / molecular"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27A016",
+            "text": "For metals in Groups I, II and III, the number of positive charges on an ion is equal to its __________ number.",
+            "options": [
+              "A. period",
+              "B. atomic",
+              "C. group",
+              "D. mass"
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27A017",
+            "text": "For non-metals in Groups V, VI and VII, the number of negative charges on an ion is usually equal to ‘__________ minus group number’.",
+            "options": [
+              "A. 7",
+              "B. 8",
+              "C. 18",
+              "D. 2"
+            ],
+            "correct": "B",
+            "explanation": "Ions of Group V elements are 3- charge;<br>Ions of Group VI elements are 2- charge;<br>Ions of Group VII elements are - charge.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27A018",
+            "text": "In the formation of calcium oxide from calcium and oxygen, electrons are __________ from calcium atoms to oxygen atoms.",
+            "options": [
+              "A. transferred",
+              "B. shared",
+              "C. formed",
+              "D. produced"
+            ],
+            "correct": "A",
+            "explanation": "Ionic bonds origin from transfer of electrons and then the electrostatic attractions between ions.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27A019",
+            "text": "Many ions are __________. However, some ions are coloured.",
+            "options": [
+              "A. colourless",
+              "B. soluble",
+              "C. unstable",
+              "D. gaseous"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27A020",
+            "text": "The __________ of coloured ions can be seen under the influence of an electric field.",
+            "options": [
+              "A. migration",
+              "B. formation",
+              "C. reaction",
+              "D. solubility"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27A021",
+            "text": "The electrostatic attraction between a ‘sea’ of __________ electrons and metal __________ is called metallic bond.",
+            "options": [
+              "A. mobile / nuclei",
+              "B. delocalised / cations",
+              "C. localised / atoms",
+              "D. free / anions"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G019",
+            "text": "What is the color of chromium(III) ions in aqueous solution?",
+            "options": [
+              "A. green",
+              "B. orange",
+              "C. yellow",
+              "D. pink"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G020",
+            "text": "What is the color of dichromate ions in aqueous solution?",
+            "options": [
+              "A. orange",
+              "B. green",
+              "C. yellow",
+              "D. purple"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G021",
+            "text": "What is the color of chromate ions in aqueous solution?",
+            "options": [
+              "A. yellow",
+              "B. green",
+              "C. orange",
+              "D. purple"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G022",
+            "text": "What is the color of manganese(II) ions in aqueous solution?",
+            "options": [
+              "A. very pale pink",
+              "B. purple",
+              "C. green",
+              "D. blue"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G023",
+            "text": "What is the color of permanganate ions in aqueous solution?",
+            "options": [
+              "A. purple",
+              "B. very pale pink",
+              "C. yellow",
+              "D. orange"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G024",
+            "text": "What is the color of iron(III) ions in aqueous solution?",
+            "options": [
+              "A. yellow / brown",
+              "B. pale green",
+              "C. orange",
+              "D. pink"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G025",
+            "text": "What is the color of iron(II) ions in aqueous solution?",
+            "options": [
+              "A. pale green",
+              "B. yellow / brown",
+              "C. very pale pink",
+              "D. blue"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G026",
+            "text": "What is the color of cobalt(II) ions in aqueous solution?",
+            "options": [
+              "A. pink",
+              "B. blue / green",
+              "C. yellow",
+              "D. purple"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G027",
+            "text": "What is the color of nickel(II) ions in aqueous solution?",
+            "options": [
+              "A. green",
+              "B. pink",
+              "C. very pale pink",
+              "D. yellow"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G028",
+            "text": "What is the color of copper(II) ions in aqueous solution?",
+            "options": [
+              "A. blue / green",
+              "B. pink",
+              "C. very pale pink",
+              "D. purple"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27G029",
+            "text": "Which of the following combinations is INCORRECT?",
+            "options": [
+              "A. sodium ion - Na⁺",
+              "B. potassium ion - K⁺",
+              "C. silver ion - Ag⁺",
+              "D. copper ion - Cu⁺"
+            ],
+            "correct": "D",
+            "explanation": "Cu⁺ is copper(I) ion instead of copper ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G030",
+            "text": "Which of the following combinations is INCORRECT?",
+            "options": [
+              "A. mercury(I) ion - Hg⁺",
+              "B. zinc(II) ion - Zn²⁺",
+              "C. silver ion - Ag⁺",
+              "D. lead(II) ion - Pb²⁺"
+            ],
+            "correct": "B",
+            "explanation": "Zn²⁺ is zinc ion instead of zinc(II) ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G031",
+            "text": "What is the formula of hydride ion?",
+            "options": [
+              "A. H⁺",
+              "B. H⁻",
+              "C. NH₄⁺",
+              "D.  OH⁻"
+            ],
+            "correct": "B",
+            "explanation": "H⁺ is hydrogen ion while H⁻ is hydride ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G032",
+            "text": "What is the formula of ammonium ion?",
+            "options": [
+              "A. NH₄⁺",
+              "B. NO₃⁻",
+              "C. NO₂⁻",
+              "D. N³⁻"
+            ],
+            "correct": "A",
+            "explanation": "NH₄⁺is ammonium ion .<br>NO₃⁻ is nitrate ion.<br>NO₂⁻ is nitrite ion.<br>N³⁻ is nitride ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G033",
+            "text": "What is the formula of nitrate ion?",
+            "options": [
+              "A. NH₄⁺",
+              "B. NO₃⁻",
+              "C. NO₂⁻",
+              "D. N³⁻"
+            ],
+            "correct": "B",
+            "explanation": "NH₄⁺is ammonium ion .<br>NO₃⁻ is nitrate ion.<br>NO₂⁻ is nitrite ion.<br>N³⁻ is nitride ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G034",
+            "text": "Which of the following combinations is INCORRECT?",
+            "options": [
+              "A. zinc ion - Zn²⁺",
+              "B. magnesium ion - Mg²⁺",
+              "C. barium ion - Ba²⁺",
+              "D. lead ion - Pb²⁺"
+            ],
+            "correct": "D",
+            "explanation": "Pb²⁺ is lead(II) ion instead of lead ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G035",
+            "text": "Which of the following combinations is INCORRECT?",
+            "options": [
+              "A. calcium(II) ion - Ca²⁺",
+              "B. iron(II) ion - Fe²⁺",
+              "C. cobalt(II) ion - Co²⁺",
+              "D. nickel(II) ion - Ni²⁺"
+            ],
+            "correct": "A",
+            "explanation": "Ca²⁺ is calcium ion instead of calcium(II) ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G036",
+            "text": "Which of the following combinations is INCORRECT?",
+            "options": [
+              "A. aluminiun(III) ion - Al³⁺",
+              "B. chromium(III) ion - Cr³⁺",
+              "C. manganese(II) ion - Mn²⁺",
+              "D. copper(II) ion - Cu²⁺"
+            ],
+            "correct": "A",
+            "explanation": "Al³⁺ is aluminium ion instead of aluminium(III) ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G037",
+            "text": "What is the formula of chlorate ion?",
+            "options": [
+              "A. Cl⁻",
+              "B. ClO₃⁻",
+              "C. ClO₄⁻",
+              "D. ClO⁻"
+            ],
+            "correct": "B",
+            "explanation": "Cl⁻is chloride ion .<br>ClO₃⁻ is chlorate ion.<br>ClO₄⁻ is perchlorate ion.<br>ClO⁻ is hypochlorite ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G038",
+            "text": "What is the formula of hydrogensulphate ion?",
+            "options": [
+              "A. HSO₄⁻",
+              "B. HSO₃⁻",
+              "C. HSO₄²⁻",
+              "D. HSO₃²⁻"
+            ],
+            "correct": "A",
+            "explanation": "Sulphate ion is SO₄²⁻, adding a hydrogen ion (H⁺) it becomes HSO₄⁻.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G039",
+            "text": "What is the formula of cyanide ion?",
+            "options": [
+              "A. CN⁻",
+              "B.  OH⁻",
+              "C. HCO₃⁻",
+              "D. CO₃²⁻"
+            ],
+            "correct": "A",
+            "explanation": "CN⁻is cyanide ion .<br>OH⁻ is hydroxide ion.<br>HCO₃⁻ is hydrogencarbonate ion.<br>CO₃²⁻ is carbonate ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G040",
+            "text": "What is the formula of permanganate ion?",
+            "options": [
+              "A. MnO₄⁻",
+              "B. MnO₃⁻",
+              "C. ClO₄⁻",
+              "D. Cr₂O₇²⁻"
+            ],
+            "correct": "A",
+            "explanation": "MnO₄⁻ is permanganate ion.<br>MnO₃⁻ is manganate ion.<br>ClO₄⁻ is perchlorate ion.<br>Cr₂O₇²⁻ is dichromate ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G041",
+            "text": "Which of the following ions does NOT have a charge of 2-?",
+            "options": [
+              "A. oxide ion",
+              "B. sulphide ion",
+              "C. silicate ion",
+              "D. iodide ion"
+            ],
+            "correct": "D",
+            "explanation": "Iodide ion is 1- in charge.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G042",
+            "text": "What is the formula of dichromate ion?",
+            "options": [
+              "A. Cr₂O₇²⁻",
+              "B. MnO₄⁻",
+              "C. CrO₄²⁻",
+              "D. Cr³⁺"
+            ],
+            "correct": "A",
+            "explanation": "MnO₄⁻ is permanganate ion.<br>Cr₂O₇²⁻ is dichromate ion.<br>CrO₄²⁻ is chromate ion.<br>Cr³⁺ is chromium(III) ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G043",
+            "text": "What is the formula of phosphide ion?",
+            "options": [
+              "A. P³⁻",
+              "B. K⁺",
+              "C. PO₄³⁻",
+              "D. PO₃³⁻"
+            ],
+            "correct": "A",
+            "explanation": "P³⁻ is phosphide ion.<br>K⁺ is potassium ion.<br>PO₄³⁻ is phosphate ion.<br>PO₃³⁻ is phosphite ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G044",
+            "text": "What is the formula of hydroxide ion?",
+            "options": [
+              "A. H⁺",
+              "B. H⁻",
+              "C. O²⁻",
+              "D.  OH⁻"
+            ],
+            "correct": "D",
+            "explanation": "H⁺ is hydrogen ion.<br>H⁻ is hydride ion.<br>O²⁻ is oxide ion.<br>OH⁻ is hydroxide ion.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27G045",
+            "text": "What is the formula of sulphate ion?",
+            "options": [
+              "A. S²⁻",
+              "B. SO₄⁻",
+              "C. SO₄²⁻",
+              "D. SO₃²⁻"
+            ],
+            "correct": "C",
+            "explanation": "S²⁻is sulphide ion .<br>SO₄²⁻ is sulphate ion.<br>SO₃²⁻ is sulphite ion.<br>There is no SO₄⁻.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
             "sf": 1
           }
         ]

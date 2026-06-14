@@ -29,7 +29,9 @@ let lastResults = null;
 let selectedDifficulty = 1;
 let selectedCount = 10;
 let isTrialMode = false;
-let excludeTranslate = true;  // 預設排除翻譯題
+let excludeTranslate = true;
+let blinkInterval = null;
+let customCount = 10;
 
 // 成績總表控制變量
 let showOnlyWrong = false;
@@ -162,13 +164,27 @@ function shuffleArray(arr) {
 
 // ==================== 成就系統 ====================
 function showUnlockCard(title, message, date, points) {
+    // 全螢幕閃光效果（僅在積分 > 0 時顯示，代表正式解鎖）
+    if (points > 0) {
+        const flash = document.createElement('div');
+        flash.className = 'unlock-flash';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 800);
+    }
+    
     let container = document.getElementById('unlockCardsContainer');
     let card = document.createElement('div');
     card.className = 'unlock-card';
     let pointsText = '';
-    if (points > 0) pointsText = `<div style="font-size:0.7rem; margin-top:4px;">🏆 +${points} 積分</div>`;
-    else if (points < 0) pointsText = `<div style="font-size:0.7rem; margin-top:4px;">⚠️ ${points} 積分</div>`;
-    card.innerHTML = `<div style="font-size:1.2rem;">🎉</div><div style="font-weight:bold;">${title}</div><div>${message}</div>${pointsText}<div style="font-size:0.65rem; margin-top:4px;">${date}</div>`;
+    if (points > 0) pointsText = `<div style="font-size:0.8rem; margin-top:4px;">🏆 +${points} 積分</div>`;
+    else if (points < 0) pointsText = `<div style="font-size:0.8rem; margin-top:4px;">⚠️ ${points} 積分</div>`;
+    else if (points === 0) pointsText = `<div style="font-size:0.8rem; margin-top:4px;">✨ 再次達標！繼續保持 ✨</div>`;
+    
+    card.innerHTML = `<div style="font-size:1.5rem;">${points > 0 ? '🎉' : '🌟'}</div>
+                      <div style="font-weight:bold; margin:4px 0;">${title}</div>
+                      <div style="font-size:0.85rem;">${message}</div>
+                      ${pointsText}
+                      <div style="font-size:0.65rem; margin-top:6px;">${date}</div>`;
     container.appendChild(card);
     setTimeout(() => { if (card.parentNode) card.remove(); }, 4200);
 }
@@ -194,9 +210,11 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     let today = new Date().toISOString().slice(0, 10);
     let key = `${unit}_${chapter}`;
     if (!userData.achievements[key]) userData.achievements[key] = {};
-    let s1 = getChapterDifficultyMastery(unit, chapter, 0);
-    let s3 = getChapterDifficultyMastery(unit, chapter, 1);
-    let s5 = getChapterDifficultyMastery(unit, chapter, 2);
+    
+    // 只計算 Basic(1)、Advanced(2)、Challenge(3)，排除 Translate(0)
+    let s1 = getChapterDifficultyMastery(unit, chapter, 1);  // Basic 題
+    let s3 = getChapterDifficultyMastery(unit, chapter, 2);  // Advanced 題
+    let s5 = getChapterDifficultyMastery(unit, chapter, 3);  // Challenge 題
 
     if (isBlankPaper) {
         addPenaltyAchievement('blankPaper', '📄', -10, '提交空白答案卷');
@@ -206,21 +224,56 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
         addPenaltyAchievement('downwardTrend', '📉', -10, '連續兩次正確率下降超過20%');
     }
 
-    if (s1 >= 80 && !userData.achievements[key].star1) {
-        userData.achievements[key].star1 = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成`, date: today, points: ACHIEVEMENT_POINTS.star1 });
+    // 一星完成 (Basic ≥ 80%)
+    if (s1 >= 80) {
+        if (!userData.achievements[key].star1) {
+            userData.achievements[key].star1 = { unlocked: true, date: today, lastAccuracy: s1 };
+            newUnlocks.push({ title: "🎉 成就解鎖！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成`, date: today, points: ACHIEVEMENT_POINTS.star1 });
+        } else if (userData.achievements[key].star1.lastAccuracy && userData.achievements[key].star1.lastAccuracy < 80 && s1 >= 80) {
+            userData.achievements[key].star1.lastAccuracy = s1;
+            newUnlocks.push({ title: "🎉 成就恢復！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成 (再次達標)`, date: today, points: 0 });
+        } else {
+            userData.achievements[key].star1.lastAccuracy = s1;
+        }
     }
-    if (s3 >= 80 && !userData.achievements[key].star3) {
-        userData.achievements[key].star3 = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖`, date: today, points: ACHIEVEMENT_POINTS.star3 });
+
+    // 三星解鎖 (Basic ≥ 80% 且 Advanced ≥ 80%)
+    if (s1 >= 80 && s3 >= 80) {
+        if (!userData.achievements[key].star3) {
+            userData.achievements[key].star3 = { unlocked: true, date: today, lastAccuracy: s3 };
+            newUnlocks.push({ title: "🎉 成就解鎖！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖`, date: today, points: ACHIEVEMENT_POINTS.star3 });
+        } else if (userData.achievements[key].star3.lastAccuracy && userData.achievements[key].star3.lastAccuracy < 80 && s3 >= 80) {
+            userData.achievements[key].star3.lastAccuracy = s3;
+            newUnlocks.push({ title: "🎉 成就恢復！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖 (再次達標)`, date: today, points: 0 });
+        } else {
+            userData.achievements[key].star3.lastAccuracy = s3;
+        }
     }
-    if (s5 >= 80 && !userData.achievements[key].star5) {
-        userData.achievements[key].star5 = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖`, date: today, points: ACHIEVEMENT_POINTS.star5 });
+
+    // 五星解鎖 (Basic ≥ 80% 且 Advanced ≥ 80% 且 Challenge ≥ 80%)
+    if (s1 >= 80 && s3 >= 80 && s5 >= 80) {
+        if (!userData.achievements[key].star5) {
+            userData.achievements[key].star5 = { unlocked: true, date: today, lastAccuracy: s5 };
+            newUnlocks.push({ title: "🎉 成就解鎖！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖`, date: today, points: ACHIEVEMENT_POINTS.star5 });
+        } else if (userData.achievements[key].star5.lastAccuracy && userData.achievements[key].star5.lastAccuracy < 80 && s5 >= 80) {
+            userData.achievements[key].star5.lastAccuracy = s5;
+            newUnlocks.push({ title: "🎉 成就恢復！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖 (再次達標)`, date: today, points: 0 });
+        } else {
+            userData.achievements[key].star5.lastAccuracy = s5;
+        }
     }
-    if (isTrialMode && accuracy >= 80 && !userData.achievements[key].trial) {
-        userData.achievements[key].trial = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成`, date: today, points: ACHIEVEMENT_POINTS.trial });
+
+    // 試煉完成 (使用試煉模式且正確率≥80%)
+    if (isTrialMode && accuracy >= 80) {
+        if (!userData.achievements[key].trial) {
+            userData.achievements[key].trial = { unlocked: true, date: today, lastAccuracy: accuracy };
+            newUnlocks.push({ title: "🎉 成就解鎖！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成`, date: today, points: ACHIEVEMENT_POINTS.trial });
+        } else if (userData.achievements[key].trial.lastAccuracy && userData.achievements[key].trial.lastAccuracy < 80 && accuracy >= 80) {
+            userData.achievements[key].trial.lastAccuracy = accuracy;
+            newUnlocks.push({ title: "🎉 成就恢復！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成 (再次達標)`, date: today, points: 0 });
+        } else {
+            userData.achievements[key].trial.lastAccuracy = accuracy;
+        }
     }
 
     let totalQ = userData.stats.totalQuestionsAnswered;
@@ -252,7 +305,7 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     }
     if (isSpeed && !userData.achievements.speedStar) {
         userData.achievements.speedStar = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚡ 速度之星 - 提前50%時間完成練習", date: today, points: ACHIEVEMENT_POINTS.speedStar });
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚡ 速度之星 - 提前50%時間完成練習且正確率≥70%", date: today, points: ACHIEVEMENT_POINTS.speedStar });
     }
 
     if (consecutiveCorrectCount >= 20 && !userData.achievements.consecutive20) {
@@ -326,10 +379,14 @@ function addPracticeHistory(unit, chapter, difficultyName, questionCount, correc
 
     let previousAccuracy = userData.stats.lastAccuracy;
     userData.stats.lastAccuracy = accuracy;
+    
+    // 速度之星條件：提前50%時間完成 且 正確率≥70%
+    let isSpeed = timeSpentPercent <= 50 && accuracy >= 70;
+    
     saveUserData();
 
     let newUnlocks = [];
-    checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, accuracy === 100 && questionCount >= 10, selectedCount === 36, timeSpentPercent <= 50, totalQuestions, newUnlocks, consecutiveCorrectCount, isBlankPaper, previousAccuracy);
+    checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, accuracy === 100 && questionCount >= 10, selectedCount === 36, isSpeed, totalQuestions, newUnlocks, consecutiveCorrectCount, isBlankPaper, previousAccuracy);
     if (newUnlocks.length > 0) {
         showUnlockCardsSequentially(newUnlocks);
     }
@@ -377,25 +434,70 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
     }
 
     let candidates = [];
-    for (let q of filteredQuestions) {
-        let include = false;
-        if (preference == 0) {
-            include = (q.difficulty_level == 0 || q.difficulty_level == 1);
-        } else if (preference == 1) {
-            include = true;
-        } else {
-            include = (q.difficulty_level == 2 || q.difficulty_level == 3);
+    
+    if (preference == 0) {
+        // 1 星：Translate + Basic
+        for (let q of filteredQuestions) {
+            if (q.difficulty_level == 0 || q.difficulty_level == 1) {
+                candidates.push(q);
+            }
         }
-        if (include) candidates.push(q);
+    } else if (preference == 1) {
+        // 3 星：優先 Advanced，其次錯過的 Basic，最後 Challenge
+        let advancedQuestions = [];
+        let wrongBasicQuestions = [];
+        let challengeQuestions = [];
+        
+        for (let q of filteredQuestions) {
+            if (q.difficulty_level == 2) {
+                advancedQuestions.push(q);
+            } else if (q.difficulty_level == 1 && userData.latestStatus[q.id] === false) {
+                wrongBasicQuestions.push(q);
+            } else if (q.difficulty_level == 3) {
+                challengeQuestions.push(q);
+            }
+        }
+        
+        candidates = [...advancedQuestions, ...wrongBasicQuestions, ...challengeQuestions];
+        
+        if (candidates.length < count) {
+            let otherBasic = filteredQuestions.filter(q => q.difficulty_level == 1 && userData.latestStatus[q.id] !== false);
+            candidates.push(...otherBasic);
+        }
+    } else {
+        // 5 星：Advanced + Challenge
+        for (let q of filteredQuestions) {
+            if (q.difficulty_level == 2 || q.difficulty_level == 3) {
+                candidates.push(q);
+            }
+        }
     }
-    if (candidates.length < count) candidates = [...filteredQuestions];
-    let withStatus = candidates.map(q => { let s = userData.latestStatus[q.id]; return { q, isAttempted: s !== undefined, isCorrect: s === true }; });
-    withStatus.sort((a, b) => {
-        if (a.isAttempted !== b.isAttempted) return a.isAttempted ? 1 : -1;
-        if (a.isAttempted && b.isAttempted && a.isCorrect !== b.isCorrect) return a.isCorrect ? 1 : -1;
-        return 0;
-    });
-    return withStatus.slice(0, count).map(item => item.q);
+    
+    if (candidates.length < count) {
+        candidates = [...filteredQuestions];
+    }
+    
+    // 去重
+    candidates = [...new Map(candidates.map(q => [q.id, q])).values()];
+    
+    // 隨機排序（保持優先級組內的隨機）
+    if (preference == 1) {
+        let advanced = candidates.filter(q => q.difficulty_level == 2);
+        let wrongBasic = candidates.filter(q => q.difficulty_level == 1 && userData.latestStatus[q.id] === false);
+        let challenge = candidates.filter(q => q.difficulty_level == 3);
+        let otherBasic = candidates.filter(q => q.difficulty_level == 1 && userData.latestStatus[q.id] !== false);
+        
+        advanced = shuffleArray(advanced);
+        wrongBasic = shuffleArray(wrongBasic);
+        challenge = shuffleArray(challenge);
+        otherBasic = shuffleArray(otherBasic);
+        
+        candidates = [...advanced, ...wrongBasic, ...challenge, ...otherBasic];
+    } else {
+        candidates = shuffleArray(candidates);
+    }
+    
+    return candidates.slice(0, Math.min(count, candidates.length));
 }
 
 // ==================== UI 渲染函數 ====================
@@ -456,15 +558,234 @@ function renderPractice() {
     }));
 }
 
+// ========== updateSettingsUnlockStatus 函數 ==========
 function updateSettingsUnlockStatus() {
     if (!pendingUnit || !pendingChapter) return;
-    let s1 = getChapterDifficultyMastery(pendingUnit, pendingChapter, 0), s3 = getChapterDifficultyMastery(pendingUnit, pendingChapter, 1), s5 = getChapterDifficultyMastery(pendingUnit, pendingChapter, 2);
-    let star3Unlocked = s1 >= 80, star5Unlocked = star3Unlocked && s3 >= 80, countUnlocked = s1 >= 80, trialUnlocked = s5 >= 80;
-    let dM = document.getElementById('diff-medium'), dH = document.getElementById('diff-hard'), c20 = document.getElementById('count-20'), c36 = document.getElementById('count-36'), tM = document.getElementById('trial-mode');
-    if (star3Unlocked) { dM.classList.remove('locked'); dM.disabled = false; dM.innerHTML = '<span class="stars">★★★</span><span class="label">3 星</span>'; } else { dM.classList.add('locked'); dM.disabled = true; }
-    if (star5Unlocked) { dH.classList.remove('locked'); dH.disabled = false; dH.innerHTML = '<span class="stars">★★★★★</span><span class="label">5 星</span>'; } else { dH.classList.add('locked'); dH.disabled = true; }
-    if (countUnlocked) { c20.classList.remove('locked'); c20.disabled = false; c20.innerHTML = '20 題'; c36.classList.remove('locked'); c36.disabled = false; c36.innerHTML = '36 題 DSE'; } else { c20.classList.add('locked'); c20.disabled = true; c36.classList.add('locked'); c36.disabled = true; }
-    if (trialUnlocked) { tM.classList.remove('locked'); tM.disabled = false; tM.innerHTML = '🔥 5** 試煉模式'; } else { tM.classList.add('locked'); tM.disabled = true; }
+    
+    let questions = window.ALL_UNITS[pendingUnit].chapters[pendingChapter].questions;
+    
+    // 計算各難度完成情況（排除 Translate）
+    let availableQuestions = excludeTranslate ? questions.filter(q => q.difficulty !== "🌐 Translate") : [...questions];
+    let basicQuestions = availableQuestions.filter(q => q.difficulty_level === 1);
+    let basicCorrect = basicQuestions.filter(q => userData.latestStatus[q.id] === true).length;
+    let basicTotal = basicQuestions.length;
+    let basicPercent = basicTotal === 0 ? 0 : Math.round(basicCorrect / basicTotal * 100);
+    
+    let advancedQuestions = availableQuestions.filter(q => q.difficulty_level === 2);
+    let advancedCorrect = advancedQuestions.filter(q => userData.latestStatus[q.id] === true).length;
+    let advancedTotal = advancedQuestions.length;
+    let advancedPercent = advancedTotal === 0 ? 0 : Math.round(advancedCorrect / advancedTotal * 100);
+    
+    let challengeQuestions = availableQuestions.filter(q => q.difficulty_level === 3);
+    let challengeCorrect = challengeQuestions.filter(q => userData.latestStatus[q.id] === true).length;
+    let challengeTotal = challengeQuestions.length;
+    let challengePercent = challengeTotal === 0 ? 0 : Math.round(challengeCorrect / challengeTotal * 100);
+    
+    // 解鎖狀態
+    let star3Unlocked = basicPercent >= 80;
+    let star5Unlocked = star3Unlocked && advancedPercent >= 80;
+    let trialUnlocked = star5Unlocked && challengePercent >= 80;
+    
+    // 決定當前進度條目標
+    let targetPercent = 0;
+    let targetCorrect = 0;
+    let targetTotal = 0;
+    let targetName = '';
+    let currentStage = 'locked';
+    
+    if (!star3Unlocked) {
+        currentStage = 'locked';
+        targetPercent = basicPercent;
+        targetCorrect = basicCorrect;
+        targetTotal = basicTotal;
+        targetName = '三星 & 36題';
+    } else if (!star5Unlocked) {
+        currentStage = 'star3';
+        targetPercent = advancedPercent;
+        targetCorrect = advancedCorrect;
+        targetTotal = advancedTotal;
+        targetName = '五星';
+    } else if (!trialUnlocked) {
+        currentStage = 'star5';
+        targetPercent = challengePercent;
+        targetCorrect = challengeCorrect;
+        targetTotal = challengeTotal;
+        targetName = '試煉模式';
+    } else {
+        currentStage = 'complete';
+    }
+    
+    // 計算還需要多少題
+    let needed = 0;
+    if (currentStage === 'locked') {
+        needed = Math.ceil(0.8 * basicTotal) - basicCorrect;
+        if (needed < 0) needed = 0;
+    } else if (currentStage === 'star3') {
+        needed = Math.ceil(0.8 * advancedTotal) - advancedCorrect;
+        if (needed < 0) needed = 0;
+    } else if (currentStage === 'star5') {
+        needed = Math.ceil(0.8 * challengeTotal) - challengeCorrect;
+        if (needed < 0) needed = 0;
+    }
+    
+    // 更新難度按鈕
+    let dM = document.getElementById('diff-medium');
+    let dH = document.getElementById('diff-hard');
+    let tM = document.getElementById('trial-mode');
+    let diffHint = document.getElementById('diffHint');
+    
+    if (dM) {
+        if (star3Unlocked) {
+            dM.classList.remove('locked');
+            dM.disabled = false;
+            dM.innerHTML = '<span class="stars">★★★</span><span class="label">3 星</span>';
+        } else {
+            dM.classList.add('locked');
+            dM.disabled = true;
+        }
+    }
+    
+    if (dH) {
+        if (star5Unlocked) {
+            dH.classList.remove('locked');
+            dH.disabled = false;
+            dH.innerHTML = '<span class="stars">★★★★★</span><span class="label">5 星</span>';
+        } else {
+            dH.classList.add('locked');
+            dH.disabled = true;
+        }
+    }
+    
+    if (tM) {
+        if (trialUnlocked) {
+            tM.classList.remove('locked');
+            tM.disabled = false;
+            tM.innerHTML = '🔥 5** 試煉模式';
+        } else {
+            tM.classList.add('locked');
+            tM.disabled = true;
+        }
+    }
+    
+    // ========== 題目數量區域（核心修改） ==========
+    let count10 = document.getElementById('count-10');
+    let count20 = document.getElementById('count-20');
+    let count36 = document.getElementById('count-36');
+    let customInput = document.getElementById('customCount');
+    let countHint = document.getElementById('countHint');
+    
+    // 10題和20題始終可用
+    if (count10) {
+        count10.disabled = false;
+        count10.classList.remove('locked');
+    }
+    if (count20) {
+        count20.disabled = false;
+        count20.classList.remove('locked');
+    }
+    
+    // 計算自訂輸入框的最大值（根據當前難度和排除翻譯設定）
+    let maxCustom = 0;
+    if (selectedDifficulty === 0) {
+        // 1 星
+        if (excludeTranslate) {
+            maxCustom = basicTotal;
+        } else {
+            maxCustom = questions.filter(q => q.difficulty_level === 0 || q.difficulty_level === 1).length;
+        }
+    } else if (selectedDifficulty === 1) {
+        // 3 星
+        maxCustom = availableQuestions.length;
+    } else if (selectedDifficulty === 2) {
+        // 5 星
+        maxCustom = advancedTotal + challengeTotal;
+    } else if (isTrialMode) {
+        // 試煉模式
+        maxCustom = Math.min(availableQuestions.length, 50);
+    }
+    maxCustom = Math.min(maxCustom, 50);
+    if (maxCustom < 1) maxCustom = 1;
+    
+    // 36題和自訂輸入框：一星解鎖後才啟用
+    if (count36 && customInput) {
+        if (star3Unlocked) {
+            // 一星解鎖後：啟用
+            count36.disabled = false;
+            count36.classList.remove('locked');
+            count36.innerHTML = '36 題';
+            customInput.disabled = false;
+            customInput.style.opacity = '1';
+            customInput.max = maxCustom;
+            
+            // 如果當前值超過最大值，自動調整
+            let currentVal = parseInt(customInput.value);
+            if (isNaN(currentVal)) currentVal = 10;
+            if (currentVal > maxCustom) {
+                customInput.value = maxCustom;
+                customCount = maxCustom;
+                selectedCount = maxCustom;
+            } else if (currentVal < 1) {
+                customInput.value = 1;
+                customCount = 1;
+                selectedCount = 1;
+            } else {
+                customCount = currentVal;
+                selectedCount = currentVal;
+            }
+            
+            if (countHint) countHint.innerHTML = `✅ 36題及自訂題數已解鎖！(上限 ${maxCustom} 題)`;
+        } else {
+            // 未解鎖：禁用
+            count36.disabled = true;
+            count36.classList.add('locked');
+            count36.innerHTML = '36 題 🔒';
+            customInput.disabled = true;
+            customInput.style.opacity = '0.5';
+            if (countHint) countHint.innerHTML = `🔒 36題及自訂題數需Basic正確率達80%解鎖 (目前 ${basicPercent}%)`;
+        }
+    }
+    
+    // 更新簡短提示
+    if (diffHint) {
+        if (currentStage === 'locked') {
+            diffHint.innerHTML = `🔒 解鎖三星需要 Basic 題正確率 ≥ 80% (目前 ${basicPercent}%)`;
+        } else if (currentStage === 'star3') {
+            diffHint.innerHTML = `🔒 解鎖五星需要 Advanced 題正確率 ≥ 80% (目前 ${advancedPercent}%)`;
+        } else if (currentStage === 'star5') {
+            diffHint.innerHTML = `🔒 解鎖試煉模式需要 Challenge 題正確率 ≥ 80% (目前 ${challengePercent}%)`;
+        } else {
+            diffHint.innerHTML = `✅ 所有難度已解鎖！`;
+        }
+    }
+    
+    // 更新進度條
+    let progressContainer = document.getElementById('star3-progress-container');
+    if (!progressContainer && diffHint && diffHint.parentNode) {
+        progressContainer = document.createElement('div');
+        progressContainer.id = 'star3-progress-container';
+        progressContainer.className = 'star3-progress-container';
+        diffHint.parentNode.appendChild(progressContainer);
+    }
+    
+    if (progressContainer) {
+        if (currentStage === 'complete') {
+            progressContainer.innerHTML = `
+                <div class="star3-progress-bar">
+                    <div class="star3-progress-fill unlocked" style="width: 100%;"></div>
+                </div>
+                <div class="star3-progress-text unlocked">🏆 恭喜！全部難度已解鎖！所有難度皆可自由選擇</div>
+            `;
+        } else {
+            let fillClass = (targetPercent >= 80) ? 'unlocked' : '';
+            let statusText = (targetPercent >= 80) ? '✅ 已達標！' : `尚需 ${needed} 題`;
+            progressContainer.innerHTML = `
+                <div class="star3-progress-bar">
+                    <div class="star3-progress-fill ${fillClass}" style="width: ${targetPercent}%;"></div>
+                </div>
+                <div class="star3-progress-text ${fillClass}">📈 解鎖${targetName}進度：${targetPercent}% (${targetCorrect}/${targetTotal}) ${statusText}</div>
+            `;
+        }
+    }
 }
 
 function renderMyMistakes() {
@@ -530,7 +851,7 @@ function renderHistory() {
     if (!userData.practiceHistory || userData.practiceHistory.length === 0) { container.innerHTML = '<div class="card">📋 暫無做題紀錄</div>'; return; }
     let html = `<div class="card"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;"><h3>📋 做題紀錄</h3><button id="exportHistoryBtn" class="btn export-btn">📥 匯出 CSV</button></div><div style="overflow-x:auto;"><table class="history-table"><thead><tr><th>日期</th><th>時間</th><th>單元</th><th>章節</th><th>題數</th><th>正確率</th><th>模式</th></tr></thead><tbody>`;
     for (let h of userData.practiceHistory) {
-        html += `<tr><td>${h.date}</td><td>${h.time}</td><td>${h.unitName}</td><td>${h.chapterName}</td><td>${h.questionCount}</td><td>${h.accuracy}%</td><td>${h.mode === 'trial' ? '試煉' : '一般'}</td></tr>`;
+        html += `<tr><td>${h.date}</td><td>${h.time}侧<td>${h.unitName}侧<td>${h.chapterName}侧<td>${h.questionCount}侧<td>${h.accuracy}%侧<td>${h.mode === 'trial' ? '試煉' : '一般'}侧</tr>`;
     }
     html += `</tbody></table></div></div>`;
     container.innerHTML = html;
@@ -545,7 +866,6 @@ function renderHistory() {
 function renderAchievements() {
     let container = document.getElementById('achievementsPanel');
     
-    // 收集所有章節資訊並排序
     let chapterList = [];
     for (let u in window.ALL_UNITS) {
         for (let ch in window.ALL_UNITS[u].chapters) {
@@ -560,10 +880,8 @@ function renderAchievements() {
     }
     chapterList.sort((a, b) => a.chapterNum - b.chapterNum);
     
-    // 收集章節成就
     let unlockedChapters = [];
     let lockedChapters = [];
-    let typeOrder = { 'star1': 1, 'star3': 2, 'star5': 3, 'trial': 4 };
     
     for (let item of chapterList) {
         let key = `${item.unit}_${item.chapter}`;
@@ -595,7 +913,6 @@ function renderAchievements() {
         }
     }
     
-    // 排序已解鎖和未解鎖
     unlockedChapters.sort((a, b) => {
         if (a.chapterNum !== b.chapterNum) return a.chapterNum - b.chapterNum;
         return a.order - b.order;
@@ -605,7 +922,6 @@ function renderAchievements() {
         return a.order - b.order;
     });
     
-    // 特殊成就
     let totalQ = userData.stats?.totalQuestionsAnswered || 0;
     let specials = [
         { id: 'firstPractice', name: '初試啼聲', icon: '🎯', unlocked: userData.achievements.firstPractice?.unlocked || false, date: userData.achievements.firstPractice?.date || null, desc: '完成第一次練習', progress: userData.achievements.firstPractice?.progress || totalQ, target: 1, showProgress: true, points: ACHIEVEMENT_POINTS.firstPractice, isPenalty: false },
@@ -614,7 +930,7 @@ function renderAchievements() {
         { id: 'thousand', name: '千題之王', icon: '👑', unlocked: userData.achievements.thousand?.unlocked || false, date: userData.achievements.thousand?.date || null, desc: '累積完成1000題', progress: totalQ, target: 1000, showProgress: true, points: ACHIEVEMENT_POINTS.thousand, isPenalty: false },
         { id: 'perfectLesson', name: '完美一課', icon: '🌟', unlocked: userData.achievements.perfectLesson?.unlocked || false, date: userData.achievements.perfectLesson?.date || null, desc: '單次練習10題以上全對', points: ACHIEVEMENT_POINTS.perfectLesson, isPenalty: false },
         { id: 'dseComplete', name: 'DSE模擬完成', icon: '📝', unlocked: userData.achievements.dseComplete?.unlocked || false, date: userData.achievements.dseComplete?.date || null, desc: '完成一次36題模式', points: ACHIEVEMENT_POINTS.dseComplete, isPenalty: false },
-        { id: 'speedStar', name: '速度之星', icon: '⚡', unlocked: userData.achievements.speedStar?.unlocked || false, date: userData.achievements.speedStar?.date || null, desc: '提前50%時間完成練習', points: ACHIEVEMENT_POINTS.speedStar, isPenalty: false },
+        { id: 'speedStar', name: '速度之星', icon: '⚡', unlocked: userData.achievements.speedStar?.unlocked || false, date: userData.achievements.speedStar?.date || null, desc: '提前50%時間完成練習且正確率≥70%', points: ACHIEVEMENT_POINTS.speedStar, isPenalty: false },
         { id: 'consecutive20', name: '連續答對王', icon: '🔥', unlocked: userData.achievements.consecutive20?.unlocked || false, date: userData.achievements.consecutive20?.date || null, desc: '連續答對20題', points: ACHIEVEMENT_POINTS.consecutive20, isPenalty: false },
         { id: 'allChaptersMaster', name: '全科目制霸', icon: '🏆', unlocked: userData.achievements.allChaptersMaster?.unlocked || false, date: userData.achievements.allChaptersMaster?.date || null, desc: '所有章節完成度達80%', points: ACHIEVEMENT_POINTS.allChaptersMaster, isPenalty: false },
         { id: 'fiveStarStreak', name: '五星連珠', icon: '⭐', unlocked: userData.achievements.fiveStarStreak?.unlocked || false, date: userData.achievements.fiveStarStreak?.date || null, desc: '連續5次練習正確率100%', points: ACHIEVEMENT_POINTS.fiveStarStreak, isPenalty: false },
@@ -659,7 +975,6 @@ function renderAchievements() {
             </div>
         </div>`;
     
-    // 特殊成就（含扣分和未解鎖）
     if (unlockedSpecials.length > 0 || unlockedPenalties.length > 0 || lockedSpecials.length > 0) {
         html += `<h3 style="margin-top:0.5rem;">🎯 特殊成就</h3>`;
         
@@ -688,7 +1003,6 @@ function renderAchievements() {
         }
     }
     
-    // 已獲得的章節成就
     if (unlockedChapters.length > 0) {
         html += `<h3 style="margin-top:0.8rem;">📖 已獲得章節成就</h3>`;
         let currentUnit = '';
@@ -702,7 +1016,6 @@ function renderAchievements() {
         }
     }
     
-    // 未獲得的章節成就（摺疊）
     if (lockedChapters.length > 0) {
         let lockedId = "lockedChaptersPanel";
         html += `<h3 class="collapsible" onclick="toggleCollapsible('${lockedId}')">🔒 未獲得章節成就 (${lockedChapters.length}) ▼</h3>
@@ -725,7 +1038,8 @@ function renderAchievements() {
 
 function startPracticeWithSettings() {
     let unit = pendingUnit, chapter = pendingChapter;
-    let allQuestions = [...window.ALL_UNITS[unit].chapters[chapter].questions], total = allQuestions.length, count = selectedCount;
+    let allQuestions = [...window.ALL_UNITS[unit].chapters[chapter].questions], total = allQuestions.length;
+    let count = customCount > 0 ? customCount : selectedCount;
     if (count > total) count = total;
     if (count < 1) count = 1;
     let selectedQuestions = selectQuestionsByDifficultyAndCount(allQuestions, count, selectedDifficulty, isTrialMode);
@@ -756,6 +1070,14 @@ function startPracticeWithSettings() {
         if (timeRemaining <= 0) submitAll();
         else { timeRemaining--; updateTimerDisplay(); }
     }, 1000);
+    
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+    }
+    const submitBtn = document.getElementById('submitAllBtn');
+    if (submitBtn) submitBtn.style.animation = '';
+    
     document.getElementById('settingsModal').style.display = 'none';
     showQuizModal();
 }
@@ -791,33 +1113,137 @@ function renderQuizNav() {
     nav.innerHTML = html;
     document.getElementById('quizCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
     document.querySelectorAll('.q-nav-btn').forEach(btn => btn.addEventListener('click', (e) => { currentQIndex = parseInt(btn.dataset.idx); renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); }));
+    checkAllQuestionsAnswered();
 }
 
 function renderCurrentQuestion() {
-    let q = currentQuestions[currentQIndex], map = currentOptionsMapping[currentQIndex];
+    let q = currentQuestions[currentQIndex];
+    let map = currentOptionsMapping[currentQIndex];
+    let hasImage = q.imageUrl !== null;
+    
     document.getElementById('modalQuestionText').innerHTML = q.text;
+    document.getElementById('quizCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
     document.getElementById('quizDifficulty').innerHTML = q.difficulty;
+    
     let imgArea = document.getElementById('modalImageArea');
-    if (q.imageUrl) { imgArea.innerHTML = `<img src="${q.imageUrl}" class="quiz-image" id="quizImageThumb">`; document.getElementById('quizImageThumb')?.addEventListener('click', () => { document.getElementById('zoomImage').src = q.imageUrl; document.getElementById('imageZoomModal').style.display = 'flex'; }); }
-    else imgArea.innerHTML = '';
-    let opts = document.getElementById('modalOptions');
-    opts.innerHTML = '';
+    let quizLayout = document.querySelector('.quiz-layout');
+    
+    if (!quizLayout) {
+        const quizBody = document.querySelector('.quiz-body');
+        const originalOptions = document.getElementById('modalOptions');
+        const originalImgArea = imgArea;
+        
+        const layoutDiv = document.createElement('div');
+        layoutDiv.className = 'quiz-layout';
+        
+        const optionsDiv = document.createElement('div');
+        optionsDiv.className = 'options-area';
+        optionsDiv.id = 'options-area-container';
+        
+        const imageDiv = document.createElement('div');
+        imageDiv.className = 'image-area';
+        imageDiv.id = 'image-area-container';
+        
+        if (originalOptions && originalOptions.parentNode) {
+            originalOptions.parentNode.insertBefore(layoutDiv, originalOptions);
+            layoutDiv.appendChild(optionsDiv);
+            layoutDiv.appendChild(imageDiv);
+            optionsDiv.appendChild(originalOptions);
+        }
+        if (originalImgArea) {
+            imageDiv.appendChild(originalImgArea);
+        }
+        
+        quizLayout = layoutDiv;
+    }
+    
+    const imageAreaContainer = document.getElementById('image-area-container');
+    const optionsArea = document.getElementById('options-area-container');
+    
+    if (hasImage) {
+        if (imageAreaContainer) imageAreaContainer.style.display = 'block';
+        if (quizLayout) quizLayout.classList.remove('no-image');
+        
+        let imgHtml = '';
+        if (q.imageUrl) {
+            imgHtml = `<img src="${q.imageUrl}" class="quiz-image" id="quizImageThumb" style="max-width:100%; max-height:180px; object-fit:contain; cursor:pointer; border-radius:8px;">`;
+        }
+        document.getElementById('modalImageArea').innerHTML = imgHtml;
+        document.getElementById('quizImageThumb')?.addEventListener('click', () => {
+            document.getElementById('zoomImage').src = q.imageUrl;
+            document.getElementById('imageZoomModal').style.display = 'flex';
+        });
+        
+        if (optionsArea) {
+            optionsArea.classList.add('vertical');
+            optionsArea.classList.remove('grid');
+        }
+    } else {
+        if (imageAreaContainer) imageAreaContainer.style.display = 'none';
+        if (quizLayout) quizLayout.classList.add('no-image');
+        document.getElementById('modalImageArea').innerHTML = '';
+        
+        if (optionsArea) {
+            optionsArea.classList.add('grid');
+            optionsArea.classList.remove('vertical');
+        }
+    }
+    
+    let optsDiv = document.getElementById('modalOptions');
+    optsDiv.innerHTML = '';
+    optsDiv.className = 'options-grid';
+    
     for (let l of ['A', 'B', 'C', 'D']) {
         let btn = document.createElement('button');
         btn.className = 'option-btn';
         if (currentAnswers[currentQIndex] === l) btn.classList.add('selected');
         btn.textContent = `${l}. ${map.letterToText[l]}`;
-        btn.addEventListener('click', () => { currentAnswers[currentQIndex] = l; renderCurrentQuestion(); renderQuizNav(); });
-        opts.appendChild(btn);
+        btn.addEventListener('click', () => {
+            currentAnswers[currentQIndex] = l;
+            renderCurrentQuestion();
+            renderQuizNav();
+            checkAllQuestionsAnswered();
+        });
+        optsDiv.appendChild(btn);
     }
+    
     updateNavButtons();
+    checkAllQuestionsAnswered();
 }
 
 function updateNavButtons() { let prev = document.getElementById('prevBtn'), next = document.getElementById('nextBtn'); prev.disabled = (currentQIndex === 0); next.disabled = (currentQIndex === currentQuestions.length - 1); }
 
 function updateTimerDisplay() { let m = Math.floor(timeRemaining / 60), s = timeRemaining % 60; document.getElementById('timerDisplay').innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; }
 
+function checkAllQuestionsAnswered() {
+    if (currentQuestions.length === 0) return;
+    
+    const allAnswered = currentAnswers.every(a => a !== null && a !== undefined);
+    const submitBtn = document.getElementById('submitAllBtn');
+    if (!submitBtn) return;
+    
+    if (allAnswered && currentAnswers.length > 0) {
+        if (!blinkInterval) {
+            blinkInterval = setInterval(() => {
+                submitBtn.style.animation = 'blink 0.3s step-end infinite';
+            }, 100);
+        }
+    } else {
+        if (blinkInterval) {
+            clearInterval(blinkInterval);
+            blinkInterval = null;
+            submitBtn.style.animation = '';
+        }
+    }
+}
+
 function submitAll() {
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+        const submitBtn = document.getElementById('submitAllBtn');
+        if (submitBtn) submitBtn.style.animation = '';
+    }
     if (timerInterval) clearInterval(timerInterval);
     let results = [], batch = [], correctCount = 0;
     let consecutiveCorrect = userData.stats.consecutiveCorrect || 0;
@@ -858,7 +1284,6 @@ function submitAll() {
     updateSettingsUnlockStatus();
 }
 
-// ========== 卡片列表版本的 displayResults ==========
 function displayResults(results) {
     let totalOriginal = results.length;
     let correctOriginal = results.filter(r => r.isCorrect).length;
@@ -983,21 +1408,79 @@ function initTabs() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('diff-easy').addEventListener('click', () => { selectedDifficulty = 0; document.getElementById('diff-easy').classList.add('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; });
-    document.getElementById('diff-medium').addEventListener('click', () => { if (document.getElementById('diff-medium').disabled) return; selectedDifficulty = 1; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.add('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; });
-    document.getElementById('diff-hard').addEventListener('click', () => { if (document.getElementById('diff-hard').disabled) return; selectedDifficulty = 2; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.add('active'); isTrialMode = false; });
-    document.getElementById('count-10').addEventListener('click', () => { selectedCount = 10; document.getElementById('count-10').classList.add('active'); document.getElementById('count-20').classList.remove('active'); document.getElementById('count-36').classList.remove('active'); });
-    document.getElementById('count-20').addEventListener('click', () => { if (document.getElementById('count-20').disabled) return; selectedCount = 20; document.getElementById('count-10').classList.remove('active'); document.getElementById('count-20').classList.add('active'); document.getElementById('count-36').classList.remove('active'); });
-    document.getElementById('count-36').addEventListener('click', () => { if (document.getElementById('count-36').disabled) return; selectedCount = 36; document.getElementById('count-10').classList.remove('active'); document.getElementById('count-20').classList.remove('active'); document.getElementById('count-36').classList.add('active'); });
-    document.getElementById('trial-mode').addEventListener('click', () => { if (document.getElementById('trial-mode').disabled) return; isTrialMode = true; selectedDifficulty = 2; selectedCount = 50; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.add('active'); document.getElementById('count-10').classList.remove('active'); document.getElementById('count-20').classList.remove('active'); document.getElementById('count-36').classList.remove('active'); });
+    document.getElementById('diff-easy').addEventListener('click', () => { selectedDifficulty = 0; document.getElementById('diff-easy').classList.add('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
+    document.getElementById('diff-medium').addEventListener('click', () => { if (document.getElementById('diff-medium').disabled) return; selectedDifficulty = 1; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.add('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
+    document.getElementById('diff-hard').addEventListener('click', () => { if (document.getElementById('diff-hard').disabled) return; selectedDifficulty = 2; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.add('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
+    document.getElementById('count-10').addEventListener('click', () => {
+        selectedCount = 10;
+        customCount = 10;
+        document.getElementById('count-10').classList.add('active');
+        document.getElementById('count-20').classList.remove('active');
+        if (document.getElementById('count-36')) document.getElementById('count-36').classList.remove('active');
+        const customInput = document.getElementById('customCount');
+        if (customInput) customInput.value = 10;
+    });
+    document.getElementById('count-20').addEventListener('click', () => {
+        if (document.getElementById('count-20').disabled) return;
+        selectedCount = 20;
+        customCount = 20;
+        document.getElementById('count-10').classList.remove('active');
+        document.getElementById('count-20').classList.add('active');
+        if (document.getElementById('count-36')) document.getElementById('count-36').classList.remove('active');
+        const customInput = document.getElementById('customCount');
+        if (customInput) customInput.value = 20;
+    });
+    document.getElementById('count-36').addEventListener('click', () => {
+        if (document.getElementById('count-36').disabled) return;
+        selectedCount = 36;
+        customCount = 36;
+        document.getElementById('count-10').classList.remove('active');
+        document.getElementById('count-20').classList.remove('active');
+        document.getElementById('count-36').classList.add('active');
+        const customInput = document.getElementById('customCount');
+        if (customInput) customInput.value = 36;
+    });
+    document.getElementById('trial-mode').addEventListener('click', () => {
+        if (document.getElementById('trial-mode').disabled) return;
+        isTrialMode = true;
+        selectedDifficulty = 2;
+        selectedCount = 50;
+        customCount = 50;
+        document.getElementById('diff-easy').classList.remove('active');
+        document.getElementById('diff-medium').classList.remove('active');
+        document.getElementById('diff-hard').classList.add('active');
+        document.getElementById('count-10').classList.remove('active');
+        document.getElementById('count-20').classList.remove('active');
+        if (document.getElementById('count-36')) document.getElementById('count-36').classList.remove('active');
+        const customInput = document.getElementById('customCount');
+        if (customInput) customInput.value = 50;
+        updateSettingsUnlockStatus();
+    });
     document.getElementById('devUnlockBtn').addEventListener('click', () => { if (!pendingUnit || !pendingChapter) return; let qs = window.ALL_UNITS[pendingUnit].chapters[pendingChapter].questions; for (let q of qs) if (q.difficulty_level === 0) userData.latestStatus[q.id] = true; saveUserData(); updateSettingsUnlockStatus(); alert('開發模式：1星題目已全部標記為正確！'); });
     document.getElementById('loginBtn').addEventListener('click', () => { let name = document.getElementById('studentName').value.trim(), cls = document.getElementById('studentClass').value.trim(); if (!name || !cls) { alert('請輸入姓名與班級'); return; } currentUser = { id: `${cls}_${name}`, name, class: cls }; loadUserData(); document.getElementById('loginScreen').style.display = 'none'; document.getElementById('mainApp').style.display = 'block'; document.getElementById('userLabel').innerHTML = `👋 ${name} (${cls})`; renderPractice(); initTabs(); document.querySelector('.tab[data-tab="practice"]').click(); });
     
-    // 排除翻譯題勾選框
     const excludeTranslateCheckbox = document.getElementById('excludeTranslate');
     if (excludeTranslateCheckbox) {
         excludeTranslateCheckbox.addEventListener('change', (e) => {
             excludeTranslate = e.target.checked;
+            updateSettingsUnlockStatus();
+        });
+    }
+    
+    const customInput = document.getElementById('customCount');
+    if (customInput) {
+        customInput.addEventListener('change', (e) => {
+            let val = parseInt(e.target.value);
+            if (isNaN(val)) val = 10;
+            let maxVal = parseInt(customInput.max);
+            if (!isNaN(maxVal) && val > maxVal) val = maxVal;
+            if (val < 1) val = 1;
+            customCount = val;
+            selectedCount = val;
+            customInput.value = val;
+            document.getElementById('count-10').classList.remove('active');
+            document.getElementById('count-20').classList.remove('active');
+            if (document.getElementById('count-36')) document.getElementById('count-36').classList.remove('active');
         });
     }
     
