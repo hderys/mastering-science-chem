@@ -12,7 +12,7 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// ==================== 全局變量 ====================
+// ==================== 全域變量 ====================
 let currentUser = null;
 let userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
 let currentUnit = null;
@@ -59,6 +59,14 @@ const ACHIEVEMENT_POINTS = {
     'blankPaper': -10,
     'downwardTrend': -10
 };
+
+// ==================== format 函數（新增） ====================
+function format(date, pattern) {
+    let year = date.getFullYear();
+    let month = String(date.getMonth() + 1).padStart(2, '0');
+    let day = String(date.getDate()).padStart(2, '0');
+    return pattern.replace('yyyy', year).replace('MM', month).replace('dd', day);
+}
 
 // ==================== 數據操作函數 ====================
 function saveUserData() {
@@ -164,7 +172,6 @@ function shuffleArray(arr) {
 
 // ==================== 成就系統 ====================
 function showUnlockCard(title, message, date, points) {
-    // 全螢幕閃光效果（僅在積分 > 0 時顯示，代表正式解鎖）
     if (points > 0) {
         const flash = document.createElement('div');
         flash.className = 'unlock-flash';
@@ -211,10 +218,9 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     let key = `${unit}_${chapter}`;
     if (!userData.achievements[key]) userData.achievements[key] = {};
     
-    // 只計算 Basic(1)、Advanced(2)、Challenge(3)，排除 Translate(0)
-    let s1 = getChapterDifficultyMastery(unit, chapter, 1);  // Basic 題
-    let s3 = getChapterDifficultyMastery(unit, chapter, 2);  // Advanced 題
-    let s5 = getChapterDifficultyMastery(unit, chapter, 3);  // Challenge 題
+    let s1 = getChapterDifficultyMastery(unit, chapter, 1);
+    let s3 = getChapterDifficultyMastery(unit, chapter, 2);
+    let s5 = getChapterDifficultyMastery(unit, chapter, 3);
 
     if (isBlankPaper) {
         addPenaltyAchievement('blankPaper', '📄', -10, '提交空白答案卷');
@@ -224,7 +230,6 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
         addPenaltyAchievement('downwardTrend', '📉', -10, '連續兩次正確率下降超過20%');
     }
 
-    // 一星完成 (Basic ≥ 80%)
     if (s1 >= 80) {
         if (!userData.achievements[key].star1) {
             userData.achievements[key].star1 = { unlocked: true, date: today, lastAccuracy: s1 };
@@ -237,7 +242,6 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
         }
     }
 
-    // 三星解鎖 (Basic ≥ 80% 且 Advanced ≥ 80%)
     if (s1 >= 80 && s3 >= 80) {
         if (!userData.achievements[key].star3) {
             userData.achievements[key].star3 = { unlocked: true, date: today, lastAccuracy: s3 };
@@ -250,7 +254,6 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
         }
     }
 
-    // 五星解鎖 (Basic ≥ 80% 且 Advanced ≥ 80% 且 Challenge ≥ 80%)
     if (s1 >= 80 && s3 >= 80 && s5 >= 80) {
         if (!userData.achievements[key].star5) {
             userData.achievements[key].star5 = { unlocked: true, date: today, lastAccuracy: s5 };
@@ -263,7 +266,6 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
         }
     }
 
-    // 試煉完成 (使用試煉模式且正確率≥80%)
     if (isTrialMode && accuracy >= 80) {
         if (!userData.achievements[key].trial) {
             userData.achievements[key].trial = { unlocked: true, date: today, lastAccuracy: accuracy };
@@ -380,7 +382,6 @@ function addPracticeHistory(unit, chapter, difficultyName, questionCount, correc
     let previousAccuracy = userData.stats.lastAccuracy;
     userData.stats.lastAccuracy = accuracy;
     
-    // 速度之星條件：提前50%時間完成 且 正確率≥70%
     let isSpeed = timeSpentPercent <= 50 && accuracy >= 70;
     
     saveUserData();
@@ -419,7 +420,6 @@ function calculateClassRank(userId, userPoints) {
 }
 
 function selectQuestionsByDifficultyAndCount(questions, count, preference, isTrial) {
-    // 先過濾掉翻譯題（如果 excludeTranslate 為 true）
     let filteredQuestions = excludeTranslate ? questions.filter(q => q.difficulty !== "🌐 Translate") : [...questions];
     
     if (isTrial) {
@@ -436,14 +436,12 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
     let candidates = [];
     
     if (preference == 0) {
-        // 1 星：Translate + Basic
         for (let q of filteredQuestions) {
             if (q.difficulty_level == 0 || q.difficulty_level == 1) {
                 candidates.push(q);
             }
         }
     } else if (preference == 1) {
-        // 3 星：優先 Advanced，其次錯過的 Basic，最後 Challenge
         let advancedQuestions = [];
         let wrongBasicQuestions = [];
         let challengeQuestions = [];
@@ -465,7 +463,6 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
             candidates.push(...otherBasic);
         }
     } else {
-        // 5 星：Advanced + Challenge
         for (let q of filteredQuestions) {
             if (q.difficulty_level == 2 || q.difficulty_level == 3) {
                 candidates.push(q);
@@ -477,10 +474,8 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
         candidates = [...filteredQuestions];
     }
     
-    // 去重
     candidates = [...new Map(candidates.map(q => [q.id, q])).values()];
     
-    // 隨機排序（保持優先級組內的隨機）
     if (preference == 1) {
         let advanced = candidates.filter(q => q.difficulty_level == 2);
         let wrongBasic = candidates.filter(q => q.difficulty_level == 1 && userData.latestStatus[q.id] === false);
@@ -544,6 +539,16 @@ function renderPractice() {
         html += `</div></div>`;
     }
     container.innerHTML = html;
+    
+    // ===== 預設展開 Microscopic World I（單元 2） =====
+    const unit2Container = document.getElementById('chapters-2');
+    if (unit2Container) {
+        unit2Container.classList.add('open');
+        const toggle2 = document.getElementById('toggle-2');
+        if (toggle2) toggle2.textContent = '▼';
+    }
+    // ===== 預設展開結束 =====
+    
     document.querySelectorAll('.practice-chapter').forEach(btn => btn.addEventListener('click', (e) => {
         e.stopPropagation(); pendingUnit = btn.dataset.unit; pendingChapter = btn.dataset.chapter; updateSettingsUnlockStatus(); document.getElementById('settingsModal').style.display = 'flex';
     }));
@@ -558,13 +563,11 @@ function renderPractice() {
     }));
 }
 
-// ========== updateSettingsUnlockStatus 函數 ==========
 function updateSettingsUnlockStatus() {
     if (!pendingUnit || !pendingChapter) return;
     
     let questions = window.ALL_UNITS[pendingUnit].chapters[pendingChapter].questions;
     
-    // 計算各難度完成情況（排除 Translate）
     let availableQuestions = excludeTranslate ? questions.filter(q => q.difficulty !== "🌐 Translate") : [...questions];
     let basicQuestions = availableQuestions.filter(q => q.difficulty_level === 1);
     let basicCorrect = basicQuestions.filter(q => userData.latestStatus[q.id] === true).length;
@@ -581,12 +584,10 @@ function updateSettingsUnlockStatus() {
     let challengeTotal = challengeQuestions.length;
     let challengePercent = challengeTotal === 0 ? 0 : Math.round(challengeCorrect / challengeTotal * 100);
     
-    // 解鎖狀態
     let star3Unlocked = basicPercent >= 80;
     let star5Unlocked = star3Unlocked && advancedPercent >= 80;
     let trialUnlocked = star5Unlocked && challengePercent >= 80;
     
-    // 決定當前進度條目標
     let targetPercent = 0;
     let targetCorrect = 0;
     let targetTotal = 0;
@@ -615,7 +616,6 @@ function updateSettingsUnlockStatus() {
         currentStage = 'complete';
     }
     
-    // 計算還需要多少題
     let needed = 0;
     if (currentStage === 'locked') {
         needed = Math.ceil(0.8 * basicTotal) - basicCorrect;
@@ -628,7 +628,6 @@ function updateSettingsUnlockStatus() {
         if (needed < 0) needed = 0;
     }
     
-    // 更新難度按鈕
     let dM = document.getElementById('diff-medium');
     let dH = document.getElementById('diff-hard');
     let tM = document.getElementById('trial-mode');
@@ -642,6 +641,13 @@ function updateSettingsUnlockStatus() {
         } else {
             dM.classList.add('locked');
             dM.disabled = true;
+            // 如果當前選的是 3 星，自動降級為 1 星
+            if (selectedDifficulty === 1) {
+                selectedDifficulty = 0;
+                document.getElementById('diff-easy').classList.add('active');
+                document.getElementById('diff-medium').classList.remove('active');
+                document.getElementById('diff-hard').classList.remove('active');
+            }
         }
     }
     
@@ -653,6 +659,13 @@ function updateSettingsUnlockStatus() {
         } else {
             dH.classList.add('locked');
             dH.disabled = true;
+            // 如果當前選的是 5 星，自動降級為 1 星
+            if (selectedDifficulty === 2) {
+                selectedDifficulty = 0;
+                document.getElementById('diff-easy').classList.add('active');
+                document.getElementById('diff-medium').classList.remove('active');
+                document.getElementById('diff-hard').classList.remove('active');
+            }
         }
     }
     
@@ -667,14 +680,12 @@ function updateSettingsUnlockStatus() {
         }
     }
     
-    // ========== 題目數量區域（核心修改） ==========
     let count10 = document.getElementById('count-10');
     let count20 = document.getElementById('count-20');
     let count36 = document.getElementById('count-36');
     let customInput = document.getElementById('customCount');
     let countHint = document.getElementById('countHint');
     
-    // 10題和20題始終可用
     if (count10) {
         count10.disabled = false;
         count10.classList.remove('locked');
@@ -684,32 +695,25 @@ function updateSettingsUnlockStatus() {
         count20.classList.remove('locked');
     }
     
-    // 計算自訂輸入框的最大值（根據當前難度和排除翻譯設定）
     let maxCustom = 0;
     if (selectedDifficulty === 0) {
-        // 1 星
         if (excludeTranslate) {
             maxCustom = basicTotal;
         } else {
             maxCustom = questions.filter(q => q.difficulty_level === 0 || q.difficulty_level === 1).length;
         }
     } else if (selectedDifficulty === 1) {
-        // 3 星
         maxCustom = availableQuestions.length;
     } else if (selectedDifficulty === 2) {
-        // 5 星
         maxCustom = advancedTotal + challengeTotal;
     } else if (isTrialMode) {
-        // 試煉模式
         maxCustom = Math.min(availableQuestions.length, 50);
     }
     maxCustom = Math.min(maxCustom, 50);
     if (maxCustom < 1) maxCustom = 1;
     
-    // 36題和自訂輸入框：一星解鎖後才啟用
     if (count36 && customInput) {
         if (star3Unlocked) {
-            // 一星解鎖後：啟用
             count36.disabled = false;
             count36.classList.remove('locked');
             count36.innerHTML = '36 題';
@@ -717,7 +721,6 @@ function updateSettingsUnlockStatus() {
             customInput.style.opacity = '1';
             customInput.max = maxCustom;
             
-            // 如果當前值超過最大值，自動調整
             let currentVal = parseInt(customInput.value);
             if (isNaN(currentVal)) currentVal = 10;
             if (currentVal > maxCustom) {
@@ -735,7 +738,6 @@ function updateSettingsUnlockStatus() {
             
             if (countHint) countHint.innerHTML = `✅ 36題及自訂題數已解鎖！(上限 ${maxCustom} 題)`;
         } else {
-            // 未解鎖：禁用
             count36.disabled = true;
             count36.classList.add('locked');
             count36.innerHTML = '36 題 🔒';
@@ -745,7 +747,6 @@ function updateSettingsUnlockStatus() {
         }
     }
     
-    // 更新簡短提示
     if (diffHint) {
         if (currentStage === 'locked') {
             diffHint.innerHTML = `🔒 解鎖三星需要 Basic 題正確率 ≥ 80% (目前 ${basicPercent}%)`;
@@ -758,7 +759,6 @@ function updateSettingsUnlockStatus() {
         }
     }
     
-    // 更新進度條
     let progressContainer = document.getElementById('star3-progress-container');
     if (!progressContainer && diffHint && diffHint.parentNode) {
         progressContainer = document.createElement('div');
@@ -846,12 +846,13 @@ function attachMistakeEvents() {
     document.querySelectorAll('.redo-q').forEach(btn => btn.addEventListener('click', (e) => redoQuestion(btn.dataset.qid)));
 }
 
+// ==================== renderHistory（已修正：新增 format 函數 + 移除「侧」字） ====================
 function renderHistory() {
     let container = document.getElementById('historyPanel');
     if (!userData.practiceHistory || userData.practiceHistory.length === 0) { container.innerHTML = '<div class="card">📋 暫無做題紀錄</div>'; return; }
     let html = `<div class="card"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;"><h3>📋 做題紀錄</h3><button id="exportHistoryBtn" class="btn export-btn">📥 匯出 CSV</button></div><div style="overflow-x:auto;"><table class="history-table"><thead><tr><th>日期</th><th>時間</th><th>單元</th><th>章節</th><th>題數</th><th>正確率</th><th>模式</th></tr></thead><tbody>`;
     for (let h of userData.practiceHistory) {
-        html += `<tr><td>${h.date}</td><td>${h.time}侧<td>${h.unitName}侧<td>${h.chapterName}侧<td>${h.questionCount}侧<td>${h.accuracy}%侧<td>${h.mode === 'trial' ? '試煉' : '一般'}侧</tr>`;
+        html += `<tr><td>${format(new Date(h.date), 'yyyy-MM-dd')}</td><td>${h.time}</td><td>${h.unitName}</td><td>${h.chapterName}</td><td>${h.questionCount}</td><td>${h.accuracy}%</td><td>${h.mode === 'trial' ? '試煉' : '一般'}</td></tr>`;
     }
     html += `</tbody></table></div></div>`;
     container.innerHTML = html;
@@ -1082,21 +1083,86 @@ function startPracticeWithSettings() {
     showQuizModal();
 }
 
+// ==================== showExplainModal（修改：修正選項顯示 + 移除重複標題） ====================
 function showExplainModal(question, userLetter, correctLetter, userText, correctText, isCorrect) {
-    let opts = '<div class="explain-options">';
-    for (let opt of question.options) {
-        let l = opt[0], t = opt.substring(3), isUser = (l === userLetter), isCor = (l === correctLetter);
-        let cls = 'explain-option-normal';
-        if (isCor) cls = 'explain-option-correct';
-        else if (isUser && !isCor) cls = 'explain-option-wrong';
-        opts += `<div class="${cls}">${l}. ${t}</div>`;
+    // 檢查是否已收藏
+    const isFav = userData.favorites.includes(question.id);
+    const favIcon = isFav ? '⭐' : '☆';
+    const favText = isFav ? '取消收藏' : '收藏';
+    
+    // ===== 使用 currentOptionsMapping 顯示選項（與作答時一致） =====
+    // 找到當前題目在 currentQuestions 中的索引
+    const qIndex = currentQuestions.findIndex(q => q.id === question.id);
+    let optionsHtml = '';
+    
+    if (qIndex !== -1 && currentOptionsMapping[qIndex]) {
+        // 使用映射的順序
+        const map = currentOptionsMapping[qIndex];
+        const letters = ['A', 'B', 'C', 'D'];
+        for (let l of letters) {
+            const isUser = (l === userLetter);
+            const isCor = (l === correctLetter);
+            let cls = 'explain-option-normal';
+            if (isCor) cls = 'explain-option-correct';
+            else if (isUser && !isCor) cls = 'explain-option-wrong';
+            optionsHtml += `<div class="${cls}">${l}. ${map.letterToText[l]}</div>`;
+        }
+    } else {
+        // 如果找不到映射（例如從錯題本進入），使用原始選項順序
+        for (let opt of question.options) {
+            let l = opt[0], t = opt.substring(3), isUser = (l === userLetter), isCor = (l === correctLetter);
+            let cls = 'explain-option-normal';
+            if (isCor) cls = 'explain-option-correct';
+            else if (isUser && !isCor) cls = 'explain-option-wrong';
+            optionsHtml += `<div class="${cls}">${l}. ${t}</div>`;
+        }
     }
-    opts += '</div>';
+    
     let ansClass = isCorrect ? 'answer-correct' : 'answer-wrong';
     let ansHtml = `<div class="answer-comparison"><span>你的答案: <span class="${ansClass}">${userLetter}</span></span><span>正解: <span class="${ansClass}">${correctLetter}</span></span></div>`;
-    let html = `<div style="margin-bottom:0.8rem;"><strong>題目:</strong> ${question.text}</div>${opts}<div style="margin:0.8rem 0; padding:0.4rem; background:#f0f0f0; border-radius:12px;"><strong>📖 題解:</strong> ${question.explanation || '無'}</div>${ansHtml}`;
+    
+    // 圖片縮圖
+    let imageHtml = '';
+    if (question.imageUrl) {
+        imageHtml = `<div style="text-align:center; margin: 0.5rem 0;">
+            <img src="${question.imageUrl}" style="max-height:150px; max-width:100%; border-radius:8px; cursor:pointer;" onclick="document.getElementById('zoomImage').src='${question.imageUrl}'; document.getElementById('imageZoomModal').style.display='flex';">
+            <div style="font-size:0.65rem; color:#999; margin-top:4px;">🖱️ 點擊圖片放大</div>
+        </div>`;
+    }
+    
+    // ===== 標題行 + 收藏按鈕（同一行） =====
+    let headerHtml = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+        <strong style="font-size:1.1rem;">📖 題目與題解</strong>
+        <button onclick="toggleFavorite('${question.id}')" class="btn" style="background:var(--deep-purple-light); padding:0.2rem 0.8rem; font-size:0.85rem;">${favIcon} ${favText}</button>
+    </div>`;
+    
+    let html = `${headerHtml}
+                <div style="margin-bottom:0.8rem;"><strong>題目:</strong> ${question.text}</div>
+                ${imageHtml}
+                ${optionsHtml}
+                <div style="margin:0.8rem 0; padding:0.4rem; background:#f0f0f0; border-radius:12px;"><strong>📖 題解:</strong> ${question.explanation || '無'}</div>
+                ${ansHtml}`;
     document.getElementById('explainContent').innerHTML = html;
     document.getElementById('explainModal').style.display = 'flex';
+}
+
+// ==================== toggleFavorite（新增：收藏切換函數） ====================
+function toggleFavorite(qid) {
+    if (userData.favorites.includes(qid)) {
+        userData.favorites = userData.favorites.filter(id => id !== qid);
+    } else {
+        userData.favorites.push(qid);
+    }
+    saveUserData();
+    // 重新整理題解彈窗（重新渲染）
+    const explainContent = document.getElementById('explainContent');
+    if (explainContent) {
+        // 簡單處理：提示並關閉
+        alert('⭐ 收藏已更新！請重新點擊「查看題解」查看最新狀態。');
+    }
+    renderPinned();
+    renderMyMistakes();
+    renderPastMistakes();
 }
 
 function showQuizModal() { renderQuizNav(); renderCurrentQuestion(); document.getElementById('quizModal').style.display = 'flex'; }
@@ -1116,10 +1182,29 @@ function renderQuizNav() {
     checkAllQuestionsAnswered();
 }
 
+// ==================== renderCurrentQuestion（修改：加入難度背景色 + 優化圖片/選項布局） ====================
 function renderCurrentQuestion() {
     let q = currentQuestions[currentQIndex];
     let map = currentOptionsMapping[currentQIndex];
     let hasImage = q.imageUrl !== null;
+    
+    // ===== 難度背景色（應用於整個 modal-content） =====
+    const modalContent = document.querySelector('#quizModal .modal-content');
+    if (modalContent) {
+        // 移除所有難度 class
+        modalContent.classList.remove('difficulty-translate', 'difficulty-basic', 'difficulty-advanced', 'difficulty-challenge');
+        // 根據難度添加對應 class
+        if (q.difficulty === '🌐 Translate') {
+            modalContent.classList.add('difficulty-translate');
+        } else if (q.difficulty === '✅ Basic') {
+            modalContent.classList.add('difficulty-basic');
+        } else if (q.difficulty === '📈 Advanced') {
+            modalContent.classList.add('difficulty-advanced');
+        } else if (q.difficulty === '🔥 Challenge') {
+            modalContent.classList.add('difficulty-challenge');
+        }
+    }
+    // ===== 難度背景色結束 =====
     
     document.getElementById('modalQuestionText').innerHTML = q.text;
     document.getElementById('quizCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
@@ -1129,7 +1214,7 @@ function renderCurrentQuestion() {
     let quizLayout = document.querySelector('.quiz-layout');
     
     if (!quizLayout) {
-        const quizBody = document.querySelector('.quiz-body');
+        const quizBodyEl = document.querySelector('.quiz-body');
         const originalOptions = document.getElementById('modalOptions');
         const originalImgArea = imgArea;
         
