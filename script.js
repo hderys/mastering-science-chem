@@ -32,6 +32,8 @@ let isTrialMode = false;
 let excludeTranslate = true;
 let blinkInterval = null;
 let customCount = 10;
+let isSingleQuestionMode = false;
+let singleQuestionSource = null;
 
 // 成績總表控制變量
 let showOnlyWrong = false;
@@ -60,7 +62,7 @@ const ACHIEVEMENT_POINTS = {
     'downwardTrend': -10
 };
 
-// ==================== format 函數（新增） ====================
+// ==================== format 函數 ====================
 function format(date, pattern) {
     let year = date.getFullYear();
     let month = String(date.getMonth() + 1).padStart(2, '0');
@@ -168,6 +170,15 @@ function shuffleArray(arr) {
         [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
+}
+
+// ==================== 輔助函數 ====================
+function hasEverWrong(qid) {
+    return userData.allAttempts.some(att => att.qid === qid && !att.isCorrect);
+}
+
+function isNotAttempted(qid) {
+    return !userData.allAttempts.some(att => att.qid === qid);
 }
 
 // ==================== 成就系統 ====================
@@ -370,7 +381,14 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
 
 function addPracticeHistory(unit, chapter, difficultyName, questionCount, correctCount, accuracy, mode, timeSpentPercent, consecutiveCorrectCount, isBlankPaper) {
     let now = new Date(), date = now.toISOString().slice(0, 10), time = now.toTimeString().slice(0, 5);
-    let unitObj = window.ALL_UNITS[unit], chapterName = unitObj ? unitObj.chapters[chapter].name : chapter, unitName = unitObj ? unitObj.name : unit;
+    let unitObj = window.ALL_UNITS[unit];
+    let unitName = unitObj ? unitObj.name : unit;
+    let chapterName = '單元測驗';
+    if (chapter && unitObj && unitObj.chapters[chapter]) {
+        chapterName = unitObj.chapters[chapter].name;
+    } else if (chapter) {
+        chapterName = chapter;
+    }
     userData.practiceHistory.unshift({ id: Date.now(), date, time, unitId: unit, unitName, chapterId: chapter, chapterName, difficulty: difficultyName, questionCount, correctCount, accuracy, mode });
     if (userData.practiceHistory.length > 100) userData.practiceHistory = userData.practiceHistory.slice(0, 100);
 
@@ -419,7 +437,8 @@ function calculateClassRank(userId, userPoints) {
     return { rank: rank, total: classmates.length };
 }
 
-function selectQuestionsByDifficultyAndCount(questions, count, preference, isTrial) {
+// ==================== 挑題邏輯 ====================
+function selectQuestionsByDifficultyAndCount(questions, count, preference, isTrial, isUnitTest = false) {
     let filteredQuestions = excludeTranslate ? questions.filter(q => q.difficulty !== "🌐 Translate") : [...questions];
     
     if (isTrial) {
@@ -433,64 +452,92 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
         return sorted.slice(0, Math.min(count, 50));
     }
 
+    let allowedLevels = [];
+    if (preference === 0) {
+        allowedLevels = [0, 1];
+    } else if (preference === 1) {
+        allowedLevels = [2];
+    } else if (preference === 2) {
+        allowedLevels = [2, 3];
+    }
+
+    let wrongQuestions = [];
+    let wrongEverQuestions = [];
+    let notAttemptedQuestions = [];
+    let otherQuestions = [];
+
+    for (let q of filteredQuestions) {
+        const level = q.difficulty_level;
+        const isAllowed = allowedLevels.includes(level);
+        
+        if (userData.latestStatus[q.id] === false) {
+            wrongQuestions.push(q);
+            continue;
+        }
+        
+        if (isUnitTest && hasEverWrong(q.id) && userData.latestStatus[q.id] !== false) {
+            wrongEverQuestions.push(q);
+            continue;
+        }
+        
+        if (isNotAttempted(q.id) && isAllowed) {
+            notAttemptedQuestions.push(q);
+            continue;
+        }
+        
+        if (isAllowed) {
+            otherQuestions.push(q);
+        }
+    }
+
     let candidates = [];
     
-    if (preference == 0) {
-        for (let q of filteredQuestions) {
-            if (q.difficulty_level == 0 || q.difficulty_level == 1) {
-                candidates.push(q);
-            }
-        }
-    } else if (preference == 1) {
-        let advancedQuestions = [];
-        let wrongBasicQuestions = [];
-        let challengeQuestions = [];
-        
-        for (let q of filteredQuestions) {
-            if (q.difficulty_level == 2) {
-                advancedQuestions.push(q);
-            } else if (q.difficulty_level == 1 && userData.latestStatus[q.id] === false) {
-                wrongBasicQuestions.push(q);
-            } else if (q.difficulty_level == 3) {
-                challengeQuestions.push(q);
-            }
-        }
-        
-        candidates = [...advancedQuestions, ...wrongBasicQuestions, ...challengeQuestions];
-        
-        if (candidates.length < count) {
-            let otherBasic = filteredQuestions.filter(q => q.difficulty_level == 1 && userData.latestStatus[q.id] !== false);
-            candidates.push(...otherBasic);
-        }
+    if (isUnitTest) {
+        candidates = [...wrongEverQuestions];
     } else {
-        for (let q of filteredQuestions) {
-            if (q.difficulty_level == 2 || q.difficulty_level == 3) {
-                candidates.push(q);
-            }
-        }
+        candidates = [...wrongQuestions];
     }
     
     if (candidates.length < count) {
-        candidates = [...filteredQuestions];
+        let shuffledNotAttempted = shuffleArray([...notAttemptedQuestions]);
+        candidates = [...candidates, ...shuffledNotAttempted];
+    }
+    
+    if (candidates.length < count) {
+        let remaining = count - candidates.length;
+        let otherShuffled = shuffleArray([...otherQuestions]);
+        
+        let selected = [];
+        if (preference === 0) {
+            let basicTranslate = otherShuffled.filter(q => q.difficulty_level === 0 || q.difficulty_level === 1);
+            let advanced = otherShuffled.filter(q => q.difficulty_level === 2);
+            let half = Math.ceil(remaining / 2);
+            selected = [
+                ...shuffleArray(basicTranslate).slice(0, half),
+                ...shuffleArray(advanced).slice(0, remaining - half)
+            ];
+        } else if (preference === 1) {
+            let advanced = otherShuffled.filter(q => q.difficulty_level === 2);
+            let challenge = otherShuffled.filter(q => q.difficulty_level === 3);
+            let half = Math.ceil(remaining / 2);
+            selected = [
+                ...shuffleArray(advanced).slice(0, half),
+                ...shuffleArray(challenge).slice(0, remaining - half)
+            ];
+        } else if (preference === 2) {
+            let advanced = otherShuffled.filter(q => q.difficulty_level === 2);
+            let challenge = otherShuffled.filter(q => q.difficulty_level === 3);
+            let advCount = Math.ceil(remaining * 0.2);
+            selected = [
+                ...shuffleArray(advanced).slice(0, advCount),
+                ...shuffleArray(challenge).slice(0, remaining - advCount)
+            ];
+        }
+        candidates = [...candidates, ...selected];
     }
     
     candidates = [...new Map(candidates.map(q => [q.id, q])).values()];
-    
-    if (preference == 1) {
-        let advanced = candidates.filter(q => q.difficulty_level == 2);
-        let wrongBasic = candidates.filter(q => q.difficulty_level == 1 && userData.latestStatus[q.id] === false);
-        let challenge = candidates.filter(q => q.difficulty_level == 3);
-        let otherBasic = candidates.filter(q => q.difficulty_level == 1 && userData.latestStatus[q.id] !== false);
-        
-        advanced = shuffleArray(advanced);
-        wrongBasic = shuffleArray(wrongBasic);
-        challenge = shuffleArray(challenge);
-        otherBasic = shuffleArray(otherBasic);
-        
-        candidates = [...advanced, ...wrongBasic, ...challenge, ...otherBasic];
-    } else {
-        candidates = shuffleArray(candidates);
-    }
+    candidates = shuffleArray(candidates);
     
     return candidates.slice(0, Math.min(count, candidates.length));
 }
@@ -522,6 +569,10 @@ function toggleCollapsible(id) {
     }
 }
 
+function isMobile() {
+    return window.innerWidth <= 640;
+}
+
 function renderPractice() {
     const container = document.getElementById('practicePanel');
     if (!container) return;
@@ -531,27 +582,77 @@ function renderPractice() {
         let unitObj = window.ALL_UNITS[unit], chapters = unitObj.chapters;
         if (Object.keys(chapters).length === 0) continue;
         let mastery = getUnitMastery(unit);
-        html += `<div class="unit-group"><div class="unit-header" onclick="toggleUnit('${unit}')"><div class="unit-header-left"><span class="unit-toggle" id="toggle-${unit}">▶</span><span>${unitObj.name}</span></div><div class="mastery-wrapper"><div class="progress-bar-container"><div class="progress-bar-fill" style="width:${mastery}%;"></div></div><span class="mastery-text">完成度 ${mastery}%</span></div></div><div class="chapters-container" id="chapters-${unit}">`;
+        let unitNameDisplay = unitObj.name;
+        let unitNameForDisplay = isMobile() ? unitObj.name.replace(/（[^）]*）/, '') : unitObj.name;
+        
+        html += `<div class="unit-group"><div class="unit-header" onclick="toggleUnit('${unit}')">
+            <div class="unit-header-left">
+                <span class="unit-toggle" id="toggle-${unit}">▶</span>
+                <span>${unitNameForDisplay}</span>
+            </div>
+            <div class="mastery-wrapper">
+                <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${mastery}%;"></div></div>
+                <span class="mastery-text">完成度 ${mastery}%</span>
+                <button class="btn btn-small unit-test-btn" data-unit="${unit}" style="background:var(--deep-purple-light); padding:0.15rem 0.5rem; font-size:0.7rem;">📝 單元測驗</button>
+            </div>
+        </div><div class="chapters-container" id="chapters-${unit}">`;
         for (let ch in chapters) {
             let chMastery = getChapterMastery(unit, ch), chTotal = getChapterTotalQuestions(unit, ch);
-            html += `<div class="chapter-item"><span class="chapter-name">${chapters[ch].name} (${chTotal} 題)</span><div class="mastery-wrapper"><div class="progress-bar-container"><div class="progress-bar-fill" style="width:${chMastery}%;"></div></div><span class="mastery-text">完成度 ${chMastery}%</span></div><div class="chapter-actions"><button class="btn btn-small practice-chapter" data-unit="${unit}" data-chapter="${ch}">✏️ 練習</button><button class="btn btn-danger btn-small clear-chapter" data-unit="${unit}" data-chapter="${ch}">🗑️ 重置</button></div></div>`;
+            let chNameDisplay = chapters[ch].name;
+            if (isMobile()) {
+                html += `<div class="chapter-item">
+                    <span class="chapter-name">${chNameDisplay} (${chTotal} 題)</span>
+                    <div class="chapter-row">
+                        <div class="progress-wrapper">
+                            <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${chMastery}%;"></div></div>
+                            <span class="mastery-text">${chMastery}%</span>
+                        </div>
+                        <div class="chapter-actions">
+                            <button class="btn btn-small practice-chapter" data-unit="${unit}" data-chapter="${ch}">✏️練習</button>
+                            <button class="btn btn-danger btn-small clear-chapter" data-unit="${unit}" data-chapter="${ch}">🗑️重置</button>
+                        </div>
+                    </div>
+                </div>`;
+            } else {
+                html += `<div class="chapter-item">
+                    <span class="chapter-name">${chNameDisplay} (${chTotal} 題)</span>
+                    <div class="mastery-wrapper">
+                        <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${chMastery}%;"></div></div>
+                        <span class="mastery-text">完成度 ${chMastery}%</span>
+                    </div>
+                    <div class="chapter-actions">
+                        <button class="btn btn-small practice-chapter" data-unit="${unit}" data-chapter="${ch}">✏️ 練習</button>
+                        <button class="btn btn-danger btn-small clear-chapter" data-unit="${unit}" data-chapter="${ch}">🗑️ 重置</button>
+                    </div>
+                </div>`;
+            }
         }
         html += `</div></div>`;
     }
     container.innerHTML = html;
     
-    // ===== 預設展開 Microscopic World I（單元 2） =====
     const unit2Container = document.getElementById('chapters-2');
     if (unit2Container) {
         unit2Container.classList.add('open');
         const toggle2 = document.getElementById('toggle-2');
         if (toggle2) toggle2.textContent = '▼';
     }
-    // ===== 預設展開結束 =====
     
     document.querySelectorAll('.practice-chapter').forEach(btn => btn.addEventListener('click', (e) => {
-        e.stopPropagation(); pendingUnit = btn.dataset.unit; pendingChapter = btn.dataset.chapter; updateSettingsUnlockStatus(); document.getElementById('settingsModal').style.display = 'flex';
+        e.stopPropagation(); 
+        pendingUnit = btn.dataset.unit; 
+        pendingChapter = btn.dataset.chapter; 
+        isSingleQuestionMode = false;
+        updateSettingsUnlockStatus(); 
+        document.getElementById('settingsModal').style.display = 'flex';
     }));
+    
+    document.querySelectorAll('.unit-test-btn').forEach(btn => btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const unit = btn.dataset.unit;
+        startUnitTest(unit);
+    }));
+    
     document.querySelectorAll('.clear-chapter').forEach(btn => btn.addEventListener('click', (e) => {
         e.stopPropagation(); let unit = btn.dataset.unit, chapter = btn.dataset.chapter;
         if (confirm(`確定清空「${window.ALL_UNITS[unit].chapters[chapter].name}」的所有練習紀錄？`)) {
@@ -561,6 +662,135 @@ function renderPractice() {
             saveUserData(); renderPractice(); renderMyMistakes(); renderPastMistakes(); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
         }
     }));
+}
+
+// ==================== 單元測驗功能 ====================
+function startUnitTest(unit) {
+    let allQuestions = [];
+    for (let ch in window.ALL_UNITS[unit].chapters) {
+        allQuestions = allQuestions.concat(window.ALL_UNITS[unit].chapters[ch].questions);
+    }
+    if (allQuestions.length === 0) {
+        alert('此單元暫無題目');
+        return;
+    }
+    
+    let count = Math.min(36, allQuestions.length);
+    let selectedQuestions = selectQuestionsByDifficultyAndCount(allQuestions, count, 1, false, true);
+    if (selectedQuestions.length < count) {
+        let remaining = allQuestions.filter(q => !selectedQuestions.includes(q));
+        let shuffled = shuffleArray(remaining);
+        selectedQuestions = [...selectedQuestions, ...shuffled.slice(0, count - selectedQuestions.length)];
+    }
+    selectedQuestions = shuffleArray(selectedQuestions);
+    
+    currentUnit = unit;
+    currentChapter = null;
+    currentQuestions = selectedQuestions;
+    currentOptionsMapping = currentQuestions.map(q => {
+        if (q.sf === 0) {
+            let letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) { let optText = q.options[i].substring(3); map[letters[i]] = optText; }
+            return { letterToText: map, correctLetter: q.correct };
+        } else {
+            let texts = q.options.map(opt => opt.replace(/^[A-D]\.\s*/, '')), shuffled = shuffleArray([...texts]), letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) map[letters[i]] = shuffled[i];
+            let correctText = q.options.find(opt => opt.startsWith(q.correct)).replace(/^[A-D]\.\s*/, ''), correctLetter = null;
+            for (let [l, t] of Object.entries(map)) if (t === correctText) { correctLetter = l; break; }
+            return { letterToText: map, correctLetter: correctLetter };
+        }
+    });
+    currentAnswers = new Array(selectedQuestions.length).fill(null);
+    currentQIndex = 0;
+    isTrialMode = false;
+    isSingleQuestionMode = false;
+    selectedCount = 36;
+    
+    let timePerQuestion = 90;
+    timeRemaining = selectedQuestions.length * timePerQuestion;
+    updateTimerDisplay();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (timeRemaining <= 0) submitAll();
+        else { timeRemaining--; updateTimerDisplay(); }
+    }, 1000);
+    
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+    }
+    const submitBtn = document.getElementById('submitAllBtn');
+    if (submitBtn) submitBtn.style.animation = '';
+    
+    document.getElementById('settingsModal').style.display = 'none';
+    document.getElementById('explainModal').style.display = 'none';
+    document.getElementById('resultModal').style.display = 'none';
+    
+    showQuizModal();
+}
+
+// ==================== 單題練習功能 ====================
+function startSingleQuestion(qid, source) {
+    let foundQ = null;
+    let foundUnit = null;
+    let foundChapter = null;
+    for (let u in window.ALL_UNITS) {
+        for (let c in window.ALL_UNITS[u].chapters) {
+            let q = window.ALL_UNITS[u].chapters[c].questions.find(qq => qq.id === qid);
+            if (q) {
+                foundQ = q;
+                foundUnit = u;
+                foundChapter = c;
+                break;
+            }
+        }
+        if (foundQ) break;
+    }
+    if (!foundQ) {
+        alert('找不到該題目');
+        return;
+    }
+    
+    currentUnit = foundUnit;
+    currentChapter = foundChapter;
+    currentQuestions = [foundQ];
+    currentOptionsMapping = currentQuestions.map(q => {
+        if (q.sf === 0) {
+            let letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) { let optText = q.options[i].substring(3); map[letters[i]] = optText; }
+            return { letterToText: map, correctLetter: q.correct };
+        } else {
+            let texts = q.options.map(opt => opt.replace(/^[A-D]\.\s*/, '')), shuffled = shuffleArray([...texts]), letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) map[letters[i]] = shuffled[i];
+            let correctText = q.options.find(opt => opt.startsWith(q.correct)).replace(/^[A-D]\.\s*/, ''), correctLetter = null;
+            for (let [l, t] of Object.entries(map)) if (t === correctText) { correctLetter = l; break; }
+            return { letterToText: map, correctLetter: correctLetter };
+        }
+    });
+    currentAnswers = new Array(1).fill(null);
+    currentQIndex = 0;
+    isSingleQuestionMode = true;
+    singleQuestionSource = source;
+    isTrialMode = false;
+    selectedDifficulty = 1;
+    
+    timeRemaining = 90;
+    updateTimerDisplay();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (timeRemaining <= 0) submitAll();
+        else { timeRemaining--; updateTimerDisplay(); }
+    }, 1000);
+    
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+    }
+    const submitBtn = document.getElementById('submitAllBtn');
+    if (submitBtn) submitBtn.style.animation = '';
+    
+    document.getElementById('settingsModal').style.display = 'none';
+    showQuizModal();
 }
 
 function updateSettingsUnlockStatus() {
@@ -641,7 +871,6 @@ function updateSettingsUnlockStatus() {
         } else {
             dM.classList.add('locked');
             dM.disabled = true;
-            // 如果當前選的是 3 星，自動降級為 1 星
             if (selectedDifficulty === 1) {
                 selectedDifficulty = 0;
                 document.getElementById('diff-easy').classList.add('active');
@@ -659,7 +888,6 @@ function updateSettingsUnlockStatus() {
         } else {
             dH.classList.add('locked');
             dH.disabled = true;
-            // 如果當前選的是 5 星，自動降級為 1 星
             if (selectedDifficulty === 2) {
                 selectedDifficulty = 0;
                 document.getElementById('diff-easy').classList.add('active');
@@ -798,7 +1026,10 @@ function renderMyMistakes() {
         html += `<div class="mistake-chapter-group"><div class="mistake-chapter-header" onclick="toggleMistakeChapter('${ch}','my')"><span>📖 ${wrongByChapter[ch][0].chapterName}</span><span class="unit-toggle" id="my-toggle-${ch}">▶</span></div><div class="mistake-questions" id="my-${ch}">`;
         for (let q of wrongByChapter[ch]) {
             let isFav = userData.favorites.includes(q.id);
-            html += `<div class="mistake-question-item"><span>${q.text}</span><div><button class="btn-icon star" data-qid="${q.id}" style="color:${isFav ? '#fbbf24' : '#ccc'}">★</button><button class="btn-icon redo-q" data-qid="${q.id}">🔄</button></div></div>`;
+            html += `<div class="mistake-question-item"><span>${q.text}</span><div>
+                <button class="btn-icon star" data-qid="${q.id}" style="color:${isFav ? '#fbbf24' : '#ccc'}">★</button>
+                <button class="btn-icon redo-q" data-qid="${q.id}" data-source="myMistakes">🔄</button>
+            </div></div>`;
         }
         html += `</div></div>`;
     }
@@ -808,7 +1039,8 @@ function renderMyMistakes() {
 }
 
 function renderPastMistakes() {
-    let wrongQids = new Set(); for (let att of userData.allAttempts) if (!att.isCorrect) wrongQids.add(att.qid);
+    let wrongQids = new Set();
+    for (let att of userData.allAttempts) if (!att.isCorrect) wrongQids.add(att.qid);
     let pastByChapter = {};
     for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) for (let q of window.ALL_UNITS[u].chapters[c].questions) if (wrongQids.has(q.id)) { if (!pastByChapter[c]) pastByChapter[c] = []; pastByChapter[c].push({ ...q, chapterName: window.ALL_UNITS[u].chapters[c].name }); }
     let container = document.getElementById('pastMistakesPanel');
@@ -818,13 +1050,18 @@ function renderPastMistakes() {
         html += `<div class="mistake-chapter-group"><div class="mistake-chapter-header" onclick="toggleMistakeChapter('${ch}','past')"><span>📖 ${pastByChapter[ch][0].chapterName}</span><span class="unit-toggle" id="past-toggle-${ch}">▶</span></div><div class="mistake-questions" id="past-${ch}">`;
         for (let q of pastByChapter[ch]) {
             let isFav = userData.favorites.includes(q.id);
-            html += `<div class="mistake-question-item"><span>${q.text}</span><div><button class="btn-icon star" data-qid="${q.id}" style="color:${isFav ? '#fbbf24' : '#ccc'}">★</button><button class="btn-icon redo-q" data-qid="${q.id}">🔄</button></div></div>`;
+            html += `<div class="mistake-question-item"><span>${q.text}</span><div>
+                <button class="btn-icon star" data-qid="${q.id}" style="color:${isFav ? '#fbbf24' : '#ccc'}">★</button>
+                <button class="btn-icon redo-q" data-qid="${q.id}" data-source="pastMistakes">🔄</button>
+                <button class="btn-icon remove-q" data-qid="${q.id}" style="color:#dc2626;" title="移除該題">🗑️</button>
+            </div></div>`;
         }
         html += `</div></div>`;
     }
     html += '</div>';
     container.innerHTML = html;
     attachMistakeEvents();
+    attachRemoveEvents();
 }
 
 function renderPinned() {
@@ -834,19 +1071,48 @@ function renderPinned() {
     for (let qid of userData.favorites) {
         let found = null, chapterName = '';
         for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) { let q = window.ALL_UNITS[u].chapters[c].questions.find(qq => qq.id === qid); if (q) { found = q; chapterName = window.ALL_UNITS[u].chapters[c].name; break; } }
-        if (found) html += `<div class="mistake-question-item"><span><strong>${chapterName}</strong> ${found.text}</span><button class="btn-icon redo-q" data-qid="${qid}">🔄</button></div>`;
+        if (found) html += `<div class="mistake-question-item"><span><strong>${chapterName}</strong> ${found.text}</span><div>
+            <button class="btn-icon redo-q" data-qid="${qid}" data-source="pinned">🔄</button>
+            <button class="btn-icon remove-q" data-qid="${qid}" style="color:#dc2626;" title="移除該題">🗑️</button>
+        </div></div>`;
     }
     html += '</div>';
     container.innerHTML = html;
-    document.querySelectorAll('.redo-q').forEach(btn => btn.addEventListener('click', (e) => redoQuestion(btn.dataset.qid)));
+    document.querySelectorAll('.redo-q').forEach(btn => btn.addEventListener('click', (e) => {
+        const qid = btn.dataset.qid;
+        const source = btn.dataset.source || 'myMistakes';
+        startSingleQuestion(qid, source);
+    }));
+    attachRemoveEvents();
 }
 
 function attachMistakeEvents() {
     document.querySelectorAll('.star').forEach(star => star.addEventListener('click', (e) => { let qid = star.dataset.qid; if (userData.favorites.includes(qid)) userData.favorites = userData.favorites.filter(id => id !== qid); else userData.favorites.push(qid); saveUserData(); renderMyMistakes(); renderPastMistakes(); renderPinned(); }));
-    document.querySelectorAll('.redo-q').forEach(btn => btn.addEventListener('click', (e) => redoQuestion(btn.dataset.qid)));
+    document.querySelectorAll('.redo-q').forEach(btn => btn.addEventListener('click', (e) => {
+        const qid = btn.dataset.qid;
+        const source = btn.dataset.source || 'myMistakes';
+        startSingleQuestion(qid, source);
+    }));
 }
 
-// ==================== renderHistory（已修正：新增 format 函數 + 移除「侧」字） ====================
+function attachRemoveEvents() {
+    document.querySelectorAll('.remove-q').forEach(btn => btn.addEventListener('click', (e) => {
+        const qid = btn.dataset.qid;
+        if (confirm('確定移除該題？')) {
+            if (userData.favorites.includes(qid)) {
+                userData.favorites = userData.favorites.filter(id => id !== qid);
+            }
+            userData.allAttempts = userData.allAttempts.filter(att => att.qid !== qid);
+            delete userData.latestStatus[qid];
+            saveUserData();
+            renderPastMistakes();
+            renderPinned();
+            renderMyMistakes();
+        }
+    }));
+}
+
+// ==================== renderHistory ====================
 function renderHistory() {
     let container = document.getElementById('historyPanel');
     if (!userData.practiceHistory || userData.practiceHistory.length === 0) { container.innerHTML = '<div class="card">📋 暫無做題紀錄</div>'; return; }
@@ -1043,7 +1309,7 @@ function startPracticeWithSettings() {
     let count = customCount > 0 ? customCount : selectedCount;
     if (count > total) count = total;
     if (count < 1) count = 1;
-    let selectedQuestions = selectQuestionsByDifficultyAndCount(allQuestions, count, selectedDifficulty, isTrialMode);
+    let selectedQuestions = selectQuestionsByDifficultyAndCount(allQuestions, count, selectedDifficulty, isTrialMode, false);
     selectedQuestions = shuffleArray(selectedQuestions);
     currentUnit = unit;
     currentChapter = chapter;
@@ -1063,6 +1329,7 @@ function startPracticeWithSettings() {
     });
     currentAnswers = new Array(selectedQuestions.length).fill(null);
     currentQIndex = 0;
+    isSingleQuestionMode = false;
     let timePerQuestion = selectedDifficulty == 0 ? 108 : (selectedDifficulty == 2 ? 75 : 90);
     timeRemaining = selectedQuestions.length * timePerQuestion;
     updateTimerDisplay();
@@ -1083,20 +1350,16 @@ function startPracticeWithSettings() {
     showQuizModal();
 }
 
-// ==================== showExplainModal（修改：修正選項顯示 + 移除重複標題） ====================
+// ==================== showExplainModal ====================
 function showExplainModal(question, userLetter, correctLetter, userText, correctText, isCorrect) {
-    // 檢查是否已收藏
     const isFav = userData.favorites.includes(question.id);
     const favIcon = isFav ? '⭐' : '☆';
     const favText = isFav ? '取消收藏' : '收藏';
     
-    // ===== 使用 currentOptionsMapping 顯示選項（與作答時一致） =====
-    // 找到當前題目在 currentQuestions 中的索引
     const qIndex = currentQuestions.findIndex(q => q.id === question.id);
     let optionsHtml = '';
     
     if (qIndex !== -1 && currentOptionsMapping[qIndex]) {
-        // 使用映射的順序
         const map = currentOptionsMapping[qIndex];
         const letters = ['A', 'B', 'C', 'D'];
         for (let l of letters) {
@@ -1108,7 +1371,6 @@ function showExplainModal(question, userLetter, correctLetter, userText, correct
             optionsHtml += `<div class="${cls}">${l}. ${map.letterToText[l]}</div>`;
         }
     } else {
-        // 如果找不到映射（例如從錯題本進入），使用原始選項順序
         for (let opt of question.options) {
             let l = opt[0], t = opt.substring(3), isUser = (l === userLetter), isCor = (l === correctLetter);
             let cls = 'explain-option-normal';
@@ -1121,7 +1383,6 @@ function showExplainModal(question, userLetter, correctLetter, userText, correct
     let ansClass = isCorrect ? 'answer-correct' : 'answer-wrong';
     let ansHtml = `<div class="answer-comparison"><span>你的答案: <span class="${ansClass}">${userLetter}</span></span><span>正解: <span class="${ansClass}">${correctLetter}</span></span></div>`;
     
-    // 圖片縮圖
     let imageHtml = '';
     if (question.imageUrl) {
         imageHtml = `<div style="text-align:center; margin: 0.5rem 0;">
@@ -1130,7 +1391,6 @@ function showExplainModal(question, userLetter, correctLetter, userText, correct
         </div>`;
     }
     
-    // ===== 標題行 + 收藏按鈕（同一行） =====
     let headerHtml = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
         <strong style="font-size:1.1rem;">📖 題目與題解</strong>
         <button onclick="toggleFavorite('${question.id}')" class="btn" style="background:var(--deep-purple-light); padding:0.2rem 0.8rem; font-size:0.85rem;">${favIcon} ${favText}</button>
@@ -1146,7 +1406,7 @@ function showExplainModal(question, userLetter, correctLetter, userText, correct
     document.getElementById('explainModal').style.display = 'flex';
 }
 
-// ==================== toggleFavorite（新增：收藏切換函數） ====================
+// ==================== toggleFavorite ====================
 function toggleFavorite(qid) {
     if (userData.favorites.includes(qid)) {
         userData.favorites = userData.favorites.filter(id => id !== qid);
@@ -1154,10 +1414,8 @@ function toggleFavorite(qid) {
         userData.favorites.push(qid);
     }
     saveUserData();
-    // 重新整理題解彈窗（重新渲染）
     const explainContent = document.getElementById('explainContent');
     if (explainContent) {
-        // 簡單處理：提示並關閉
         alert('⭐ 收藏已更新！請重新點擊「查看題解」查看最新狀態。');
     }
     renderPinned();
@@ -1165,7 +1423,193 @@ function toggleFavorite(qid) {
     renderPastMistakes();
 }
 
-function showQuizModal() { renderQuizNav(); renderCurrentQuestion(); document.getElementById('quizModal').style.display = 'flex'; }
+// ==================== 元素周期表功能 ====================
+function showPeriodicTable() {
+    const imgUrl = 'https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/periodic_table.png';
+    document.getElementById('zoomImage').src = imgUrl;
+    document.getElementById('imageZoomModal').style.display = 'flex';
+}
+
+function closeImageZoom() {
+    document.getElementById('imageZoomModal').style.display = 'none';
+}
+
+// ==================== 顯示 DSE 等級預測彈窗 ====================
+function showDSEResult(accuracy, correctCount, totalCount) {
+    let level = '';
+    let levelClass = '';
+    let emoji = '';
+    
+    if (accuracy >= 95) {
+        level = '5**';
+        levelClass = 'level-5star';
+        emoji = '🌟';
+    } else if (accuracy >= 90) {
+        level = '5*';
+        levelClass = 'level-5star';
+        emoji = '🌟';
+    } else if (accuracy >= 85) {
+        level = '5';
+        levelClass = 'level-5';
+        emoji = '🌟';
+    } else if (accuracy >= 78) {
+        level = '4';
+        levelClass = 'level-4';
+        emoji = '📘';
+    } else if (accuracy >= 57) {
+        level = '3';
+        levelClass = 'level-3';
+        emoji = '📗';
+    } else {
+        level = '尚未達標';
+        levelClass = 'level-fail';
+        emoji = '📖';
+    }
+    
+    const isPass = accuracy >= 57;
+    const passText = isPass ? '🎉 繼續加油！' : '💪 請多多複習，下次一定可以！';
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'dseResultOverlay';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center;
+        z-index: 9999; animation: fadeIn 0.3s ease;
+    `;
+    
+    const card = document.createElement('div');
+    card.style.cssText = `
+        background: linear-gradient(145deg, #1a1a2e, #2d2d44);
+        border-radius: 32px; padding: 2.5rem 3rem; max-width: 480px; width: 90%;
+        text-align: center; color: white; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        animation: slideUp 0.4s ease; border: 2px solid rgba(255,215,0,0.3);
+    `;
+    
+    let levelColor = '#ffd700';
+    if (level === '4') levelColor = '#4a9eff';
+    else if (level === '3') levelColor = '#34d399';
+    else if (level === '尚未達標') levelColor = '#94a3b8';
+    
+    card.innerHTML = `
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
+        <div style="font-size: 1.2rem; font-weight: 600; color: #a78bfa; margin-bottom: 0.3rem;">單元測驗完成！</div>
+        <div style="font-size: 1rem; color: #94a3b8; margin-bottom: 1.5rem;">
+            正確率：<span style="color: white; font-weight: 700;">${accuracy}%</span>
+            （${correctCount} / ${totalCount} 題）
+        </div>
+        <div style="margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">📊 DSE 預計等級</div>
+        <div style="font-size: 4rem; font-weight: 900; color: ${levelColor}; text-shadow: 0 0 30px ${levelColor}40; line-height: 1.2;">
+            ${emoji} ${level}
+        </div>
+        <div style="margin: 1.5rem 0 2rem 0; font-size: 1rem; color: #cbd5e1;">
+            ${passText}
+        </div>
+        <button onclick="closeDSEResult()" style="
+            background: linear-gradient(135deg, #7c3aed, #4a1d8c);
+            color: white; border: none; padding: 0.8rem 2.5rem;
+            border-radius: 60px; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: transform 0.2s;
+        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            查看詳細成績
+        </button>
+    `;
+    
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeDSEResult();
+        }
+    });
+    
+    window._dseResultCallback = function() {
+        closeDSEResult();
+    };
+}
+
+function closeDSEResult() {
+    const overlay = document.getElementById('dseResultOverlay');
+    if (overlay) {
+        overlay.remove();
+    }
+    if (window._dseResultCallback) {
+        window._dseResultCallback();
+    }
+}
+
+// ==================== 自動登入相關 ====================
+function checkAutoLogin() {
+    const saved = localStorage.getItem('ms_chem_autoLogin');
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            if (data.name && data.class) {
+                document.getElementById('studentName').value = data.name;
+                document.getElementById('studentClass').value = data.class;
+                document.getElementById('loginBtn').click();
+                return true;
+            }
+        } catch (e) {}
+    }
+    return false;
+}
+
+// ==================== 登出功能（已修復） ====================
+function logout() {
+    // 1. 只清除「自動登入」資訊（下次不會自動登入）
+    localStorage.removeItem('ms_chem_autoLogin');
+    
+    // 2. ⚠️ 重要：不再刪除用戶數據！
+    // 數據保留在 localStorage 中，重新登入即可恢復
+    
+    // 3. 清除當前使用者狀態
+    currentUser = null;
+    userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
+    
+    // 4. 回到登入畫面
+    document.getElementById('loginScreen').style.display = 'block';
+    document.getElementById('mainApp').style.display = 'none';
+    
+    // 5. ⚠️ 重要：不再清空輸入框！
+    // 讓「記住我」的資料繼續顯示在輸入框中
+    // document.getElementById('studentName').value = '';  // ← 已移除
+    // document.getElementById('studentClass').value = '';  // ← 已移除
+    
+    // 6. 取消勾選「記住我」
+    const rememberMe = document.getElementById('rememberMeCheckbox');
+    if (rememberMe) rememberMe.checked = false;
+    
+    // 7. 清除使用者標籤
+    document.getElementById('userLabel').innerHTML = '';
+}
+
+function showQuizModal() { 
+    renderQuizNav(); 
+    renderCurrentQuestion(); 
+    document.getElementById('quizModal').style.display = 'flex';
+    
+    const footer = document.querySelector('.quiz-footer');
+    let periodicBtn = document.getElementById('periodicTableBtn');
+    if (currentChapter && parseInt(currentChapter) >= 6) {
+        if (!periodicBtn) {
+            periodicBtn = document.createElement('button');
+            periodicBtn.id = 'periodicTableBtn';
+            periodicBtn.className = 'btn btn-outline';
+            periodicBtn.textContent = '📊 元素周期表';
+            periodicBtn.addEventListener('click', showPeriodicTable);
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.parentNode.insertBefore(periodicBtn, nextBtn.nextSibling);
+            }
+        }
+        periodicBtn.style.display = 'inline-block';
+    } else {
+        if (periodicBtn) {
+            periodicBtn.style.display = 'none';
+        }
+    }
+}
 
 function renderQuizNav() {
     let nav = document.getElementById('questionNav'), html = '';
@@ -1182,18 +1626,15 @@ function renderQuizNav() {
     checkAllQuestionsAnswered();
 }
 
-// ==================== renderCurrentQuestion（修改：加入難度背景色 + 優化圖片/選項布局） ====================
+// ==================== renderCurrentQuestion ====================
 function renderCurrentQuestion() {
     let q = currentQuestions[currentQIndex];
     let map = currentOptionsMapping[currentQIndex];
     let hasImage = q.imageUrl !== null;
     
-    // ===== 難度背景色（應用於整個 modal-content） =====
     const modalContent = document.querySelector('#quizModal .modal-content');
     if (modalContent) {
-        // 移除所有難度 class
         modalContent.classList.remove('difficulty-translate', 'difficulty-basic', 'difficulty-advanced', 'difficulty-challenge');
-        // 根據難度添加對應 class
         if (q.difficulty === '🌐 Translate') {
             modalContent.classList.add('difficulty-translate');
         } else if (q.difficulty === '✅ Basic') {
@@ -1204,7 +1645,6 @@ function renderCurrentQuestion() {
             modalContent.classList.add('difficulty-challenge');
         }
     }
-    // ===== 難度背景色結束 =====
     
     document.getElementById('modalQuestionText').innerHTML = q.text;
     document.getElementById('quizCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
@@ -1334,6 +1774,7 @@ function submitAll() {
     let consecutiveCorrect = userData.stats.consecutiveCorrect || 0;
     let answeredCount = currentAnswers.filter(a => a !== null).length;
     let isBlankPaper = (answeredCount === 0);
+    const isUnitTestMode = (currentChapter === null && currentQuestions.length > 1);
 
     for (let i = 0; i < currentQuestions.length; i++) {
         let q = currentQuestions[i], map = currentOptionsMapping[i], userLetter = currentAnswers[i];
@@ -1356,8 +1797,54 @@ function submitAll() {
     let mode = isTrialMode ? 'trial' : 'normal';
     let expectedTime = currentQuestions.length * (selectedDifficulty == 0 ? 108 : (selectedDifficulty == 2 ? 75 : 90));
     let timeSpent = Math.round((expectedTime - timeRemaining) / expectedTime * 100);
+    
+    if (isSingleQuestionMode && currentQuestions.length === 1) {
+        const qid = currentQuestions[0].id;
+        const isCorrectSingle = results[0].isCorrect;
+        
+        if (singleQuestionSource === 'myMistakes' && isCorrectSingle) {
+            userData.latestStatus[qid] = true;
+            saveUserData();
+            alert('🎉 答對了！該題已從「我的錯題」中移除！');
+        } else if (singleQuestionSource === 'myMistakes' && !isCorrectSingle) {
+            alert('❌ 答錯了！該題仍保留在「我的錯題」中，加油！');
+        } else if (singleQuestionSource === 'pastMistakes' || singleQuestionSource === 'pinned') {
+            if (isCorrectSingle) {
+                alert('✅ 答對了！該題仍保留在列表中（歷程/收藏不會自動移除）');
+            } else {
+                alert('❌ 答錯了！再試一次吧！');
+            }
+        }
+        recordBatch(batch);
+        addPracticeHistory(currentUnit, currentChapter, '單題練習', 1, isCorrectSingle ? 1 : 0, isCorrectSingle ? 100 : 0, 'single', 0, consecutiveCorrect, isBlankPaper);
+        renderMyMistakes();
+        renderPastMistakes();
+        renderPinned();
+        renderHistory();
+        renderAchievements();
+        document.getElementById('quizModal').style.display = 'none';
+        return;
+    }
+    
     addPracticeHistory(currentUnit, currentChapter, diffName, currentQuestions.length, correctCount, accuracy, mode, timeSpent, consecutiveCorrect, isBlankPaper);
     lastResults = results;
+    
+    if (isUnitTestMode && currentQuestions.length >= 10) {
+        window._dseResultCallback = function() {
+            displayResults(results);
+        };
+        showDSEResult(accuracy, correctCount, currentQuestions.length);
+        document.getElementById('quizModal').style.display = 'none';
+        renderPractice();
+        renderMyMistakes();
+        renderPastMistakes();
+        renderPinned();
+        renderHistory();
+        renderAchievements();
+        updateSettingsUnlockStatus();
+        return;
+    }
+    
     displayResults(results);
     document.getElementById('quizModal').style.display = 'none';
     renderPractice();
@@ -1492,7 +1979,55 @@ function initTabs() {
     }));
 }
 
+// ==================== 一鍵解鎖全部功能 ====================
+function unlockAll() {
+    if (!pendingUnit || !pendingChapter) {
+        alert('請先選擇一個章節');
+        return;
+    }
+    let qs = window.ALL_UNITS[pendingUnit].chapters[pendingChapter].questions;
+    for (let q of qs) {
+        userData.latestStatus[q.id] = true;
+    }
+    saveUserData();
+    updateSettingsUnlockStatus();
+    renderPractice();
+    renderMyMistakes();
+    renderPastMistakes();
+    renderPinned();
+    renderHistory();
+    renderAchievements();
+    alert('🔓 所有難度已解鎖！');
+}
+
+// ==================== 登出功能 ====================
+function setupLogout() {
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    const hasAutoLogin = checkAutoLogin();
+    
+    const rememberMeCheckbox = document.getElementById('rememberMeCheckbox');
+    if (!rememberMeCheckbox) {
+        const loginScreen = document.getElementById('loginScreen');
+        if (loginScreen) {
+            const loginBtn = document.getElementById('loginBtn');
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'display:flex; align-items:center; gap:8px; margin:8px 0 12px 0;';
+            wrapper.innerHTML = `
+                <input type="checkbox" id="rememberMeCheckbox" style="width:16px; height:16px; cursor:pointer;">
+                <label for="rememberMeCheckbox" style="font-size:0.85rem; color:#2e0f5a; cursor:pointer;">🔒 記住我（下次自動登入）</label>
+            `;
+            if (loginBtn && loginBtn.parentNode) {
+                loginBtn.parentNode.insertBefore(wrapper, loginBtn);
+            }
+        }
+    }
+    
     document.getElementById('diff-easy').addEventListener('click', () => { selectedDifficulty = 0; document.getElementById('diff-easy').classList.add('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
     document.getElementById('diff-medium').addEventListener('click', () => { if (document.getElementById('diff-medium').disabled) return; selectedDifficulty = 1; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.add('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
     document.getElementById('diff-hard').addEventListener('click', () => { if (document.getElementById('diff-hard').disabled) return; selectedDifficulty = 2; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.add('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
@@ -1541,8 +2076,29 @@ document.addEventListener('DOMContentLoaded', function() {
         if (customInput) customInput.value = 50;
         updateSettingsUnlockStatus();
     });
-    document.getElementById('devUnlockBtn').addEventListener('click', () => { if (!pendingUnit || !pendingChapter) return; let qs = window.ALL_UNITS[pendingUnit].chapters[pendingChapter].questions; for (let q of qs) if (q.difficulty_level === 0) userData.latestStatus[q.id] = true; saveUserData(); updateSettingsUnlockStatus(); alert('開發模式：1星題目已全部標記為正確！'); });
-    document.getElementById('loginBtn').addEventListener('click', () => { let name = document.getElementById('studentName').value.trim(), cls = document.getElementById('studentClass').value.trim(); if (!name || !cls) { alert('請輸入姓名與班級'); return; } currentUser = { id: `${cls}_${name}`, name, class: cls }; loadUserData(); document.getElementById('loginScreen').style.display = 'none'; document.getElementById('mainApp').style.display = 'block'; document.getElementById('userLabel').innerHTML = `👋 ${name} (${cls})`; renderPractice(); initTabs(); document.querySelector('.tab[data-tab="practice"]').click(); });
+    
+    document.getElementById('devUnlockBtn').addEventListener('click', unlockAll);
+    
+    document.getElementById('loginBtn').addEventListener('click', () => { 
+        let name = document.getElementById('studentName').value.trim(), 
+            cls = document.getElementById('studentClass').value.trim(); 
+        if (!name || !cls) { alert('請輸入姓名與班級'); return; } 
+        currentUser = { id: `${cls}_${name}`, name, class: cls }; 
+        loadUserData(); 
+        
+        const rememberMe = document.getElementById('rememberMeCheckbox');
+        if (rememberMe && rememberMe.checked) {
+            localStorage.setItem('ms_chem_autoLogin', JSON.stringify({ name: name, class: cls }));
+        }
+        
+        document.getElementById('loginScreen').style.display = 'none'; 
+        document.getElementById('mainApp').style.display = 'block'; 
+        document.getElementById('userLabel').innerHTML = `👋 ${name} (${cls}) <button id="logoutBtn" class="btn btn-small" style="background:#dc2626; margin-left:8px; padding:0.15rem 0.5rem; font-size:0.6rem;">登出</button>`;
+        renderPractice(); 
+        initTabs(); 
+        document.querySelector('.tab[data-tab="practice"]').click();
+        setupLogout();
+    });
     
     const excludeTranslateCheckbox = document.getElementById('excludeTranslate');
     if (excludeTranslateCheckbox) {
@@ -1596,7 +2152,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('closeExplainBtn').addEventListener('click', () => { document.getElementById('explainModal').style.display = 'none'; if (lastResults) displayResults(lastResults); });
     document.getElementById('submitAllBtn').addEventListener('click', () => submitAll());
     document.getElementById('closeResultBtn').addEventListener('click', () => document.getElementById('resultModal').style.display = 'none');
-    document.getElementById('closeZoomBtn').addEventListener('click', () => document.getElementById('imageZoomModal').style.display = 'none');
+    document.getElementById('closeZoomBtn').addEventListener('click', closeImageZoom);
     document.getElementById('prevBtn').addEventListener('click', () => { if (currentQIndex > 0) { currentQIndex--; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
     document.getElementById('nextBtn').addEventListener('click', () => { if (currentQIndex < currentQuestions.length - 1) { currentQIndex++; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
     document.getElementById('studentName').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });

@@ -97,10 +97,10 @@
     </div>
 </div>
 
-<div id="explainModal" class="modal"><div class="modal-content"><h3>📖 題目與題解</h3><div id="explainContent" class="explain-content"></div><button id="closeExplainBtn" class="btn">返回成績總表</button></div></div>
+<div id="explainModal" class="modal"><div class="modal-content"><div id="explainContent" class="explain-content"></div><button id="closeExplainBtn" class="btn">返回成績總表</button></div></div>
 <div id="quizModal" class="modal"><div class="modal-content"><div class="quiz-header"><span id="quizDifficulty"></span><span id="quizCounter"></span><span id="timerDisplay" class="quiz-timer">00:00</span></div><div id="questionNav" class="question-nav"></div><div class="quiz-body"><div id="modalQuestionText" class="question-text"></div><div id="modalImageArea"></div><div id="modalOptions"></div></div><div class="quiz-footer"><button id="prevBtn" class="btn btn-outline">◀ 上一題</button><button id="nextBtn" class="btn btn-outline">下一題 ▶</button><button id="submitAllBtn" class="btn" style="background:#10b981;">提交答案</button></div></div></div>
 <div id="resultModal" class="modal"><div class="modal-content"><h3>成績總表</h3><div id="resultContent" class="result-container"></div><button id="closeResultBtn" class="btn">關閉</button></div></div>
-<div id="imageZoomModal" class="modal"><div class="modal-content"><img id="zoomImage" src=""><button id="closeZoomBtn" class="btn">關閉</button></div></div>
+<div id="imageZoomModal" class="modal"><div class="modal-content"><button onclick="closeImageZoom()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666; position:absolute; top:10px; right:16px; z-index:10;">✕</button><img id="zoomImage" src="" style="width:100%; max-height:70vh; object-fit:contain;"><button id="closeZoomBtn" class="btn" style="margin-top:0.8rem;">關閉</button></div></div>
 
 <div id="unlockCardsContainer" class="unlock-cards-container"></div>
 
@@ -1751,7 +1751,7 @@ window.ALL_UNITS = {
           },
           {
             "id": "C26A006",
-            "text": "The following table shows the atomic numbers of five elements. Which two elements could be in the same period <br>of the Periodic Table?",
+            "text": "The following table shows the atomic numbers of five elements. Which two elements could be in the same period of the Periodic Table?",
             "options": [
               "A. 𝑃 and 𝑄 ",
               "B. 𝑄 and 𝑅 ",
@@ -1767,7 +1767,7 @@ window.ALL_UNITS = {
           },
           {
             "id": "C26A007",
-            "text": "Which of the following statements concerning argon is/are correct? <br> (1)   It is a colourless gas at room temperature and <br>pressure. <br> (2)  It is used to fill balloons and airships.<br> (3)  It has an octet of electrons.",
+            "text": "Which of the following statements concerning argon is/are correct? <br>(1) It is a colourless gas at room temperature and <br>pressure. <br>(2) It is used to fill balloons and airships.<br>(3) It has an octet of electrons.",
             "options": [
               "A. (1) only",
               "B. (2) only",
@@ -1783,7 +1783,7 @@ window.ALL_UNITS = {
           },
           {
             "id": "C26A008",
-            "text": "Which of the following statements concerning the elements in the same group of the Periodic Table is/are correct?<br> (1)   The elements exist in the same physical state at room temperature and pressure.<br> (2)   The elements have the same number of outermost shell electrons in their atoms (except Group 0).<br> (3)   The higher the element is located in the group, the less reactive the element is.",
+            "text": "Which of the following statements concerning the elements in the same group of the Periodic Table is/are correct?<br>(1) The elements exist in the same physical state at room temperature and pressure.<br>(2) The elements have the same number of outermost shell electrons in their atoms (except Group 0).<br>(3) The higher the element is located in the group, the less reactive the element is.",
             "options": [
               "A. (1) only",
               "B. (2) only",
@@ -4873,6 +4873,134 @@ window.ALL_UNITS = {
             "difficulty": "🔥 Challenge",
             "difficulty_level": 3,
             "sf": 0
+          },
+          {
+            "id": "C27B048",
+            "text": "Which of the following combinations is correct?",
+            "options": [
+              "A. Copper(II) ion - reddish brown",
+              "B. Cobalt(II) ion - pink",
+              "C. Dichromate ion - yellow",
+              "D. Permanganate - orange"
+            ],
+            "correct": "B",
+            "explanation": "The colour of copper(II) ion, dichromate ion and permanganate ion are blue, orange and purple respectively.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27B049",
+            "text": "Which of the following ions are coloured?<br>(1) Cu²⁺(aq)<br>(2) Cr₂O₇²⁻(aq)<br>(3) K⁺(aq)",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "K⁺(aq) is colourless.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C27B050",
+            "text": "The table below shows the colour of the aqueous solution of three compounds. Which of the following combinations about the ions involved is likely to be correct?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "C",
+            "explanation": "Since 𝑅𝑄 is colourless, 𝑅²⁺(aq) and 𝑄²⁻(aq) are both colourless. As 𝑅𝑆 is orange in colour, 𝑆²⁻(aq) should be orange in colour, which can be Cr₂O₇²⁻(aq). As 𝑃𝑄 is blue in colour, 𝑃²⁺(aq) should be blue in colour, which can be Cu²⁺(aq).",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C07B050.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C27B051",
+            "text": "The colours of the aqueous solutions of three ionic compounds are shown below. Which of the following ions is/are likely colourless?<br>(1) 𝐶²⁻(aq)<br>(2) 𝐷²⁺(aq)<br>(3) 𝐵²⁺(aq)",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "C",
+            "explanation": "As 𝐶𝐵 solution is colourless, both 𝐶²⁻(aq) and 𝐵²⁺(aq) are colourless. As 𝐶𝐷 solution is yellow in colour and 𝐶²⁻(aq) is colourless, 𝐷²⁺(aq) is yellow in colour.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C07B051.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C27B052",
+            "text": "Consider the following set-up about the migration of ions. Which of the following observations is correct?",
+            "options": [
+              "A. Purple spot moves towards electrode 𝐴.",
+              "B. Blue spot moves towards electrode 𝐵.",
+              "C. Orange spot moves towards electrode 𝐵.",
+              "D. There is no observable change."
+            ],
+            "correct": "B",
+            "explanation": "Copper(II) ions are blue in colour and positively charged, which move towards the negative electrode (electrode 𝐵). Dichromate ions are orange in colour and negatively charged. They move towards the positive electrode (electrode 𝐴).",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C07B052.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C27B053",
+            "text": "Which of the following statements about metallic bond is correct?",
+            "options": [
+              "A. It is the electrostatic attraction between the metal atoms.",
+              "B. It is the electrostatic attraction between the metal ions.",
+              "C. It is the electrostatic attraction between the metal atoms and delocalized electrons.",
+              "D. It is the electrostatic attraction between the metal ions and delocalized electrons."
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C27B054",
+            "text": "Which of the following statements about the electrical conductivity of metals are correct?<br>(1) Metals can conduct electricity in solid state.<br>(2) When metal conducts electricity, there is no chemical change in the metal.<br>(3) Mobile metal ions are responsible for the electrical conduction of metals.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "Delocalized electrons are responsible for the electrical conduction of metals.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C27B055",
+            "text": "Which of the following statements about ionic bonds and metallic bonds are correct?<br>(1) They are electrostatic in nature.<br>(2) They are both non-directional.<br>(3) They form by the transfer of electrons.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "Ionic bonds form by the transfer of electrons between atoms whereas metallic bonds form between the metal ions and electrons. There is no transfer of electrons between metal atoms in metals.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
           }
         ]
       },
@@ -4881,7 +5009,7 @@ window.ALL_UNITS = {
         "questions": [
           {
             "id": "C28A001",
-            "text": "The following table shows the electronic arrangements of four elements. Which of the two elements would probably form <br>a covalent compound?",
+            "text": "The following table shows the electronic arrangements of four elements. Which of the two elements would probably form a covalent compound?",
             "options": [
               "A. 𝑊 and 𝑋 ",
               "B. 𝑋 and 𝑍 ",
@@ -5438,6 +5566,438 @@ window.ALL_UNITS = {
             "difficulty": "🌐 Translate",
             "difficulty_level": 0,
             "sf": 1
+          },
+          {
+            "id": "C28B001",
+            "text": "Which of the following substances consist of molecules?<br>(1) Water<br>(2) Ammonium nitrate<br>(3) Carbon monoxide",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "B",
+            "explanation": "Ammonium nitrate is an ionic compound containing NH₄⁺ and NO₃⁻ ions.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C28B002",
+            "text": "Which of the following pairs of molecules has the same atomicity?",
+            "options": [
+              "A. CH₄ and NCl₃",
+              "B. CO₂ and BF₃",
+              "C. HCl and O₃",
+              "D. NO₂ and Cl₂O"
+            ],
+            "correct": "D",
+            "explanation": "Both NO₂ and Cl₂O has three atoms in their molecules.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C28B003",
+            "text": "Which of the following statements concerning neon are correct?<br>(1) Neon is used in advertising signs.<br>(2) Neon exists as monoatomic molecules.<br>(3) An neon atom has a duplet structure.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "There are eight electrons in the outermost shell of a neon atom.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C28B004",
+            "text": "Which of the following statements about bromine at room conditions is INCORRECT?",
+            "options": [
+              "A. It exists as diatomic molecules.",
+              "B. It is a liquid.",
+              "C. It is dark red in colour.",
+              "D. Double covalent bond exists within the molecule."
+            ],
+            "correct": "D",
+            "explanation": "Each bromine atom shares one electron to attain an octet structure. The molecule is diatomic and contains a single covalent bond only.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C28B005",
+            "text": "Which of the following compounds consists of covalent bond only?",
+            "options": [
+              "A. NH₄Cl",
+              "B. CO₂",
+              "C. NaOH",
+              "D. K₂CO₃"
+            ],
+            "correct": "B",
+            "explanation": "CO₂ consists of two C=O covalent bonds whereas NH₄Cl, NaOH and K₂CO₃ consist of both ionic and covalent bonds.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C28B006",
+            "text": "Which of the following compounds consists of double covalent bond?",
+            "options": [
+              "A. CS₂",
+              "B. H₂O",
+              "C. HCl",
+              "D. N₂"
+            ],
+            "correct": "A",
+            "explanation": "CS₂ consists of two C=S double covalent bonds. H₂O consists of two O-H single covalent bonds. HCl consists of one H-Cl single covalent bond. N₂ consists of one NN triple covalent bond.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C28B007",
+            "text": "Which of the following statements concerning oxygen are correct?<br>(1) It reacts with lithium to form an ionic compound.<br>(2) It reacts with sulphur to form a covalent compound.<br>(3) It exists as diatomic molecules.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C28B008",
+            "text": "The table below shows the electronic arrangements of four atoms. Which of the following atoms is the most probable to form a single bond in the molecule of its element?",
+            "options": [
+              "A. 𝑃",
+              "B. 𝑄",
+              "C. 𝑅",
+              "D. 𝑆"
+            ],
+            "correct": "C",
+            "explanation": "Atom 𝑅 has seven outermost shell electrons. It can share one outermost shell electron with another atom 𝑅 to attain an octet structure.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08B008.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C28B009",
+            "text": "Which of the following combinations can give a covalent compound?",
+            "options": [
+              "A. Group II element + Group VII element",
+              "B. Group VI element + Group VII element",
+              "C. Group I element + Group 0 element",
+              "D. Group VI element + Group 0 element"
+            ],
+            "correct": "B",
+            "explanation": "Group VI and VII elements are non-metals. They combine to attain an octet structure by sharing of electrons. Hence, a covalent bond forms.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C28B010",
+            "text": "The following diagram is the electron diagram of the compound formed between elements 𝑋 and 𝑌 (showing electrons in the outermost shell only). Which of the following combinations is correct?",
+            "options": [
+              "A. 𝑋: Group IV, 𝑌: Group VII",
+              "B. 𝑋: Group V, 𝑌: Group VII",
+              "C. 𝑋: Group I, 𝑌: Group VI",
+              "D. 𝑋: Group IV, 𝑌: Group VI"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08B010.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C28B011",
+            "text": "Element 𝑋 is in Group V and exists as molecules, 𝑋2. Which of the following diagrams correctly shows the electronic structure of an 𝑋2 molecule?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "D",
+            "explanation": "An 𝑋 atom has five outermost shell electrons. Hence, an 𝑋 atom shares three outermost shell electrons with another 𝑋 atom to form a stable 𝑋2 molecule.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08B011.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C28B012",
+            "text": "Which of the following best describes covalent bonding?",
+            "options": [
+              "A. It is an attractive force between shared electrons and the two nuclei of the bonded atoms.",
+              "B. It is an attractive force between lone pair electrons and the nuclei of hydrogen atoms.",
+              "C. It is an attractive force between cations and anions.",
+              "D. It is an attractive force between cations and delocalized electrons."
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C28B013",
+            "text": "Which of the following statements about covalent bond are correct?<br>(1) It forms by the sharing of electrons between the bonded atoms.<br>(2) It is non-directional.<br>(3) It is a type of electrostatic attraction.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "B",
+            "explanation": "Covalent bonds are strong directional electrostatic attraction.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C28B014",
+            "text": "𝑋 and 𝑌 are two elements of different periods in the Periodic Table. The electron diagram of a compound formed between 𝑋 and 𝑌 is shown below. (Only electrons in the outermost shells are shown.) Which of the following is the most probable combinations of 𝑋 and 𝑌?",
+            "options": [
+              "A. 𝑋: sulphur, 𝑌: silicon",
+              "B. 𝑋: sulphur, 𝑌: carbon",
+              "C. 𝑋: oxygen, 𝑌: sulphur",
+              "D. 𝑋: oxygen, 𝑌: carbon"
+            ],
+            "correct": "B",
+            "explanation": "From the electron diagram, an 𝑋 atom contains six outermost shell electrons while a 𝑌 atom contains four outermost shell electrons. Sulphur and silicon are both Period 3 elements, while carbon and oxygen are both Period 2 elements. ",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08B014.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C28B015",
+            "text": "Which of the following molecules has the least number of lone pair of electrons?",
+            "options": [
+              "A. oxygen",
+              "B. chlorine",
+              "C. water",
+              "D. ammonia"
+            ],
+            "correct": "D",
+            "explanation": "oxygen: 2 bond pairs and 4 lone pairs<br>chlorine: 1 bond pair and 6 lone pairs<br>water: 2 bond pairs and 2 lone pairs<br>ammonia (NH₃): 3 bond pairs and 1 lone pair",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C28B016",
+            "text": "The electron diagram of a compound formed between elements 𝐴, 𝐵 and 𝐶 is shown. Which of the following combinations is correct?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "C",
+            "explanation": "𝐴 and 𝐵 belong to Group IV and Group VI respectively. 𝐶 is hydrogen.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08B016.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C28B017",
+            "text": "Which of the following substances has the same number of electrons as a water molecule?",
+            "options": [
+              "A. Neon",
+              "B. Fluorine",
+              "C. Lithium oxide",
+              "D. Sodium chloride"
+            ],
+            "correct": "A",
+            "explanation": "Water molecule (H₂S) contains 10 electrons.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C28B018",
+            "text": "Which of the following statements about a hydrogen sulphide molecule is/are correct?<br>(1) Each hydrogen atom shares one bonding electron in the molecule.<br>(2) The total number of electrons in the molecule is 8.<br>(3) Covalent bond is present in the molecule.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "C",
+            "explanation": "The electronic arrangement of sulphur is 2, 8, 6. Together with the two electrons from the two hydrogen atom, the total number of electrons in the molecule (H₂S) should be 18.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C28B019",
+            "text": "The electronic structure of a compound formed between an element 𝐿 and bromine is shown below (only electrons in the outermost shells are shown). What would be the formula of the compound formed between 𝐿 and calcium?",
+            "options": [
+              "A. Ca𝐿",
+              "B. Ca₂𝐿",
+              "C. Ca𝐿₂",
+              "D. Ca₃𝐿₂"
+            ],
+            "correct": "A",
+            "explanation": "𝐿 forms two single covalent bonds with two bromine atoms so 𝐿 is a Group VI element.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08B019.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C28B020",
+            "text": "An element 𝑅 exists as molecules. The atomic number of 𝑅 is 9 and a molecule of 𝑅 has a formula of 𝑅2. Which of the following can represent the electron diagram of 𝑅₂?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "C",
+            "explanation": "The electronic arrangement of 𝑅 is 2, 7. Hence, 𝑅 is a Group VII element and it shares one electron when forming molecules.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08B020.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C28B021",
+            "text": "The electron diagram (showing electrons in the outermost shells only) of the ion formed by elements 𝑋 and 𝑌 is shown below. Which of the following statements is/are INCORRECT?<br>(1) There are five electrons in the outermost shell of an atom 𝑋.<br>(2) There is one lone pair of electrons in the ion.<br>(3) There is one electron in the outermost shell of an atom 𝑌.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "B",
+            "explanation": "The lone pair of 𝑋 has been donated to 𝑌 so there is no more lone pair in the ion.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08B021.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C28B022",
+            "text": "Which of the following species possess dative covalent bond?<br>(1) H₃O⁺<br>(2) NH₄⁺<br>(3) CO",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "For H₂O, one lone pair of O atom has been donated to one H⁺ ion.<br>For NH₄⁺, one lone pair of N atom has been donated to one H⁺ ion.<br>For CO, one extra lone pair of O is donated to the bonded C, i.e. one of the bond in the triple bonds is dative.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C28B023",
+            "text": "An element 𝑋 forms an anion 𝑋³⁻ with 10 electrons. When two atoms of 𝑋 form a molecule, which of the following statements about the molecule is INCORRECT?",
+            "options": [
+              "A. There are 14 electrons in the molecule.",
+              "B. Triple covalent bond forms between the atoms.",
+              "C. There is one lone pair of electrons in the molecule.",
+              "D. The relative molecular mass of the molecule is 28."
+            ],
+            "correct": "C",
+            "explanation": "A 𝑋 atom has seven electrons. 𝑋 is nitrogen and there are two lone pairs of electrons in the molecule.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C28B024",
+            "text": "A compound, 𝑀x𝑁y, forms from elements 𝑀 and 𝑁. The atomic numbers of 𝑀 and 𝑁 are 6 and 8 respectively. Which of the following combinations is correct?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "B",
+            "explanation": "Both 𝑀 and 𝑁 are non-metals and so they form covalent bonds. 𝑀 has four outermost shell electrons and 𝑁 has six outermost shell electrons. The chemical formula of the compound is 𝑀𝑁₂.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08B024.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C28B025",
+            "text": "Elements 𝑋 and 𝑌 belong to Group V and VII respectively in the Periodic Table. Which of the following combinations about the compound they form is correct?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "B",
+            "explanation": "𝑋 and 𝑌 are non-metals and so they form covalent bonds. To form bonds, an 𝑋 atom needs three more outermost shell electrons while a 𝑌 atom needs one only. Hence, one 𝑋 atom shares electrons with three 𝑌 atoms. The compound formed has a formula of 𝑋𝑌₃.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08B025.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C28B026",
+            "text": "Which of the following combinations about the molecular formula and the relative molecular mass of sulphur trioxide is correct?",
+            "options": [
+              "A. SO₂, 64.1",
+              "B. SO₂, 64.1 g",
+              "C. SO₃, 80.1",
+              "D. SO₃, 80.1 g"
+            ],
+            "correct": "C",
+            "explanation": "The relative molecular mass of sulphur trioxide (SO₃) = 32.1 + 16.0 × 3 = 80.1",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C28B027",
+            "text": "Which of the following statements about ionic bond and covalent bond is/are correct?<br>(1) Both of them are electrostatic attraction.<br>(2) Both of them are non-directional.<br>(3) The formation of both type of bonds involves the transfer of electrons.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "A",
+            "explanation": "Covalent bonds are directional. The formation of covalent bond does not involve the transfer of electrons. It involves the sharing of electrons between two atoms.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
           }
         ]
       },
@@ -6066,6 +6626,1078 @@ window.ALL_UNITS = {
             "imageUrl": null,
             "difficulty": "🌐 Translate",
             "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C29B001",
+            "text": "Chlorine exists as a gas at room temperature and pressure because",
+            "options": [
+              "A. chlorine is reactive.",
+              "B. the intermolecular forces among chlorine molecules are weak.",
+              "C. the intermolecular forces between chlorine atoms are weak.",
+              "D. chlorine molecules are diatomic."
+            ],
+            "correct": "B",
+            "explanation": "With weak intermolecular forces, only little energy is needed to separate the molecules, hence it has a low melting and boiling point.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B002",
+            "text": "Helium has a low boiling point because",
+            "options": [
+              "A. a helium atom has a duplet structure.",
+              "B. helium molecules are monoatomic.",
+              "C. the van der Waals’ forces between helium atoms are weak.",
+              "D. helium is a noble gas."
+            ],
+            "correct": "C",
+            "explanation": "With weak van der Waals' forces, only little energy is needed to separate the helium molecules, hence it has a low melting and boiling point.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B003",
+            "text": "Which of the following statements concerning the structure of solid carbon dioxide is/are correct?<br>(1) It has a simple molecular structure.<br>(2) Carbon atom and oxygen atom within the molecule are held by ionic bond.<br>(3) Carbon dioxide molecules are held together by intermolecular forces.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "C",
+            "explanation": "Carbon dioxide is a covalent molecule. There are two C=O bonds joining the carbon and oxygen atoms together in the molecule.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C29B004",
+            "text": "Which of the following statements about substances with simple molecular structure are correct?<br>(1) They have low melting points and boiling points.<br>(2) Most of them are insoluble in water but soluble in non-aqueous solvents.<br>(3) They must be gases at room temperature.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "Substances with simple molecular structure could be solids (e.g. iodine), liquids (e.g. water) or gases (e.g. carbon dioxide) at room temperature.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B005",
+            "text": "Which of the following statements about iodine is INCORRECT?",
+            "options": [
+              "A. It is a halogen.",
+              "B. It is a solid at room conditions.",
+              "C. It reacts with sodium to form an ionic compound.",
+              "D. It has a giant covalent structure."
+            ],
+            "correct": "D",
+            "explanation": "Iodine has a simple molecular structure.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B006",
+            "text": "The atomic numbers of elements 𝑋 and 𝑌 are 15 and 17 respectively. They combine to form compound 𝑍. Which of the following statements about compound 𝑍 are correct?<br>(1) Z has a giant covalent structure.<br>(2) Z has a chemical formula of 𝑋𝑌₃.<br>(3) Z cannot conduct electricity.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "C",
+            "explanation": "𝑍 has a simple molecular structure. The electronic arrangement of 𝑋 is 2, 8, 5. It shares electrons with three other atoms of 𝑌 to form a covalent compound with a molecular formula of 𝑋𝑌₃.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B007",
+            "text": "The atomic numbers of elements 𝑋 and 𝑌 are 6 and 8 respectively. The compound formed between 𝑋 and 𝑌<br>(1) has a simple molecular structure.<br>(2) is a gas at room conditions.<br>(3) is a non-conductor of electricity.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "𝑋 and 𝑌 are carbon and oxygen respectively. The compound formed between them is carbon dioxide.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B008",
+            "text": "Which of the following statements about diamond is INCORRECT?",
+            "options": [
+              "A. It has giant covalent structure.",
+              "B. It has a high melting point.",
+              "C. It dissolves in water.",
+              "D. It does not dissolve in hexane."
+            ],
+            "correct": "C",
+            "explanation": "Diamond is insoluble in water as the carbon atoms are held together by strong covalent bonds.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B009",
+            "text": "Which of the following statements about covalent compounds is/are correct?<br>(1) The atoms in covalent compounds are held together by covalent bonds.<br>(2) All covalent compounds consist of discrete molecules.<br>(3) All covalent compounds have a low boiling point.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "A",
+            "explanation": "Covalent compounds with giant covalent structure have a network of strong covalent bonds. They have high boiling points",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B010",
+            "text": "Which of the following can show that covalent bond is a strong bond?",
+            "options": [
+              "A. Iodine is a solid at room temperature and pressure.",
+              "B. Iodine has a higher boiling point than helium.",
+              "C. Diamond has a high melting point.",
+              "D. Diamond cannot conduct electricity."
+            ],
+            "correct": "C",
+            "explanation": "In melting diamond, carbon-carbon covalent bonds are broken.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B011",
+            "text": "Which of the following statements about dry ice and silicon dioxide is correct?",
+            "options": [
+              "A. Both of them have simple molecular structures.",
+              "B. Both of them have high melting points.",
+              "C. Both of them are covalent compounds.",
+              "D. Both of them are soluble in water."
+            ],
+            "correct": "C",
+            "explanation": "Silicon is quartz. Carbon dioxide has a simple molecular structure while silicon dioxide has a giant covalent structure. Carbon dioxide has a low melting point. Carbon dioxide is only slightly soluble in water while silicon dioxide is insoluble in water.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B012",
+            "text": "Which of the following statements about silicon is correct?",
+            "options": [
+              "A. It consists of delocalized electrons around the silicon cations in the structure.",
+              "B. It exists as discrete molecules.",
+              "C. It is a semi-conductor.",
+              "D. It consists of cations and anions in solid lattice."
+            ],
+            "correct": "C",
+            "explanation": "Silicon is a semi-metal with giant covalent structure. It conducts electricity when it is heated or slightly impure.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B013",
+            "text": "Which of the following statements about graphite is correct?",
+            "options": [
+              "A. It is a covalent compound.",
+              "B. Intermolecular forces are present within graphite layers.",
+              "C. It is hard.",
+              "D. It is a good conductor of electricity."
+            ],
+            "correct": "D",
+            "explanation": "Graphite consists of only one atom, it is an ELEMENT but not compound. The carbon atoms are held together by strong covalent bonds within graphite layers. Graphite is soft because the graphite layers are held together by weak van der Waals’ forces. Graphite is a good conductor because it contains delocalized electrons which can move along the layers.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B014",
+            "text": "Which of the following statements about silicon dioxide and nitrogen dioxide are correct?<br>(1) Both of their constituent elements are joined together by covalent bonds.<br>(2) Both of them are insoluble in methylbenzene.<br>(3) Both of them do not conduct electricity under any conditions.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "B",
+            "explanation": "Nitrogen dioxide has a simple molecular structure. It is soluble in methylbenzene (a non-aqueous solvent).",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B015",
+            "text": "Which of the following statements about graphite and diamond is correct?",
+            "options": [
+              "A. They have the same relative atomic mass.",
+              "B. They have the same hardness.",
+              "C. Both of them can conduct electricity.",
+              "D. They have the same boiling and melting points."
+            ],
+            "correct": "A",
+            "explanation": "Diamond is hard as it has a network of strong covalent bonds in its structure. However, graphite is soft as the van der Waals’ forces between the graphite layers are weak. Diamond cannot conduct electricity as there are no delocalized electrons in its structure. However, each carbon atom is bonded to three carbon atoms only and there is one delocalized electron per carbon atom in the structure of graphite.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B016",
+            "text": "Which of the following statements about substances with giant covalent structures are correct?<br>(1) All of them have similar physical properties.<br>(2) All of them are insoluble in any solvents.<br>(3) All of them have high melting points and boiling points.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "C",
+            "explanation": "Diamond and graphite have very different physical properties. Diamond is hard but graphite is soft.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B017",
+            "text": "Consider the following information. Which of the above information is/are correct?",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "A",
+            "explanation": "Silicon and oxygen atoms are joined together by covalent bonds throughout the structure of silicon dioxide. Calcium ions and chloride ions are held together by ionic bonds in calcium chloride.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C09B017.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B018",
+            "text": "Which of the following substances is an electrolyte?",
+            "options": [
+              "A. Magnesium sulphate",
+              "B. Copper",
+              "C. Distilled water",
+              "D. Sugar"
+            ],
+            "correct": "A",
+            "explanation": "Electrolyte is a non-conductor in the solid state, but is a conductor when molten or in aqueous solution. Magnesium ions and sulphate ions are not mobile in solid state, but become mobile when molten or in aqueous solution.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B019",
+            "text": "Molten sodium chloride conducts electricity because",
+            "options": [
+              "A. it contains metallic sodium.",
+              "B. it contains mobile ions.",
+              "C. it contains free chlorine.",
+              "D. it contains free electrons."
+            ],
+            "correct": "B",
+            "explanation": "Sodium chloride contains sodium ion but not metallic sodium. There is no free chlorine or free electrons in molten sodium chloride.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B020",
+            "text": "Which of the following diagrams represents the structure of sodium chloride (only the cross section is shown) at room conditions?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "A",
+            "explanation": "At room conditions, sodium chloride is a solid with a regular packing.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C09B020.webp",
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C29B021",
+            "text": "Which of the following statements about the structure of sodium chloride are correct?<br>(1) Sodium ions are smaller than chloride ions.<br>(2) Each sodium ion is surrounded by four chloride ions.<br>(3) Each chloride ion is surrounded by six sodium ions.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "B",
+            "explanation": "Sodium ion has two occupied electron shells while chloride ion has three occupied electron shells. Hence, sodium ion has a smaller size than chloride ion. Each sodium ion should be surrounded by six chloride ions.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B022",
+            "text": "Which of the following statements about ionic compounds is/are correct?<br>(1) Their solid states can conduct electricity.<br>(2) They are usually soluble in water but insoluble in non-aqueous solvents.<br>(3) They are malleable and ductile.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "B",
+            "explanation": "Ionic compounds only conduct electricity when molten or in aqueous solution. They are not malleable and ductile.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C29B023",
+            "text": "Which of the following statements about potassium iodide is INCORRECT?",
+            "options": [
+              "A. It is a solid at room temperature.",
+              "B. It has different chemical properties from iodine.",
+              "C. It is insoluble in methylbenzene.",
+              "D. It conducts electricity in solid state."
+            ],
+            "correct": "D",
+            "explanation": "It conducts electricity when molten or in aqueous solution.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B024",
+            "text": "Which of the following combinations is INCORRECT?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "A",
+            "explanation": "The attractive force between carbon atoms in diamond is covalent bond. There is no giant covalent bond, although diamond has a giant covalent structure.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C09B024.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B025",
+            "text": "Which of the following combinations indicates the correct type of constituent particles which exists in that substance at room conditions?",
+            "options": [
+              "A. hydrogen - atoms",
+              "B. magnesium oxide - ions",
+              "C. silicon dioxide - molecules",
+              "D. iron - ions"
+            ],
+            "correct": "B",
+            "explanation": "Magnesium oxide consists of Mg²⁺ and O²⁻ ions. Hydrogen exists as H₂ molecules. Silicon dioxide has a giant covalent structure. No molecules can be found. Iron exists as iron atoms.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B026",
+            "text": "A compound forms from element 𝑋 (with atomic number = 20) and element 𝑌 (with atomic number = 35). Which of the following statements concerning the compound is/are correct?<br>(1)\tIt is soluble in water.<br>(2)\tIt conducts electricity in all states.<br>(3)\tIt is yellowish brown in colour.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "A",
+            "explanation": "The compound is calcium bromide. It only conducts electricity when molten or in aqueous solution. It is white in colour.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B027",
+            "text": "Which of the below combinations are correct?<br>(1) silicon - covalent bond<br>(2) lithium oxide - metallic bond<br>(3) argon - van der Waals' forces",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "B",
+            "explanation": "The ions in lithium oxide are held by ionic bonds.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C29B028",
+            "text": "Which of the following substances contains mobile ions?",
+            "options": [
+              "A. Pt(s)",
+              "B. Br₂(l)",
+              "C. NaBr(l)",
+              "D. CH₃CH₂OH(l)"
+            ],
+            "correct": "C",
+            "explanation": "Platinum has delocalized electrons but not mobile ions.<br>Bromine and ethanol does not compose of ions.<br>",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B029",
+            "text": "Rubidium and iodine react to form rubidium iodide. The crystal structure of rubidium iodide is similar to that of sodium chloride. Rubidium iodide has a high melting point because",
+            "options": [
+              "A. it is very hard.",
+              "B. rubidium ions and iodide ions form strong ionic bonds with each other.",
+              "C. rubidium is a Group I metal.",
+              "D. rubidium and iodine are of the same Period."
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B030",
+            "text": "Which of the following statements about the thermal conductivity of metal is correct?",
+            "options": [
+              "A. Heat causes metal atoms to collide with each other and the collisions produce heat.",
+              "B. Free electrons near the energy source gain energy. They run throughout the metal and transfer energy to all parts of the metal.",
+              "C. The free electrons move faster when they have gained energy and collide with other electrons. Heat is transferred along the metal.",
+              "D. The metal ions near the energy source gain energy. They move and carry heat energy throughout the metal."
+            ],
+            "correct": "C",
+            "explanation": "Metals do not produce heat itself and the heat is transferred by the collisions of free electrons. Metal ions do not move in the metal lattice.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B031",
+            "text": "Which of the following statements about metallic bond are correct?<br>(1) The lower position of the metal in the Periodic Table, the weaker is the metallic bond.<br>(2) The strength of metallic bond increases with increasing number of outermost shell electrons of the metal atoms.<br>(3) Metal is ductile and malleable because metallic bond is weak.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "The lower position of the metal in the Periodic Table, the greater is its atomic size. The distances between metal ions and the ‘sea’ of electrons are greater, thus the metal has a weaker metallic bond. As the number of electrons participating in metallic bond formation increases, the strength of metallic bonds increases. Metal is ductile and malleable because atoms in metal are packed in layers which can slip over each other when a force is applied to them.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B032",
+            "text": "Metals are good electrical conductors because",
+            "options": [
+              "A. the metal ions in the metal lattice are free to move.",
+              "B. the metal atoms in the metal lattice are free to move.",
+              "C. the outermost shell electrons of metal atoms are free to move.",
+              "D. all the electrons in the metal lattice are free to move."
+            ],
+            "correct": "C",
+            "explanation": "Only the outermost shell electron of metal atoms can leave easily to form a ‘sea’ of electrons, and the delocalized electrons help to conduct electricity. The metal atoms or ions are unable to move in the lattice.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B033",
+            "text": "Which of the following statements about iron and iron(III) oxide is correct?",
+            "options": [
+              "A. They have giant metallic structure.",
+              "B. They conduct electricity in liquid state.",
+              "C. They are electrolytes.",
+              "D. They are malleable."
+            ],
+            "correct": "B",
+            "explanation": "Liquid iron has delocalized electrons for conducting electricity while liquid iron(III) oxide has mobile ions for conducting electricity. Iron has a giant metallic structure while iron(III) oxide has a giant ionic structure. Iron is not an electrolyte but iron(III) oxide is. Iron is a metal and is malleable but iron(III) oxide is not.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B034",
+            "text": "Which of the following metals has the highest melting point?",
+            "options": [
+              "A. Sodium",
+              "B. Magnesium",
+              "C. Aluminium",
+              "D. Potassium"
+            ],
+            "correct": "C",
+            "explanation": "The strength of metallic bonds is greater if more outermost shell electrons participate in the formation of bonds. Each aluminium atom contributes three electrons to form metallic bonds and so it has the highest melting point among the four metals.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B035",
+            "text": "Which of the following statements about giant metallic structures are correct?<br>(1) Metallic bonds in giant metallic structures are non-directional.<br>(2) A giant metallic structure consists of positive and negative ions bonded together.<br>(3) Delocalized electrons can move freely within a giant metallic structure.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "B",
+            "explanation": "A giant metallic structure consists of positive ions and delocalized electrons.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B036",
+            "text": "Most metals have high melting points and boiling points because",
+            "options": [
+              "A. metals are good conductors of heat.",
+              "B. most of them are solids at room temperature.",
+              "C. metallic bonds are usually strong and not easily broken.",
+              "D. metallic bonds are non-directional."
+            ],
+            "correct": "C",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B037",
+            "text": "A current passes through a piece of sodium. Which of the following statements are INCORRECT?<br>(1) Sodium atoms lose electrons to form sodium compounds.<br>(2) The sodium sample cannot conduct electricity in molten state.<br>(3) The sodium sample conducts electricity when its delocalized electrons collide with neighbouring electrons.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "Electrons help conduct electricity since it is a mobile charge carrier, metals will not lose electrons in the process, and collision is NOT required. Yet transfer of heat involves collision.<br>Matter conducts electricity if it has mobile ion or delocalized electrons. In molten state (liquid state) of metals, it has delocalized electrons hence it conducts electricity.<br><br>",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B038",
+            "text": "Which of the following statements are INCORRECT?<br>(1) Molten ionic compounds conduct electricity because there are delocalized electrons.<br>(2) There are chemical changes in the metal when it conducts electricity.<br>(3) If a metal piece is connected to a battery, the atoms in the metal lose electrons.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "Molten ionic compounds conduct electricity as there are mobile ions. There is no chemical change in the metal when it conducts electricity. The number of electrons in metal atoms remains unchanged at any moment.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B039",
+            "text": "The table below lists the melting points and boiling points of five metals. At 2500 degree Celsius, which of the following combinations about the states of metals is correct?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "A",
+            "explanation": "At a temp. higher than boiling point, it is a gas; at a temp. lower than the melting point, it is a solid. While temp. in-between two is liquid.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C09B039.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B040",
+            "text": "Mercury is a liquid at room temperature and pressure. Which of the following statements concerning mercury is/are correct?<br>(1) Mercury ions and delocalized electrons are held together by metallic bonds.<br>(2) Mercury is composed of discrete molecules.<br>(3) Mercury is the only metal in liquid state at room temperature and pressure.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "C",
+            "explanation": "Molecules only refer to those with simple molecular structures.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B041",
+            "text": "The table below shows properties of three substances. Which of the following combinations is correct?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "C",
+            "explanation": "H₂SO₄ is a an acid a (covalent compound). When it dissolves in water, it ionizes to give mobile ions which conduct electricity. NaBr is an ionic compound. Its ions become mobile when molten or in aqueous solution. Pb is a metal.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C09B041.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B042",
+            "text": "Which of the following solids consists of discrete molecules?",
+            "options": [
+              "A. Dry ice",
+              "B. Diamond",
+              "C. Sodium chloride",
+              "D. Iron"
+            ],
+            "correct": "A",
+            "explanation": "Dry ice (carbon dioxide) has a simple molecular structure. Diamond has a giant covalent structure. Sodium chloride has a giant ionic structure. Iron has a giant metallic structure.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B043",
+            "text": "Which of the following substances CANNOT conduct electricity?<br>(1) An aqueous solution of calcium chloride<br>(2) An aqueous solution of sugar<br>(3) Molten sodium bromide",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "B",
+            "explanation": "Sugar has a simple molecular structure. It does not contain mobile ions in aqueous solution.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B044",
+            "text": "Which of the following substances can conduct electricity in the molten state?<br>(1) Sulphur<br>(2) Ammonium dichromate<br>(3) Gold",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C29B045",
+            "text": "Which of the following substances has the lowest electrical conductivity?",
+            "options": [
+              "A. C(graphite)",
+              "B. HNO₃(aq)",
+              "C. Mn(s)",
+              "D. CH₃OH(l)"
+            ],
+            "correct": "D",
+            "explanation": "CH₃OH has a simple molecular structure. It does not contain any mobile ions or electrons to conduct electricity. HNO₃(l) is an acid that ionizes in water to form hydrogen ions and nitrate ions",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B046",
+            "text": "All of the following groups include substances with the same types of structure except",
+            "options": [
+              "A. nitrogen, oxygen and neon.",
+              "B. chromium, manganese and iron.",
+              "C. carbon dioxide, silicon dioxide and chlorine dioxide.",
+              "D. propanoic acid, methanol and methyl propanoate."
+            ],
+            "correct": "C",
+            "explanation": "Carbon dioxide and chlorine dioxide have simple molecular structures. Silicon dioxide has a giant covalent structure.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B047",
+            "text": "In which of the following substances are the particles the furthest apart from each other at room conditions?",
+            "options": [
+              "A. Bromine",
+              "B. Sodium",
+              "C. Carbon dioxide",
+              "D. Alcohol"
+            ],
+            "correct": "C",
+            "explanation": "Only carbon dioxide is a gas at room conditions.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B048",
+            "text": "Which of the following sequences indicates the correct ascending order of melting points of the substances - hydrogen chloride, sodium chloride and tetrachloromethane?",
+            "options": [
+              "A. HCl < NaCl < CCl₄",
+              "B. NaCl < CCl₄ < HCl",
+              "C. HCl < CCl₄ < NaCl",
+              "D. CCl₄ < HCl < NaCl"
+            ],
+            "correct": "C",
+            "explanation": "Both HCl and CCl₄ have simple molecular structure. As CCl₄ has a larger molecular size than HCl, its melting point is higher. NaCl has a giant ionic structure. The ions are held together by strong ionic bonds and so it has the highest melting point.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B049",
+            "text": "Which of the following substances could have a giant covalent structure?",
+            "options": [
+              "A. a solid that is soluble in water",
+              "B. a solid that is insoluble in water",
+              "C. a gas that is insoluble in water",
+              "D. a liquid that is insoluble in water"
+            ],
+            "correct": "B",
+            "explanation": "Substances with a giant covalent structure are all solids at room temperature and are insoluble in water.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B050",
+            "text": "Substance 𝑋 melts at 3 degrees Celsius and boils at 44 degrees Celsius. Which of the following statements about 𝑋 is/are correct?<br>(1)\t𝑋 is a solid at room temperature.<br>(2)\t𝑋 has weak intermolecular forces between molecules.<br>(3)\t𝑋 has a giant covalent structure.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "B",
+            "explanation": "𝑋 is a covalent compound and has a simple molecular structure.<br>𝑋 is a liquid at room temp.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B051",
+            "text": "Substance 𝑌 has a high melting point and a high boiling point. It conducts electricity when molten or in aqueous solution and at the same time decomposed by electricity. Substance 𝑌 is likely to be",
+            "options": [
+              "A. silicon dioxide.",
+              "B. graphite.",
+              "C. gold.",
+              "D. magnesium bromide."
+            ],
+            "correct": "D",
+            "explanation": "Magnesium bromide is an ionic compound. It has a high melting point and a high boiling point. It conducts electricity when molten or in aqueous solution. When conducting electricity, magnesium ions are changed to magnesium metal and bromide ions are changed to bromine gas.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B052",
+            "text": "With the given melting point and electrical conductivity at room temp., which of the above substances would probably have a giant covalent structure?",
+            "options": [
+              "A. 1610 degree Celsius, poor conductivity",
+              "B. 872 degree Celsius, good when in aqueous solution",
+              "C. 45 degree Celsius, poor conductivity",
+              "D. 1769 degree Celsius, good conductivity"
+            ],
+            "correct": "A",
+            "explanation": "Substances with a giant covalent structure have very high melting points and cannot conduct electricity (except graphite).<br>Note: Graphite's melting point is higher than 3000 degree Celsius.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B053",
+            "text": "Which of the following substances has a giant ionic structure?",
+            "options": [
+              "A. A solid that conducts electricity in molten state but not in solid state",
+              "B. A solid that conducts electricity in both molten state and solid state",
+              "C. A solid that conducts electricity in solid state but not in molten state",
+              "D. A liquid that conducts electricity in molten state"
+            ],
+            "correct": "A",
+            "explanation": "Ionic compounds only conduct electricity when molten or in aqueous solution.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B054",
+            "text": "The properties of three chlorides are given below. Which of the following statements are INCORRECT?<br>(1)\tThe chlorides of 𝑌 and 𝑍 have giant ionic structures.<br>(2)\tThe chloride of 𝑋 is a solid at room temperature.<br>(3)\t𝑋 is probably a metal.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "D",
+            "explanation": "As the chloride of 𝑍 is a poor conductor of electricity in molten state, it may have a giant covalent structure or simple molecular structure.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C09B054.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B055",
+            "text": "If 𝑌 has a very high melting point and conducts electricity when molten or in aqueous solution, 𝑌 most probably has a",
+            "options": [
+              "A. giant covalent structure.",
+              "B. simple molecular structure.",
+              "C. giant ionic structure.",
+              "D. giant metallic structure."
+            ],
+            "correct": "C",
+            "explanation": "Only ionic compounds conduct electricity when molten or in aqueous solution.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B056",
+            "text": "The melting points of some chlorides are given below. What can be deduced from the above data?<br>(1) NaCl cannot conduct electricity at 800 degree Celsius.<br>(2) SiCl₄ is a covalent compound with a simple molecular structure.<br>(3) PCl₃ is a covalent compound with a giant covalent structure.",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "NaCl is a solid at 800 degree Celsius. It cannot conduct electricity in solid state. PCl₃ should have a simple molecular structure as it has a low melting point.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C09B056.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B057",
+            "text": "Chlorides of 𝑋 and 𝑌 have melting points at -50 and 1000 degree Celsius respectively. Which of the following statements about these two chlorides is correct?",
+            "options": [
+              "A. Both 𝑋 and 𝑌 are metals.",
+              "B. The chloride of 𝑋 can conduct electricity in molten state.",
+              "C. The chloride of 𝑋 has a giant covalent structure.",
+              "D. The chloride of 𝑌 can conduct electricity at 1000C."
+            ],
+            "correct": "D",
+            "explanation": "The low melting point of chloride of 𝑋 indicates that it has a simple molecular structure. 𝑋 should be a non-metal forming a covalent compound with chlorine. No ions or delocalized electrons are present in the chloride of 𝑋. Chloride of 𝑌 should be an ionic compound and the ions are mobile when it melts.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B058",
+            "text": "The melting point and boiling point of 𝑃 are 801 and 1465 degree Celsius respectively. In molten state, 𝑃 conducts electricity with decomposition. 𝑃 probably has",
+            "options": [
+              "A. a giant covalent structure.",
+              "B. a giant ionic structure.",
+              "C. a simple molecular structure.",
+              "D. a giant metallic structure."
+            ],
+            "correct": "B",
+            "explanation": "𝑃 has a high melting point and boiling point. It is not a molecule. It conducts electricity in its molten state and so it must contain ions or free electrons. It decomposes in its molten state under electricity. Hence, it is not a metal but an ionic compound.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B059",
+            "text": "A substance is soluble in water and does not conduct electricity in solid state. The substance could be<br>(1) an element with giant covalent structure.<br>(2) a compound with simple molecular structure.<br>(3) a compound with giant ionic structure.",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (3) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "D",
+            "explanation": "Substances with giant covalent structure are insoluble in any solvents.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B060",
+            "text": "Which of the above substances has a giant metallic structure and is a solid at room temperature?",
+            "options": [
+              "A. 𝑃",
+              "B. 𝑄",
+              "C. 𝑅",
+              "D. 𝑆"
+            ],
+            "correct": "D",
+            "explanation": "Substances with a giant metallic structure have high melting points and are electrical conductors. Only 𝑄 and 𝑆 are good conductors, yet 𝑄 is NOT a solid at room temp.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C09B060.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29B061",
+            "text": "The table below shows the electrical conductivities of four substances at different states. In the table, a tick and a cross represent ‘can conduct electricity’and  'cannot conduct electricity’ respectively. Which of the above substances is likely to be wax?",
+            "options": [
+              "A. 𝑊",
+              "B. 𝑋",
+              "C. 𝑌",
+              "D. 𝑍"
+            ],
+            "correct": "B",
+            "explanation": "Wax(蠟) has a simple molecular structure. It does not contain mobile ions in neither solid nor liquid states and it is insoluble in water.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C09B061.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C29B062",
+            "text": "Which of the following substances conducts electricity in its solid and liquid states?",
+            "options": [
+              "A. Wax",
+              "B. Silver",
+              "C. Sulphur",
+              "D. Magnesium oxide"
+            ],
+            "correct": "B",
+            "explanation": "Silver is a metal which conducts electricity in its solid and liquid states.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C29B063",
+            "text": "The atomic numbers of two elements 𝐴 and 𝐵 are 11 and 16 respectively. The compound formed between 𝐴 and 𝐵",
+            "options": [
+              "A. is a gas at room temperature.",
+              "B. is a not an electrolyte.",
+              "C. has a chemical formula of 𝐴₂𝐵.",
+              "D. is insoluble in water."
+            ],
+            "correct": "C",
+            "explanation": "The compound formed is an ionic compound. It should have a high melting point and boiling point. Ionic compound is an electrolyte and usually soluble in water.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B064",
+            "text": "Two elements 𝑋 and 𝑌 have 4 and 7 outermost shell electrons respectively. Which of the following statements about the compound formed between 𝑋 and 𝑌 is correct?",
+            "options": [
+              "A. It is an ionic compound.",
+              "B. It has a very high melting point.",
+              "C. It has a chemical formula of 𝑋𝑌₄.",
+              "D. It can conduct electricity."
+            ],
+            "correct": "C",
+            "explanation": "𝑋 and 𝑌 are non-metals. They form covalent bonds by sharing electrons. Covalent compounds usually do not have a high melting point. Covalent compounds have no ions present. They cannot conduct electricity under all conditions.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29B065",
+            "text": "The electronic arrangement of atoms 𝑋 and 𝑌 are 2, 8, 1 and 2, 8, 7 respectively. Which of the following statements about the compound formed between 𝑋 and 𝑌 is INCORRECT?",
+            "options": [
+              "A. It has a giant structure.",
+              "B. It has a high melting point.",
+              "C. It is insoluble in water.",
+              "D. It conducts electricity in molten state."
+            ],
+            "correct": "C",
+            "explanation": "Ionic compounds are usually soluble in water.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B066",
+            "text": "Strontium is just below calcium in the Periodic Table. It reacts with chlorine to form a compound. Which of the following statements about the chloride of strontium is INCORRECT?",
+            "options": [
+              "A. It has a giant structure.",
+              "B. It has a high melting point.",
+              "C. It is a white solid.",
+              "D. It is a good electrical conductor at room temperature."
+            ],
+            "correct": "D",
+            "explanation": "Strontium chloride is an ionic compound with a giant ionic structure. Group II metal ions and chloride ion are colourless and so strontium chloride formed is a white solid. The ions in strontium chloride solid are not mobile. It cannot conduct electricity at room temperature.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29B067",
+            "text": "The atomic numbers of two elements 𝑋 and 𝑌 are 19 and 16 respectively. The compound formed between 𝑋 and 𝑌",
+            "options": [
+              "A. has a formula of 𝑋₂𝑌.",
+              "B. conducts electricity at room conditions.",
+              "C. is a liquid at room conditions.",
+              "D. is insoluble in water."
+            ],
+            "correct": "A",
+            "explanation": "𝑋 and 𝑌 are potassium and sulphur respectively. The compound formed is potassium sulphide, which is an ionic compound.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
             "sf": 1
           }
         ]
