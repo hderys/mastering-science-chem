@@ -783,10 +783,13 @@ body {
     
     /* ============================================================
        手機版：題目頁面
+       圖片：小圖滿屏，大圖限高 150px，完美置中
+       容器：min-height 60vh，max-height 95vh
+       四個按鈕：文字放大 1.2 倍
        ============================================================ */
     #quizModal .modal-content {
-        max-height: 98vh;
-        height: 98vh;
+        min-height: 60vh;
+        max-height: 95vh;
         padding: 0.3rem 0.4rem;
         display: flex;
         flex-direction: column;
@@ -811,7 +814,7 @@ body {
         font-size: 0.75rem;
     }
     
-    /* ----- 2. 題號導航：18px × 3行 = 54px ----- */
+    /* ----- 2. 題號導航：18px × 3行 ----- */
     .question-nav {
         gap: 2px !important;
         margin-bottom: 0.1rem !important;
@@ -853,7 +856,7 @@ body {
         overflow: hidden;
     }
     
-    /* 題目文字：有圖片時正常 */
+    /* 題目文字 */
     .question-text {
         font-size: clamp(1.1rem, 4vw, 1.25rem) !important;
         margin-bottom: 0.1rem;
@@ -865,13 +868,13 @@ body {
         font-weight: 500;
     }
     
-    /* 無圖片時：題目文字再放大，填滿空間 */
+    /* 無圖片時：題目文字再放大 */
     .quiz-layout.no-image .question-text {
         font-size: clamp(1.3rem, 5vw, 1.5rem) !important;
         max-height: 35vh;
     }
     
-    /* ----- 4. 圖片區：有圖片時顯示，無圖片時隱藏 ----- */
+    /* ----- 4. 圖片區：小圖滿屏，大圖限高 150px，完美置中 ----- */
     .image-area {
         max-width: 100%;
         margin: 0.1rem auto !important;
@@ -880,21 +883,22 @@ body {
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
-        max-height: 18vh;
+        max-height: 150px;
         min-height: 0;
         text-align: center !important;
         position: relative;
+        width: 100%;
     }
     .image-area img {
-        max-height: 120px;
+        max-height: 150px;
         max-width: 100%;
         width: auto;
         height: auto;
         object-fit: contain;
         display: block;
-        margin: 0 auto;
+        margin: 0 auto !important;
     }
-    /* 有圖片時才顯示放大鏡圖示，且放大 */
+    /* 有圖片時顯示放大鏡圖示 */
     .image-area:has(img)::after {
         content: "🔍";
         font-size: 0.7rem !important;
@@ -914,41 +918,42 @@ body {
         display: none !important;
     }
     
-    /* ----- 5. 選項區 ----- */
+    /* ----- 5. 選項區：緊接圖片下方 ----- */
     .options-area {
         flex: 1 1 auto;
         width: 100%;
         min-height: 0;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
+        padding-top: 0.1rem;
     }
     
     /* 有圖片時：2x2 網格 */
     .quiz-layout:not(.no-image) .options-area .options-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 10px;
+        gap: 8px;
         flex: 1;
-        align-content: center;
+        align-content: flex-start;
     }
     
     /* 無圖片時：垂直排列 */
     .quiz-layout.no-image .options-area .options-grid {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
         flex: 1;
-        justify-content: center;
+        justify-content: flex-start;
     }
     
     /* 選項按鈕 */
     .options-area .option-btn {
-        padding: 0.5rem 0.6rem;
+        padding: 0.4rem 0.5rem;
         font-size: clamp(0.95rem, 3.5vw, 1.1rem) !important;
         border-radius: 10px;
         border-width: 2px;
-        min-height: 50px;
+        min-height: 44px;
         display: flex;
         align-items: center;
         line-height: 1.2;
@@ -962,12 +967,12 @@ body {
     
     /* 無圖片時垂直排列的選項按鈕略大 */
     .quiz-layout.no-image .options-area .option-btn {
-        padding: 0.5rem 0.8rem;
-        min-height: 55px;
+        padding: 0.4rem 0.7rem;
+        min-height: 48px;
         font-size: clamp(1rem, 3.8vw, 1.15rem) !important;
     }
     
-    /* ----- 6. 四個底部按鈕：增高、文字放大 ----- */
+    /* ----- 6. 四個底部按鈕：文字放大 1.2 倍 ----- */
     .quiz-footer {
         flex-shrink: 0;
         padding: 0.1rem 0 0.05rem 0;
@@ -1017,7 +1022,7 @@ body {
         align-items: stretch;
         flex: 1;
         min-height: 0;
-        gap: 0.1rem;
+        gap: 0.05rem;
     }
     .quiz-layout .image-area {
         max-width: 100%;
@@ -1039,7 +1044,89 @@ body {
 }
 
 /* ============================================================
-   桌面版（手機版以外的所有樣式）
+   桌面版
+   ============================================================ */
+/* ----- 桌面版：設定彈窗空隙縮小 ----- */
+@media (min-width: 641px) {
+    .modal-content { 
+        padding: 0.7rem; 
+        max-height: 85vh;
+    }
+    .settings-two-columns { 
+        gap: 0.6rem; 
+        margin: 0.3rem 0 0.5rem 0;
+    }
+    .settings-left, .settings-right {
+        gap: 0.4rem;
+    }
+    .setting-group {
+        padding: 0.4rem;
+    }
+    .setting-title {
+        margin-bottom: 0.2rem;
+    }
+    .btn-row {
+        gap: 0.4rem;
+        margin-bottom: 0.1rem;
+    }
+    .setting-btn {
+        padding: 0.2rem 0.15rem;
+    }
+    .dev-btn-full, .action-btn-full, .cancel-btn-full {
+        padding: 0.2rem 0.4rem;
+        margin-bottom: 0.15rem;
+    }
+}
+
+/* ----- 桌面版：問題頁面元素縮小 20% ----- */
+@media (min-width: 641px) {
+    /* 題號圓圈：30px → 24px */
+    .q-nav-btn {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 0.56rem !important;
+    }
+    .question-nav {
+        gap: 3px;
+    }
+    
+    /* 題目文字：縮小 */
+    .question-text {
+        font-size: clamp(0.75rem, 3.5vw, 0.85rem) !important;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* 選項按鈕：縮小 */
+    .option-btn {
+        padding: 0.35rem 0.6rem !important;
+        font-size: clamp(0.65rem, 2vw, 0.75rem) !important;
+        border-radius: 10px;
+    }
+    .option-btn::before {
+        width: 0.9rem !important;
+        font-size: 0.8rem !important;
+    }
+    .options-area .options-grid {
+        gap: 6px;
+    }
+    
+    /* 圖片：限高 180px */
+    .image-area img {
+        max-height: 180px !important;
+    }
+    
+    /* 四個底部按鈕：文字放大 1.2 倍（0.8rem → 0.9rem） */
+    .quiz-footer .btn {
+        font-size: 0.9rem !important;
+        padding: 0.35rem 0.7rem;
+    }
+    .quiz-footer #periodicTableBtn {
+        font-size: 0.75rem !important;
+    }
+}
+
+/* ============================================================
+   共用（桌面版 + 手機版）
    ============================================================ */
 #quizModal .modal-content {
     transition: background-color 0.4s ease;
@@ -1059,7 +1146,7 @@ body {
     flex-shrink: 0;
 }
 
-/* ----- 桌面版題號導航（30px） ----- */
+/* ----- 桌面版題號導航（基本） ----- */
 .question-nav {
     display: flex;
     flex-wrap: wrap;
@@ -1098,7 +1185,7 @@ body {
     word-break: break-word;
 }
 
-/* ===== 桌面版：選項與圖片區域 ===== */
+/* ===== 桌面版：選項與圖片區域（基本） ===== */
 @media (min-width: 641px) {
     .options-area {
         flex: 1;
