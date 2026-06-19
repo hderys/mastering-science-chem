@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Mastering Science - Chemistry</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* 強制手機版圖片高度 130px（避免被 style.css 舊版覆蓋） */
+        @media (max-width: 640px) {
+            .image-area-mobile img,
+            #quizModal .image-area-mobile img,
+            .quiz-layout-mobile .image-area-mobile img {
+                max-height: 130px !important;
+            }
+        }
+    </style>
 </head>
 <body>
 
@@ -1767,7 +1777,7 @@ window.ALL_UNITS = {
           },
           {
             "id": "C26A007",
-            "text": "Which of the following statements concerning argon is/are correct? <br>(1) It is a colourless gas at room temperature and <br>pressure. <br>(2) It is used to fill balloons and airships.<br>(3) It has an octet of electrons.",
+            "text": "Which of the following statements concerning argon is/are correct? <br>(1) It is a colourless gas at room temperature and pressure. <br>(2) It is used to fill balloons and airships.<br>(3) It has an octet of electrons.",
             "options": [
               "A. (1) only",
               "B. (2) only",

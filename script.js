@@ -437,7 +437,7 @@ function calculateClassRank(userId, userPoints) {
     return { rank: rank, total: classmates.length };
 }
 
-// ==================== 挑題邏輯 ====================
+// ==================== 挑題邏輯（含 #9 單元測驗獨立邏輯） ====================
 function selectQuestionsByDifficultyAndCount(questions, count, preference, isTrial, isUnitTest = false) {
     let filteredQuestions = excludeTranslate ? questions.filter(q => q.difficulty !== "🌐 Translate") : [...questions];
     
@@ -452,6 +452,45 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
         return sorted.slice(0, Math.min(count, 50));
     }
 
+    // ===== #9 單元測驗獨立邏輯 =====
+    if (isUnitTest) {
+        // 1. 優先挑出所有曾經錯過的題目（不限難度）
+        let wrongQuestions = filteredQuestions.filter(q => hasEverWrong(q.id));
+        wrongQuestions = shuffleArray(wrongQuestions);
+        
+        if (wrongQuestions.length >= count) {
+            return wrongQuestions.slice(0, count);
+        }
+        
+        // 2. 從剩餘題目中（不含錯題），篩選 Advanced + Challenge
+        let remainingQuestions = filteredQuestions.filter(q => !hasEverWrong(q.id));
+        let advancedQuestions = remainingQuestions.filter(q => q.difficulty_level === 2);
+        let challengeQuestions = remainingQuestions.filter(q => q.difficulty_level === 3);
+        
+        advancedQuestions = shuffleArray(advancedQuestions);
+        challengeQuestions = shuffleArray(challengeQuestions);
+        
+        let needed = count - wrongQuestions.length;
+        let advCount = Math.round(needed * 0.2);
+        let chalCount = needed - advCount;
+        
+        let selectedAdv = advancedQuestions.slice(0, advCount);
+        let selectedChal = challengeQuestions.slice(0, chalCount);
+        
+        let result = [...wrongQuestions, ...selectedAdv, ...selectedChal];
+        
+        if (result.length < count) {
+            let allRemaining = remainingQuestions.filter(q => 
+                !selectedAdv.includes(q) && !selectedChal.includes(q)
+            );
+            let extra = shuffleArray(allRemaining).slice(0, count - result.length);
+            result = [...result, ...extra];
+        }
+        
+        return shuffleArray(result);
+    }
+
+    // ===== 一般練習邏輯 =====
     let allowedLevels = [];
     if (preference === 0) {
         allowedLevels = [0, 1];
@@ -462,7 +501,6 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
     }
 
     let wrongQuestions = [];
-    let wrongEverQuestions = [];
     let notAttemptedQuestions = [];
     let otherQuestions = [];
 
@@ -472,11 +510,6 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
         
         if (userData.latestStatus[q.id] === false) {
             wrongQuestions.push(q);
-            continue;
-        }
-        
-        if (isUnitTest && hasEverWrong(q.id) && userData.latestStatus[q.id] !== false) {
-            wrongEverQuestions.push(q);
             continue;
         }
         
@@ -490,13 +523,7 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
         }
     }
 
-    let candidates = [];
-    
-    if (isUnitTest) {
-        candidates = [...wrongEverQuestions];
-    } else {
-        candidates = [...wrongQuestions];
-    }
+    let candidates = [...wrongQuestions];
     
     if (candidates.length < count) {
         let shuffledNotAttempted = shuffleArray([...notAttemptedQuestions]);
@@ -677,6 +704,7 @@ function startUnitTest(unit) {
     
     let count = Math.min(36, allQuestions.length);
     let selectedQuestions = selectQuestionsByDifficultyAndCount(allQuestions, count, 1, false, true);
+    
     if (selectedQuestions.length < count) {
         let remaining = allQuestions.filter(q => !selectedQuestions.includes(q));
         let shuffled = shuffleArray(remaining);
@@ -1538,7 +1566,7 @@ function closeDSEResult() {
     }
 }
 
-// ==================== 自動登入相關 ====================
+// ==================== 自動登入相關（含 #10 記住我自動打勾） ====================
 function checkAutoLogin() {
     const saved = localStorage.getItem('ms_chem_autoLogin');
     if (saved) {
@@ -1547,6 +1575,9 @@ function checkAutoLogin() {
             if (data.name && data.class) {
                 document.getElementById('studentName').value = data.name;
                 document.getElementById('studentClass').value = data.class;
+                // #10 如果有儲存自動登入資訊，自動勾選「記住我」
+                const rememberMe = document.getElementById('rememberMeCheckbox');
+                if (rememberMe) rememberMe.checked = true;
                 document.getElementById('loginBtn').click();
                 return true;
             }
@@ -1555,15 +1586,26 @@ function checkAutoLogin() {
     return false;
 }
 
-// ==================== 登出功能（已修復） ====================
+// ==================== 登出功能（修正：登出後保留姓名班級和勾選狀態） ====================
 function logout() {
-    // 1. 只清除「自動登入」資訊（下次不會自動登入）
+    // 1. 先讀取「記住我」的資料（在刪除之前）
+    const saved = localStorage.getItem('ms_chem_autoLogin');
+    let savedName = '';
+    let savedClass = '';
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            if (data.name && data.class) {
+                savedName = data.name;
+                savedClass = data.class;
+            }
+        } catch (e) {}
+    }
+    
+    // 2. 清除自動登入資訊（下次不會自動登入）
     localStorage.removeItem('ms_chem_autoLogin');
     
-    // 2. ⚠️ 重要：不再刪除用戶數據！
-    // 數據保留在 localStorage 中，重新登入即可恢復
-    
-    // 3. 清除當前使用者狀態
+    // 3. 清除當前使用者狀態（但保留數據）
     currentUser = null;
     userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
     
@@ -1571,27 +1613,46 @@ function logout() {
     document.getElementById('loginScreen').style.display = 'block';
     document.getElementById('mainApp').style.display = 'none';
     
-    // 5. ⚠️ 重要：不再清空輸入框！
-    // 讓「記住我」的資料繼續顯示在輸入框中
-    // document.getElementById('studentName').value = '';  // ← 已移除
-    // document.getElementById('studentClass').value = '';  // ← 已移除
+    // 5. 如果有「記住我」的資料，填入輸入框並打勾
+    if (savedName && savedClass) {
+        document.getElementById('studentName').value = savedName;
+        document.getElementById('studentClass').value = savedClass;
+        const rememberMe = document.getElementById('rememberMeCheckbox');
+        if (rememberMe) rememberMe.checked = true;
+    } else {
+        // 沒有資料就清空
+        document.getElementById('studentName').value = '';
+        document.getElementById('studentClass').value = '';
+        const rememberMe = document.getElementById('rememberMeCheckbox');
+        if (rememberMe) rememberMe.checked = false;
+    }
     
-    // 6. 取消勾選「記住我」
-    const rememberMe = document.getElementById('rememberMeCheckbox');
-    if (rememberMe) rememberMe.checked = false;
-    
-    // 7. 清除使用者標籤
+    // 6. 清除使用者標籤
     document.getElementById('userLabel').innerHTML = '';
 }
 
+// ==================== showQuizModal（含 #7 單元測驗周期表按鈕） ====================
 function showQuizModal() { 
     renderQuizNav(); 
     renderCurrentQuestion(); 
     document.getElementById('quizModal').style.display = 'flex';
     
-    const footer = document.querySelector('.quiz-footer');
+    // 判斷是否為手機版
+    const isMobileDevice = window.innerWidth <= 640;
+    
+    // 決定使用的 footer class
+    const footerClass = isMobileDevice ? 'quiz-footer-mobile' : 'quiz-footer-desktop';
+    const footer = document.querySelector(`.${footerClass}`);
+    
+    // 如果 footer 不存在，使用 .quiz-footer 作為備用
+    const footerElement = footer || document.querySelector('.quiz-footer');
+    
     let periodicBtn = document.getElementById('periodicTableBtn');
-    if (currentChapter && parseInt(currentChapter) >= 6) {
+    
+    // #7 判斷是否顯示：一般練習章節 >= 6，或是單元測驗模式 (currentChapter === null)
+    const shouldShowPeriodicTable = (currentChapter && parseInt(currentChapter) >= 6) || currentChapter === null;
+    
+    if (shouldShowPeriodicTable) {
         if (!periodicBtn) {
             periodicBtn = document.createElement('button');
             periodicBtn.id = 'periodicTableBtn';
@@ -1599,8 +1660,8 @@ function showQuizModal() {
             periodicBtn.textContent = '📊 元素周期表';
             periodicBtn.addEventListener('click', showPeriodicTable);
             const nextBtn = document.getElementById('nextBtn');
-            if (nextBtn) {
-                nextBtn.parentNode.insertBefore(periodicBtn, nextBtn.nextSibling);
+            if (nextBtn && footerElement) {
+                footerElement.insertBefore(periodicBtn, nextBtn.nextSibling);
             }
         }
         periodicBtn.style.display = 'inline-block';
@@ -1626,11 +1687,20 @@ function renderQuizNav() {
     checkAllQuestionsAnswered();
 }
 
-// ==================== renderCurrentQuestion ====================
+// ==================== renderCurrentQuestion（手機版/桌面版 class 分離 + DOM 順序修正） ====================
 function renderCurrentQuestion() {
     let q = currentQuestions[currentQIndex];
     let map = currentOptionsMapping[currentQIndex];
     let hasImage = q.imageUrl !== null;
+    
+    // 判斷是否為手機版
+    const isMobileDevice = window.innerWidth <= 640;
+    
+    // 根據版本選擇 class
+    const layoutClass = isMobileDevice ? 'quiz-layout-mobile' : 'quiz-layout-desktop';
+    const imageClass = isMobileDevice ? 'image-area-mobile' : 'image-area-desktop';
+    const optionsClass = isMobileDevice ? 'options-area-mobile' : 'options-area-desktop';
+    const footerClass = isMobileDevice ? 'quiz-footer-mobile' : 'quiz-footer-desktop';
     
     const modalContent = document.querySelector('#quizModal .modal-content');
     if (modalContent) {
@@ -1651,7 +1721,7 @@ function renderCurrentQuestion() {
     document.getElementById('quizDifficulty').innerHTML = q.difficulty;
     
     let imgArea = document.getElementById('modalImageArea');
-    let quizLayout = document.querySelector('.quiz-layout');
+    let quizLayout = document.querySelector(`.${layoutClass}`);
     
     if (!quizLayout) {
         const quizBodyEl = document.querySelector('.quiz-body');
@@ -1659,20 +1729,30 @@ function renderCurrentQuestion() {
         const originalImgArea = imgArea;
         
         const layoutDiv = document.createElement('div');
-        layoutDiv.className = 'quiz-layout';
+        layoutDiv.className = layoutClass;
         
         const optionsDiv = document.createElement('div');
-        optionsDiv.className = 'options-area';
+        optionsDiv.className = optionsClass;
         optionsDiv.id = 'options-area-container';
         
         const imageDiv = document.createElement('div');
-        imageDiv.className = 'image-area';
+        imageDiv.className = imageClass;
         imageDiv.id = 'image-area-container';
         
         if (originalOptions && originalOptions.parentNode) {
             originalOptions.parentNode.insertBefore(layoutDiv, originalOptions);
-            layoutDiv.appendChild(optionsDiv);
-            layoutDiv.appendChild(imageDiv);
+            
+            // 手機版與桌面版 DOM 順序分離
+            if (isMobileDevice) {
+                // 手機版：圖片先，選項後（圖片在上方）
+                layoutDiv.appendChild(imageDiv);
+                layoutDiv.appendChild(optionsDiv);
+            } else {
+                // 桌面版：選項先，圖片後（用 order 控制圖片在右側）
+                layoutDiv.appendChild(optionsDiv);
+                layoutDiv.appendChild(imageDiv);
+            }
+            
             optionsDiv.appendChild(originalOptions);
         }
         if (originalImgArea) {
@@ -1684,6 +1764,19 @@ function renderCurrentQuestion() {
     
     const imageAreaContainer = document.getElementById('image-area-container');
     const optionsArea = document.getElementById('options-area-container');
+    
+    // 更新 container 的 class（確保版本正確）
+    if (imageAreaContainer) {
+        imageAreaContainer.className = imageClass;
+        imageAreaContainer.id = 'image-area-container';
+    }
+    if (optionsArea) {
+        optionsArea.className = optionsClass;
+        optionsArea.id = 'options-area-container';
+    }
+    if (quizLayout) {
+        quizLayout.className = layoutClass;
+    }
     
     if (hasImage) {
         if (imageAreaContainer) imageAreaContainer.style.display = 'block';
@@ -1730,6 +1823,12 @@ function renderCurrentQuestion() {
             checkAllQuestionsAnswered();
         });
         optsDiv.appendChild(btn);
+    }
+    
+    // 更新 footer class
+    const footerElement = document.querySelector('.quiz-footer');
+    if (footerElement) {
+        footerElement.className = footerClass;
     }
     
     updateNavButtons();
@@ -2009,6 +2108,7 @@ function setupLogout() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // #10 自動登入檢查（會自動勾選記住我）
     const hasAutoLogin = checkAutoLogin();
     
     const rememberMeCheckbox = document.getElementById('rememberMeCheckbox');
