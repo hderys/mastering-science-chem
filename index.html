@@ -236,6 +236,62 @@
         .hidden {
             display: none !important;
         }
+
+        /* ===== 舊帳戶列表樣式 ===== */
+        .old-account-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border: 2px solid #e0d6f5;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            margin-bottom: 8px;
+            width: 100%;
+            text-align: left;
+        }
+        .old-account-item:hover {
+            border-color: #4a1d8c;
+            background: #f5f0ff;
+            transform: translateY(-1px);
+        }
+        .old-account-item .account-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: #2e0f5a;
+        }
+        .old-account-item .account-class {
+            font-size: 13px;
+            color: #888;
+        }
+        .old-account-item .account-stats {
+            font-size: 13px;
+            text-align: right;
+        }
+        .old-account-item .account-stats .count {
+            font-weight: 600;
+            color: #4a1d8c;
+        }
+        .old-account-item .account-stats .accuracy {
+            font-weight: 600;
+        }
+        .old-account-item .account-stats .accuracy.high {
+            color: #10b981;
+        }
+        .old-account-item .account-stats .accuracy.medium {
+            color: #f59e0b;
+        }
+        .old-account-item .account-stats .accuracy.low {
+            color: #dc2626;
+        }
+        .no-accounts-msg {
+            text-align: center;
+            color: #999;
+            padding: 20px 0;
+            font-size: 14px;
+        }
     </style>
     
     <!-- ===== Firebase SDK (傳統相容版本) ===== -->
@@ -353,28 +409,18 @@
     </div>
 </div>
 
-<!-- ===== 舊用戶轉移彈窗（學生端 - 無需登入） ===== -->
+<!-- ===== 舊用戶轉移彈窗（學生端 - 無需登入，點選方式） ===== -->
 <div class="modal-overlay" id="migrateAccountModal">
     <div class="modal-box">
         <button class="close-btn" onclick="closeModal('migrateAccountModal')">✕</button>
         <h2>🔄 舊帳戶轉移</h2>
-        <div class="sub">如果您之前是用「姓名 + 班級」登入，請輸入舊資料，系統會幫您找到帳戶並產生驗證碼。</div>
+        <div class="sub">如果您之前是用「姓名 + 班級」登入，請選擇您的舊帳戶。</div>
 
-        <div id="migrateError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
-
-        <div class="form-group">
-            <label>👤 您的姓名</label>
-            <input type="text" id="migrateOldName" placeholder="例如：陳小明">
+        <div id="migrateAccountList" class="mt-8">
+            <!-- 動態顯示帳戶列表 -->
+            <div class="no-accounts-msg">⏳ 正在掃描帳戶...</div>
         </div>
 
-        <div class="form-group">
-            <label>📚 您的班級</label>
-            <input type="text" id="migrateOldClass" placeholder="例如：VIP">
-        </div>
-
-        <button class="btn btn-primary" id="findOldAccountBtn">🔍 尋找我的帳戶</button>
-
-        <div id="migrateAccountInfo" class="mt-8" style="display:none;"></div>
         <div id="migrateCodeDisplay" class="mt-8"></div>
         <div id="migrateMessage" class="mt-8"></div>
 

@@ -239,7 +239,6 @@ async function updateMigrationStatusInFirebase(code, status, newUserId) {
 async function loadAllStudentsFromFirebase(className) {
     console.log('📥 從 Firebase 讀取學生數據:', className);
     
-    // 先從 localStorage 讀取
     const db = getUsers();
     const localStudents = db.users.filter(u => u.className === className && !u.isTeacher);
     console.log(`📊 localStorage: ${localStudents.length} 位學生`);
@@ -260,7 +259,6 @@ async function loadAllStudentsFromFirebase(className) {
         });
         console.log(`📊 Firebase: ${firebaseStudents.length} 位學生`);
         
-        // 合併：Firebase 優先
         const merged = [...firebaseStudents];
         for (const s of localStudents) {
             if (!merged.find(m => m.userId === s.userId)) {
@@ -285,13 +283,9 @@ function format(date, pattern) {
 // ==================== 數據操作函數 ====================
 function saveUserData() {
     if (!currentUser) return;
-    
-    // 存入 localStorage
-    localStorage.setItem(`ms_chem_${currentUser.id || currentUser.userId}`, JSON.stringify(userData));
-    
-    // 同步到 Firebase
+    const userId = currentUser.id || currentUser.userId;
+    localStorage.setItem(`ms_chem_${userId}`, JSON.stringify(userData));
     if (firestoreEnabled) {
-        const userId = currentUser.id || currentUser.userId;
         syncToFirestore('users', userId, {
             latestStatus: userData.latestStatus || {},
             allAttempts: userData.allAttempts || [],
@@ -306,10 +300,8 @@ function saveUserData() {
 
 async function loadUserData() {
     if (!currentUser) return;
-    
     const userId = currentUser.id || currentUser.userId;
     
-    // 先從 Firebase 讀取（優先）
     if (firestoreEnabled) {
         try {
             const cloudData = await loadFromFirestore('users', userId);
@@ -326,7 +318,6 @@ async function loadUserData() {
                 if (!userData.achievements) userData.achievements = {};
                 if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
                 if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
-                // 同步到 localStorage
                 localStorage.setItem(`ms_chem_${userId}`, JSON.stringify(userData));
                 console.log('✅ 從 Firebase 載入數據');
                 return;
@@ -336,7 +327,6 @@ async function loadUserData() {
         }
     }
     
-    // 如果 Firebase 沒有數據，從 localStorage 讀取
     const raw = localStorage.getItem(`ms_chem_${userId}`);
     if (raw) {
         userData = JSON.parse(raw);
@@ -345,7 +335,6 @@ async function loadUserData() {
         if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
         if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
         console.log('✅ 從 localStorage 載入數據');
-        // 如果有 Firebase，同步上去
         if (firestoreEnabled) {
             syncToFirestore('users', userId, {
                 latestStatus: userData.latestStatus || {},
@@ -360,7 +349,6 @@ async function loadUserData() {
         return;
     }
     
-    // 完全沒有數據，初始化
     userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
     if (!userData.practiceHistory) userData.practiceHistory = [];
     if (!userData.achievements) userData.achievements = {};
@@ -453,7 +441,6 @@ function shuffleArray(arr) {
     return arr;
 }
 
-// ==================== 輔助函數 ====================
 function hasEverWrong(qid) {
     return userData.allAttempts.some(att => att.qid === qid && !att.isCorrect);
 }
@@ -512,21 +499,14 @@ function updateUser(userId, data) {
     if (index !== -1) {
         db.users[index] = { ...db.users[index], ...data };
         saveUsers(db);
-        
-        // 同步到 Firebase
         if (firestoreEnabled) {
             firebase.firestore()
                 .collection('users')
                 .doc(userId)
                 .set(db.users[index], { merge: true })
-                .then(() => {
-                    console.log('✅ 用戶資料已同步到 Firebase:', userId);
-                })
-                .catch(e => {
-                    console.warn('⚠️ Firebase 更新失敗:', e.message);
-                });
+                .then(() => console.log('✅ 用戶資料已同步到 Firebase:', userId))
+                .catch(e => console.warn('⚠️ Firebase 更新失敗:', e.message));
         }
-        
         return db.users[index];
     }
     return null;
@@ -548,10 +528,10 @@ function generateUserId(className) {
     return String(num).padStart(6, '0');
 }
 
-// ==================== 建立用戶（同時存入 Firebase） ====================
-function createUser(name, className, phone) {
+// ==================== 建立用戶（支援自訂學號） ====================
+function createUser(name, className, phone, customUserId = null) {
     const db = getUsers();
-    const userId = generateUserId(className);
+    const userId = customUserId || generateUserId(className);
     const initialPassword = generateRandomPassword();
     const user = {
         userId: userId,
@@ -572,22 +552,16 @@ function createUser(name, className, phone) {
         stats: { totalQuestionsAnswered: 0, totalCorrect: 0 }
     };
     
-    // 存入 localStorage
     db.users.push(user);
     saveUsers(db);
     
-    // 存入 Firebase
     if (firestoreEnabled) {
         firebase.firestore()
             .collection('users')
             .doc(userId)
             .set(user, { merge: true })
-            .then(() => {
-                console.log('✅ 用戶已存入 Firebase:', userId);
-            })
-            .catch(e => {
-                console.warn('⚠️ Firebase 儲存失敗:', e.message);
-            });
+            .then(() => console.log('✅ 用戶已存入 Firebase:', userId))
+            .catch(e => console.warn('⚠️ Firebase 儲存失敗:', e.message));
     }
     
     return user;
@@ -596,10 +570,8 @@ function createUser(name, className, phone) {
 // ==================== 登入處理（先 Firebase，再 localStorage） ====================
 async function handleLogin(userId, password) {
     clearLoginError();
-    
     let user = null;
     
-    // 1. 先從 Firebase 查詢
     if (firestoreEnabled) {
         try {
             const doc = await firebase.firestore()
@@ -609,8 +581,6 @@ async function handleLogin(userId, password) {
             if (doc.exists) {
                 user = doc.data();
                 console.log('✅ 從 Firebase 找到用戶:', userId);
-                
-                // 同步到 localStorage
                 const db = getUsers();
                 const existing = db.users.find(u => u.userId === userId);
                 if (existing) {
@@ -625,12 +595,9 @@ async function handleLogin(userId, password) {
         }
     }
     
-    // 2. 如果 Firebase 找不到，從 localStorage 查詢
     if (!user) {
         user = findUser(userId);
-        if (user) {
-            console.log('✅ 從 localStorage 找到用戶:', userId);
-        }
+        if (user) console.log('✅ 從 localStorage 找到用戶:', userId);
     }
     
     if (!user) {
@@ -638,7 +605,6 @@ async function handleLogin(userId, password) {
         return;
     }
     
-    // 檢查密碼
     const isValid = (user.password && user.password === password) ||
                     (user.isFirstLogin && user.initialPassword === password);
     
@@ -658,11 +624,9 @@ async function handleLogin(userId, password) {
         return;
     }
     
-    // 登入成功
     loginAttempts = 0;
     currentUser = user;
     
-    // 記住我
     if (document.getElementById('rememberMeCheckbox').checked) {
         localStorage.setItem('ms_chem_login', JSON.stringify({ userId: userId, password: password }));
     } else {
@@ -689,7 +653,6 @@ function enterMainApp(user) {
     
     updateUserLabel();
     
-    // 強制從 Firebase 載入最新數據
     loadUserData().then(() => {
         renderPractice();
         initTabs();
@@ -792,7 +755,7 @@ document.getElementById('forgotSubmitBtn')?.addEventListener('click', function()
     }, 3000);
 });
 
-// ==================== 修改密碼 ====================
+// ==================== 修改密碼（支援 Enter 送出） ====================
 function openChangePasswordModal(isFirstLogin = false) {
     const modal = document.getElementById('changePasswordModal');
     const title = document.getElementById('changePasswordTitle');
@@ -848,13 +811,11 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', function
 
     const userId = currentUser.id || currentUser.userId;
     
-    // 更新本地用戶資料
     updateUser(userId, {
         password: newPwd,
         isFirstLogin: false
     });
 
-    // 同步到 Firebase Auth
     if (firestoreEnabled) {
         const email = userId + '@ms.com';
         firebase.auth().signInWithEmailAndPassword(email, currentUser.password || '')
@@ -862,24 +823,15 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', function
                 const user = firebase.auth().currentUser;
                 if (user) {
                     user.updatePassword(newPwd)
-                        .then(() => {
-                            console.log('✅ Firebase Auth 密碼已更新');
-                        })
-                        .catch(e => {
-                            console.warn('⚠️ Firebase Auth 密碼更新失敗:', e.message);
-                        });
+                        .then(() => console.log('✅ Firebase Auth 密碼已更新'))
+                        .catch(e => console.warn('⚠️ Firebase Auth 密碼更新失敗:', e.message));
                 }
             })
             .catch(() => {
-                // 如果無法登入，嘗試建立帳戶
                 const email = userId + '@ms.com';
                 firebase.auth().createUserWithEmailAndPassword(email, newPwd)
-                    .then(() => {
-                        console.log('✅ Firebase Auth 帳戶已建立');
-                    })
-                    .catch(e => {
-                        console.warn('⚠️ Firebase Auth 建立失敗:', e.message);
-                    });
+                    .then(() => console.log('✅ Firebase Auth 帳戶已建立'))
+                    .catch(e => console.warn('⚠️ Firebase Auth 建立失敗:', e.message));
             });
     }
 
@@ -896,108 +848,116 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', function
     }, 1500);
 });
 
-// ==================== 舊用戶轉移（學生端 - 無需登入） ====================
-document.getElementById('migrateAccountLink')?.addEventListener('click', function() {
-    document.getElementById('migrateAccountModal').classList.add('show');
-    document.getElementById('migrateCodeDisplay').innerHTML = '';
-    document.getElementById('migrateMessage').innerHTML = '';
-    document.getElementById('migrateAccountInfo').style.display = 'none';
-    document.getElementById('migrateError').style.display = 'none';
-    document.getElementById('migrateOldName').value = '';
-    document.getElementById('migrateOldClass').value = '';
+// 修改密碼彈窗支援 Enter 送出
+document.getElementById('newPassword')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('changePasswordBtn').click();
+    }
+});
+document.getElementById('confirmPassword')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('changePasswordBtn').click();
+    }
 });
 
-document.getElementById('findOldAccountBtn')?.addEventListener('click', async function() {
-    const name = document.getElementById('migrateOldName').value.trim();
-    const className = document.getElementById('migrateOldClass').value.trim();
-    const errEl = document.getElementById('migrateError');
-    const infoEl = document.getElementById('migrateAccountInfo');
+// ==================== 舊帳戶轉移（點選方式，無需登入） ====================
+document.getElementById('migrateAccountLink')?.addEventListener('click', function() {
+    const modal = document.getElementById('migrateAccountModal');
+    modal.classList.add('show');
+    
+    const listEl = document.getElementById('migrateAccountList');
     const codeDisplay = document.getElementById('migrateCodeDisplay');
-
-    // 重置顯示
-    errEl.style.display = 'none';
-    infoEl.style.display = 'none';
+    const msgEl = document.getElementById('migrateMessage');
     codeDisplay.innerHTML = '';
-
-    if (!name || !className) {
-        errEl.textContent = '⚠️ 請輸入姓名和班級';
-        errEl.style.display = 'block';
-        return;
-    }
-
-    // 從 localStorage 查找舊帳戶（格式：{班級}_{姓名}）
+    msgEl.innerHTML = '';
+    
+    // 掃描所有舊帳戶（包含 _ 的，如 VIP_張小華）
     const db = getUsers();
-    const oldUserId = `${className}_${name}`;
-    const oldUser = db.users.find(u => u.userId === oldUserId);
-
-    if (!oldUser) {
-        errEl.textContent = `❌ 找不到「${name}」在「${className}」班的帳戶，請確認輸入正確`;
-        errEl.style.display = 'block';
+    const oldAccounts = db.users.filter(u => u.userId && u.userId.includes('_'));
+    
+    if (oldAccounts.length === 0) {
+        listEl.innerHTML = `<div class="no-accounts-msg">📭 沒有找到舊帳戶。<br>如果您之前是用學號登入，請直接使用學號登入。</div>`;
         return;
     }
-
-    // 計算簡單的進度統計
-    const totalQ = oldUser.stats?.totalQuestionsAnswered || 0;
-    const totalCorrect = oldUser.stats?.totalCorrect || 0;
-    const acc = totalQ > 0 ? Math.round(totalCorrect / totalQ * 100) : 0;
-
-    // 顯示找到的帳戶資訊
-    infoEl.style.display = 'block';
-    infoEl.innerHTML = `
-        <div class="alert alert-success">
-            <strong>✅ 找到您的帳戶！</strong><br>
-            👤 姓名：${oldUser.name}<br>
-            📚 班級：${oldUser.className}<br>
-            📊 進度：已做 ${totalQ} 題，正確率 ${acc}%
-        </div>
-        <button class="btn btn-primary" id="generateMigrationCodeBtn">📋 產生驗證碼</button>
-    `;
-
-    // 儲存找到的舊用戶資訊供後續使用
-    window._foundOldUser = oldUser;
-
-    // 綁定產生驗證碼按鈕
-    document.getElementById('generateMigrationCodeBtn')?.addEventListener('click', async function() {
-        const user = window._foundOldUser;
-        if (!user) {
-            codeDisplay.innerHTML = `<div class="alert alert-danger">⚠️ 請先尋找您的帳戶</div>`;
-            return;
-        }
-
-        const code = String(Math.floor(100000 + Math.random() * 900000));
+    
+    let html = `<div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:13px; color:#666; margin-bottom:4px;">請選擇您的舊帳戶：</div>`;
+    
+    for (const acc of oldAccounts) {
+        const totalQ = acc.stats?.totalQuestionsAnswered || 0;
+        const totalCorrect = acc.stats?.totalCorrect || 0;
+        const accRate = totalQ > 0 ? Math.round(totalCorrect / totalQ * 100) : 0;
+        const rateClass = accRate >= 70 ? 'high' : (accRate >= 40 ? 'medium' : 'low');
         
-        const oldData = {
-            latestStatus: user.latestStatus || {},
-            allAttempts: user.allAttempts || [],
-            favorites: user.favorites || [],
-            practiceHistory: user.practiceHistory || [],
-            achievements: user.achievements || {},
-            stats: user.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 }
-        };
-        
-        const migrationData = {
-            code: code,
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-            oldUserId: user.userId,
-            oldName: user.name,
-            oldClass: user.className,
-            oldData: oldData
-        };
-        
-        await saveMigrationToFirebase(migrationData);
-        
-        codeDisplay.innerHTML = `
-            <div style="text-align:center; padding:8px 0;">
-                <div style="font-size:13px; color:#666;">您的驗證碼是：</div>
-                <div class="verify-code">${code}</div>
-                <div style="font-size:12px; color:#999;">請把這個驗證碼告訴老師</div>
-                <button class="btn btn-sm btn-outline mt-8" onclick="navigator.clipboard?.writeText('${code}')">📋 複製驗證碼</button>
-            </div>
+        html += `
+            <button class="old-account-item" data-userid="${acc.userId}">
+                <div>
+                    <div class="account-name">👤 ${acc.name}</div>
+                    <div class="account-class">📚 ${acc.className} 班</div>
+                </div>
+                <div class="account-stats">
+                    <div class="count">${totalQ} 題</div>
+                    <div class="accuracy ${rateClass}">正確率 ${accRate}%</div>
+                </div>
+            </button>
         `;
-        document.getElementById('migrateMessage').innerHTML = `<div class="alert alert-success">✅ 驗證碼已產生並儲存！請將驗證碼告訴老師。</div>`;
+    }
+    html += `</div>`;
+    listEl.innerHTML = html;
+    
+    // 綁定點擊事件
+    document.querySelectorAll('.old-account-item').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const userId = this.dataset.userid;
+            await generateMigrationCode(userId);
+        });
     });
 });
+
+async function generateMigrationCode(userId) {
+    const db = getUsers();
+    const user = db.users.find(u => u.userId === userId);
+    const codeDisplay = document.getElementById('migrateCodeDisplay');
+    const msgEl = document.getElementById('migrateMessage');
+    
+    if (!user) {
+        msgEl.innerHTML = `<div class="alert alert-danger">❌ 找不到該帳戶</div>`;
+        return;
+    }
+    
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    
+    const oldData = {
+        latestStatus: user.latestStatus || {},
+        allAttempts: user.allAttempts || [],
+        favorites: user.favorites || [],
+        practiceHistory: user.practiceHistory || [],
+        achievements: user.achievements || {},
+        stats: user.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 }
+    };
+    
+    const migrationData = {
+        code: code,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        oldUserId: user.userId,
+        oldName: user.name,
+        oldClass: user.className,
+        oldData: oldData
+    };
+    
+    await saveMigrationToFirebase(migrationData);
+    
+    codeDisplay.innerHTML = `
+        <div style="text-align:center; padding:8px 0;">
+            <div style="font-size:13px; color:#666;">您的驗證碼是：</div>
+            <div class="verify-code">${code}</div>
+            <div style="font-size:12px; color:#999;">請把這個驗證碼告訴老師</div>
+            <button class="btn btn-sm btn-outline mt-8" onclick="navigator.clipboard?.writeText('${code}')">📋 複製驗證碼</button>
+        </div>
+    `;
+    msgEl.innerHTML = `<div class="alert alert-success">✅ 驗證碼已產生並儲存！請將驗證碼告訴老師。</div>`;
+}
 
 // ==================== 密碼顯示切換 ====================
 document.getElementById('togglePasswordBtn')?.addEventListener('click', function() {
@@ -1459,7 +1419,6 @@ function renderPractice() {
         let unitObj = window.ALL_UNITS[unit], chapters = unitObj.chapters;
         if (Object.keys(chapters).length === 0) continue;
         let mastery = getUnitMastery(unit);
-        let unitNameDisplay = unitObj.name;
         let unitNameForDisplay = isMobile() ? unitObj.name.replace(/（[^）]*）/, '') : unitObj.name;
         
         html += `<div class="unit-group"><div class="unit-header" onclick="toggleUnit('${unit}')">
@@ -2310,10 +2269,6 @@ function toggleFavorite(qid) {
         userData.favorites.push(qid);
     }
     saveUserData();
-    const explainContent = document.getElementById('explainContent');
-    if (explainContent) {
-        alert('⭐ 收藏已更新！請重新點擊「查看題解」查看最新狀態。');
-    }
     renderPinned();
     renderMyMistakes();
     renderPastMistakes();
@@ -3144,7 +3099,6 @@ async function renderTeacherPanel() {
         return;
     }
     
-    // 確保 managedClasses 存在
     if (!currentUser.managedClasses) {
         currentUser.managedClasses = [currentUser.className];
         updateUser(currentUser.userId, { managedClasses: currentUser.managedClasses });
@@ -3152,11 +3106,7 @@ async function renderTeacherPanel() {
     
     const managedClasses = currentUser.managedClasses || [currentUser.className];
     const currentClass = currentUser.currentClass || currentUser.className;
-    
-    // 從 Firebase 讀取學生數據
     const students = await loadAllStudentsFromFirebase(currentClass);
-    
-    // 讀取班級設定（開放章節）
     const classSettings = await loadClassSettings(currentClass) || {};
     const openChapters = classSettings.openChapters || [];
     
@@ -3186,7 +3136,11 @@ async function renderTeacherPanel() {
         
         <div class="card">
             <div class="card-title">📝 建立學生帳戶</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">學號（可自訂）</label>
+                    <input type="text" id="teacherNewId" placeholder="VIP123 或留空自動" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
+                </div>
                 <div>
                     <label style="font-size:12px; font-weight:500; color:#2e0f5a;">姓名</label>
                     <input type="text" id="teacherNewName" placeholder="陳小明" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
@@ -3245,6 +3199,7 @@ async function renderTeacherPanel() {
                         <span style="background:${statusColor}; color:white; padding:2px 12px; border-radius:12px; font-size:11px;">${status}</span>
                     </td>
                     <td style="padding:8px 10px; text-align:center;">
+                        <button class="btn btn-small" onclick="showStudentPassword('${s.userId}')" style="background:#f59e0b; padding:2px 8px; font-size:10px; color:white; border:none; border-radius:12px;">🔑 密碼</button>
                         <button class="btn btn-danger btn-small" onclick="deleteStudent('${s.userId}')" style="font-size:10px; padding:2px 8px;">刪除</button>
                     </td>
                 </tr>
@@ -3264,15 +3219,20 @@ async function renderTeacherPanel() {
             <div id="chapterManagement">
     `;
     
-    const allChapters = [
-        { id: 5, name: '5. Atomic Structure' },
-        { id: 6, name: '6. Periodic Table' },
-        { id: 7, name: '7. Ionic Bond' },
-        { id: 8, name: '8. Covalent Bond' },
-        { id: 9, name: '9. Structures & Properties' }
-    ];
+    // 動態從題庫讀取章節
+    const allChaptersFromDB = [];
+    for (let u in window.ALL_UNITS) {
+        for (let ch in window.ALL_UNITS[u].chapters) {
+            const chNum = parseInt(ch);
+            allChaptersFromDB.push({
+                id: chNum,
+                name: window.ALL_UNITS[u].chapters[ch].name
+            });
+        }
+    }
+    allChaptersFromDB.sort((a, b) => a.id - b.id);
     
-    for (const ch of allChapters) {
+    for (const ch of allChaptersFromDB) {
         const isOpen = openChapters.includes(ch.id);
         html += `
             <div style="display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid #f0edf8;">
@@ -3297,7 +3257,6 @@ async function renderTeacherPanel() {
             <div id="wrongStatsContainer">
     `;
     
-    // 計算錯題統計
     const wrongCount = {};
     for (const s of students) {
         const attempts = s.allAttempts || [];
@@ -3313,7 +3272,6 @@ async function renderTeacherPanel() {
     if (sortedWrong.length === 0) {
         html += `<div style="text-align:center; color:#999; padding:12px 0; font-size:13px;">🎉 全班沒有錯題！繼續保持！</div>`;
     } else {
-        // 從題庫中查找題目文字
         let qTexts = {};
         for (let u in window.ALL_UNITS) {
             for (let c in window.ALL_UNITS[u].chapters) {
@@ -3443,10 +3401,11 @@ async function renderTeacherPanel() {
             <div style="font-size:13px; color:#065f46;">
                 ✅ 修改教師姓名<br>
                 ✅ 切換管理班級<br>
-                ✅ 建立學生帳戶<br>
+                ✅ 建立學生帳戶（可自訂學號）<br>
                 ✅ 查看學生進度（即時）<br>
                 ✅ 修改學生姓名<br>
                 ✅ 刪除學生帳戶<br>
+                ✅ 查看學生初始密碼<br>
                 ✅ 章節開放/隱藏<br>
                 ✅ 錯題統計<br>
                 ✅ 成就/積分排名<br>
@@ -3461,8 +3420,17 @@ async function renderTeacherPanel() {
     bindTeacherEvents();
 }
 
+function showStudentPassword(userId) {
+    const user = findUser(userId);
+    if (!user) {
+        alert('❌ 找不到該學生');
+        return;
+    }
+    const password = user.initialPassword || '（已修改密碼）';
+    alert(`🔑 ${user.name}（${user.userId}）的初始密碼：\n\n${password}\n\n⚠️ 如果學生已修改過密碼，這個密碼可能已經無效。`);
+}
+
 function bindTeacherEvents() {
-    // 更新教師姓名
     document.getElementById('updateTeacherNameBtn')?.addEventListener('click', function() {
         const newName = document.getElementById('teacherNameInput').value.trim();
         if (!newName) { alert('請輸入姓名'); return; }
@@ -3474,7 +3442,6 @@ function bindTeacherEvents() {
         alert('✅ 姓名已更新！');
     });
     
-    // 切換班級
     document.getElementById('teacherClassSelector')?.addEventListener('change', function() {
         const newClass = this.value;
         if (newClass !== currentUser.className) {
@@ -3485,8 +3452,8 @@ function bindTeacherEvents() {
         }
     });
     
-    // 建立學生
     document.getElementById('teacherCreateStudentBtn')?.addEventListener('click', function() {
+        const customId = document.getElementById('teacherNewId').value.trim() || null;
         const name = document.getElementById('teacherNewName').value.trim();
         const className = document.getElementById('teacherNewClass').value.trim() || currentUser.className;
         const phone = document.getElementById('teacherNewPhone').value.trim();
@@ -3495,20 +3462,26 @@ function bindTeacherEvents() {
             resultEl.innerHTML = `<div class="alert alert-danger">⚠️ 請填寫姓名和電話號碼</div>`;
             return;
         }
-        const newUser = createUser(name, className, phone);
+        const newUser = createUser(name, className, phone, customId);
         resultEl.innerHTML = `
-            <div class="alert alert-success">✅ 帳戶已建立！<br>
-            👤 ${newUser.name}<br>
-            🆔 學號：<strong>${newUser.userId}</strong><br>
-            🔑 初始密碼：<strong style="font-family:monospace;">${newUser.initialPassword}</strong>
+            <div class="alert alert-success" style="position:relative; border-left:4px solid #10b981; padding:16px;">
+                <button onclick="this.parentElement.remove()" style="position:absolute; top:8px; right:12px; background:none; border:none; font-size:20px; cursor:pointer; color:#999;">✕</button>
+                <div style="font-size:16px; font-weight:700; color:#065f46;">✅ 帳戶已建立！</div>
+                <div style="margin-top:8px; line-height:1.8;">
+                    <div>👤 姓名：<strong>${newUser.name}</strong></div>
+                    <div>🆔 學號：<strong style="font-size:20px; color:#4a1d8c;">${newUser.userId}</strong></div>
+                    <div>🔑 初始密碼：<strong style="font-size:20px; font-family:monospace; background:#f0f0f0; padding:2px 12px; border-radius:6px;">${newUser.initialPassword}</strong></div>
+                    <div style="font-size:13px; color:#666; margin-top:6px;">📌 請將學號和密碼告訴學生</div>
+                    <div style="font-size:13px; color:#f59e0b; margin-top:4px;">⚠️ 學生第一次登入時會要求修改密碼</div>
+                </div>
             </div>
         `;
+        document.getElementById('teacherNewId').value = '';
         document.getElementById('teacherNewName').value = '';
         document.getElementById('teacherNewPhone').value = '';
         renderTeacherPanel();
     });
     
-    // 儲存章節設定
     document.getElementById('saveChaptersBtn')?.addEventListener('click', async function() {
         const checkboxes = document.querySelectorAll('#chapterManagement input[type="checkbox"]');
         const openChapters = [];
@@ -3525,7 +3498,6 @@ function bindTeacherEvents() {
         }, 3000);
     });
     
-    // 匯出全班成績
     document.getElementById('exportClassDataBtn')?.addEventListener('click', async function() {
         const className = currentUser.currentClass || currentUser.className;
         const students = await loadAllStudentsFromFirebase(className);
@@ -3556,7 +3528,6 @@ function bindTeacherEvents() {
         }, 3000);
     });
     
-    // 執行轉移
     document.getElementById('executeMigrationBtn')?.addEventListener('click', async function() {
         const code = document.getElementById('migrationCodeInput').value.trim();
         const newId = document.getElementById('migrationNewId').value.trim();
@@ -3599,11 +3570,9 @@ function bindTeacherEvents() {
             stats: migration.oldData?.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 }
         };
         
-        // 存入 localStorage
         db.users.push(newStudent);
         saveUsers(db);
         
-        // 存入 Firebase
         if (firestoreEnabled) {
             try {
                 await firebase.firestore()
@@ -3631,7 +3600,6 @@ function bindTeacherEvents() {
         renderTeacherPanel();
     });
     
-    // 管理班級
     document.getElementById('manageClassesBtn')?.addEventListener('click', function() {
         const currentClasses = currentUser.managedClasses || [currentUser.className];
         const input = prompt('請輸入您要管理的班級（用逗號分隔）：\n例如：3A,3B,3C', currentClasses.join(','));
@@ -3646,7 +3614,6 @@ function bindTeacherEvents() {
     });
 }
 
-// ==================== 修改學生姓名 ====================
 function openEditNameModal(userId) {
     const user = findUser(userId);
     if (!user) return;
@@ -3661,7 +3628,6 @@ function openEditNameModal(userId) {
     }
 }
 
-// ==================== 刪除學生帳戶 ====================
 function deleteStudent(userId) {
     if (userId === currentUser?.userId) {
         alert('⚠️ 無法刪除自己的帳戶');
@@ -3677,7 +3643,6 @@ function deleteStudent(userId) {
     }
 }
 
-// ==================== 一鍵解鎖全部 ====================
 function unlockAll() {
     if (!pendingUnit || !pendingChapter) {
         alert('請先選擇一個章節');
@@ -3698,7 +3663,6 @@ function unlockAll() {
     alert('🔓 所有難度已解鎖！');
 }
 
-// ==================== 登出功能 ====================
 function setupLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
@@ -3706,7 +3670,6 @@ function setupLogout() {
     }
 }
 
-// ==================== 載入班級設定 ====================
 async function loadClassSettings(className) {
     if (!firestoreEnabled) {
         const db = getUsers();
