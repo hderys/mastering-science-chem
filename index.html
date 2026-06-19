@@ -14,7 +14,255 @@
                 max-height: 130px !important;
             }
         }
+
+        /* ===== 登入畫面樣式 ===== */
+        .form-group-login {
+            margin-bottom: 14px;
+        }
+        .form-group-login label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #2e0f5a;
+            margin-bottom: 4px;
+        }
+        .form-group-login input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 40px;
+            border: 2px solid #e0d6f5;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group-login input:focus {
+            border-color: #4a1d8c;
+        }
+        .password-wrapper {
+            position: relative;
+        }
+        .password-wrapper input {
+            padding-right: 48px;
+        }
+        .toggle-password-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #888;
+        }
+        .toggle-password-btn:hover {
+            color: #4a1d8c;
+        }
+
+        /* ===== 彈窗 ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 24px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 24px 28px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .modal-box .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .modal-box .close-btn:hover {
+            color: #333;
+        }
+        .modal-box h2 {
+            color: #2e0f5a;
+            margin-bottom: 4px;
+            font-size: 20px;
+        }
+        .modal-box .sub {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        .modal-box .form-group {
+            margin-bottom: 12px;
+        }
+        .modal-box .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #2e0f5a;
+            margin-bottom: 3px;
+        }
+        .modal-box .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 2px solid #e0d6f5;
+            font-size: 14px;
+            outline: none;
+        }
+        .modal-box .form-group input:focus {
+            border-color: #4a1d8c;
+        }
+        .modal-box .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin-top: 4px;
+        }
+        .modal-box .btn-primary {
+            background: #4a1d8c;
+            color: white;
+        }
+        .modal-box .btn-primary:hover {
+            background: #3b1a6e;
+        }
+        .modal-box .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .modal-box .btn-success:hover {
+            background: #059669;
+        }
+        .modal-box .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+        .modal-box .btn-danger:hover {
+            background: #b91c1c;
+        }
+        .modal-box .btn-outline {
+            background: white;
+            color: #4a1d8c;
+            border: 2px solid #4a1d8c;
+        }
+        .modal-box .btn-outline:hover {
+            background: #f5f0ff;
+        }
+        .modal-box .inline-flex {
+            display: flex;
+            gap: 8px;
+        }
+        .modal-box .inline-flex .btn {
+            flex: 1;
+        }
+        .modal-box .mt-8 {
+            margin-top: 8px;
+        }
+        .modal-box .mt-12 {
+            margin-top: 12px;
+        }
+        .modal-box .text-center {
+            text-align: center;
+        }
+        .modal-box .text-sm {
+            font-size: 13px;
+        }
+        .modal-box .text-danger {
+            color: #dc2626;
+        }
+        .modal-box .text-success {
+            color: #10b981;
+        }
+        .modal-box .divider {
+            height: 1px;
+            background: #e0d6f5;
+            margin: 12px 0;
+        }
+        .modal-box .alert {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .modal-box .alert-success {
+            background: #d4edda;
+            color: #065f46;
+        }
+        .modal-box .alert-danger {
+            background: #f8d7da;
+            color: #7f1d1d;
+        }
+        .modal-box .alert-warning {
+            background: #fef3c7;
+            color: #7c5a00;
+        }
+
+        .verify-code {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 8px;
+            color: #4a1d8c;
+            text-align: center;
+            padding: 16px;
+            background: white;
+            border-radius: 12px;
+            border: 2px dashed #4a1d8c;
+            margin: 8px 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
     </style>
+    
+    <!-- ===== Firebase SDK (傳統相容版本) ===== -->
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
+    
+    <script>
+        // 您的 Firebase 配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyBWUr-qFjDuAbRn2ueCOA24Bx5vHhGwCzs",
+            authDomain: "mastering-science.firebaseapp.com",
+            projectId: "mastering-science",
+            storageBucket: "mastering-science.firebasestorage.app",
+            messagingSenderId: "969510026630",
+            appId: "1:969510026630:web:5c0ff3ffc7b3bdc04c8007"
+        };
+        
+        // 初始化 Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // 初始化 Firestore 和 Auth
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        console.log('🔥 Firebase 已初始化！');
+    </script>
 </head>
 <body>
 
@@ -25,12 +273,104 @@
     <button id="dismissOrientationBtn" class="dismiss-btn">我知道了 / Got it</button>
 </div>
 
+<!-- ===== 登入畫面（新版：ID + 密碼） ===== -->
 <div id="loginScreen" style="max-width: 400px; margin: 80px auto;" class="card">
     <h2 style="color: var(--deep-purple); font-size: clamp(1.2rem, 6vw, 1.6rem);">🧪 Mastering Science</h2>
     <div style="margin: 8px 0 16px;"><div>一步步掌握科學概念</div><div>Master science, one step at a time</div></div>
-    <input type="text" id="studentName" placeholder="姓名 / Name" style="width:100%; padding:8px; margin-bottom:8px; border-radius:40px; border:1px solid #ccc;">
-    <input type="text" id="studentClass" placeholder="班級 / Class" style="width:100%; padding:8px; margin-bottom:8px; border-radius:40px; border:1px solid #ccc;">
-    <button class="btn" id="loginBtn" style="width:100%;">開始學習 / Start Learning</button>
+
+    <div id="loginError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
+
+    <div class="form-group-login">
+        <label for="loginUserId">登入 ID（學號）</label>
+        <input type="text" id="loginUserId" placeholder="例如：20240001 或 VIP001">
+    </div>
+
+    <div class="form-group-login">
+        <label for="loginPassword">密碼</label>
+        <div class="password-wrapper">
+            <input type="password" id="loginPassword" placeholder="請輸入密碼">
+            <button type="button" class="toggle-password-btn" id="togglePasswordBtn">👁️</button>
+        </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px; margin:12px 0 16px 0;">
+        <input type="checkbox" id="rememberMeCheckbox" style="width:16px; height:16px; cursor:pointer;">
+        <label for="rememberMeCheckbox" style="font-size:0.85rem; color:#2e0f5a; cursor:pointer;">🔒 記住我（下次自動登入）</label>
+    </div>
+
+    <button class="btn" id="loginBtn" style="width:100%; padding:12px; font-size:1rem;">🔒 登入</button>
+
+    <div style="margin-top:14px; text-align:center; font-size:0.8rem; color:#999;">
+        <span>第一次登入？請向老師索取初始密碼</span>
+        <br>
+        <button id="forgotPasswordLink" style="background:none; border:none; color:#4a1d8c; cursor:pointer; text-decoration:underline; font-size:0.8rem; margin-top:4px;">🔑 忘記密碼？</button>
+        <br>
+        <button id="migrateAccountLink" style="background:none; border:none; color:#4a1d8c; cursor:pointer; text-decoration:underline; font-size:0.8rem; margin-top:4px;">🔄 已有帳號？點此轉移</button>
+    </div>
+</div>
+
+<!-- ===== 忘記密碼彈窗 ===== -->
+<div class="modal-overlay" id="forgotPasswordModal">
+    <div class="modal-box">
+        <button class="close-btn" onclick="closeModal('forgotPasswordModal')">✕</button>
+        <h2>🔑 忘記密碼</h2>
+        <div class="sub">請輸入您的學號和電話號碼，驗證通過後即可重設密碼。</div>
+        <div id="forgotError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
+        <div class="form-group">
+            <label>登入 ID（學號）</label>
+            <input type="text" id="forgotUserId" placeholder="例如：20240001">
+        </div>
+        <div class="form-group">
+            <label>電話號碼</label>
+            <input type="text" id="forgotPhone" placeholder="例如：91234567">
+        </div>
+        <div class="inline-flex">
+            <button class="btn btn-outline" onclick="closeModal('forgotPasswordModal')">取消</button>
+            <button class="btn btn-primary" id="forgotSubmitBtn">驗證並重設</button>
+        </div>
+        <div id="forgotMessage" class="mt-8"></div>
+    </div>
+</div>
+
+<!-- ===== 修改密碼彈窗 ===== -->
+<div class="modal-overlay" id="changePasswordModal">
+    <div class="modal-box">
+        <button class="close-btn" onclick="closeModal('changePasswordModal')">✕</button>
+        <h2 id="changePasswordTitle">🔐 修改密碼</h2>
+        <div class="sub" id="changePasswordDesc">請輸入新的密碼。</div>
+        <div id="changePasswordError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
+        <div class="form-group">
+            <label>新密碼（至少 4 個字元）</label>
+            <input type="password" id="newPassword" placeholder="請輸入新密碼">
+        </div>
+        <div class="form-group">
+            <label>確認新密碼</label>
+            <input type="password" id="confirmPassword" placeholder="請再次輸入新密碼">
+        </div>
+        <button class="btn btn-success" id="changePasswordBtn">✅ 確認修改</button>
+        <button class="btn btn-outline mt-8" id="changePasswordCancelBtn">取消</button>
+        <div id="changePasswordMessage" class="mt-8"></div>
+    </div>
+</div>
+
+<!-- ===== 舊用戶轉移彈窗（學生端） ===== -->
+<div class="modal-overlay" id="migrateAccountModal">
+    <div class="modal-box">
+        <button class="close-btn" onclick="closeModal('migrateAccountModal')">✕</button>
+        <h2>🔄 舊帳戶轉移</h2>
+        <div class="sub">如果您之前是用「姓名 + 班級」登入，請按照以下步驟轉移：</div>
+        <div style="background:#fef3c7; border-radius:12px; padding:14px; font-size:13px; color:#7c5a00; margin-bottom:12px; line-height:1.8;">
+            📌 步驟：<br>
+            1. 點擊下方「顯示驗證碼」按鈕<br>
+            2. 將顯示的 6 位數驗證碼告訴老師<br>
+            3. 老師在後台輸入驗證碼並指定新學號<br>
+            4. 完成後，請用新的學號登入
+        </div>
+        <button class="btn btn-primary" id="showMigrationCodeBtn">📋 顯示驗證碼</button>
+        <div id="migrationCodeDisplay" class="mt-8"></div>
+        <button class="btn btn-outline mt-8" onclick="closeModal('migrateAccountModal')">返回登入</button>
+        <div id="migrateMessage" class="mt-8"></div>
+    </div>
 </div>
 
 <div id="mainApp" style="display:none;">
@@ -45,6 +385,8 @@
         <button class="tab" data-tab="pinned">⭐ 收藏</button>
         <button class="tab" data-tab="history">📋 做題紀錄</button>
         <button class="tab" data-tab="achievements">🏆 我的成就</button>
+        <!-- 老師專用分頁（僅老師帳號顯示） -->
+        <button class="tab" data-tab="teacher" id="teacherTab" style="display:none;">🧑‍🏫 老師後台</button>
     </div>
     <div id="practicePanel"></div>
     <div id="myMistakesPanel" style="display:none;"></div>
@@ -52,6 +394,7 @@
     <div id="pinnedPanel" style="display:none;"></div>
     <div id="historyPanel" style="display:none;"></div>
     <div id="achievementsPanel" style="display:none;"></div>
+    <div id="teacherPanel" style="display:none;"></div>
 </div>
 
 <div id="settingsModal" class="modal">
@@ -112,51 +455,36 @@
 <!-- ===== 手機版問題彈窗（完全不變） ===== -->
 <div id="quizModal" class="modal"><div class="modal-content"><div class="quiz-header"><span id="quizDifficulty"></span><span id="quizCounter"></span><span id="timerDisplay" class="quiz-timer">00:00</span></div><div id="questionNav" class="question-nav"></div><div class="quiz-body"><div id="modalQuestionText" class="question-text"></div><div id="modalImageArea"></div><div id="modalOptions"></div></div><div class="quiz-footer"><button id="prevBtn" class="btn btn-outline">◀ 上一題</button><button id="nextBtn" class="btn btn-outline">下一題 ▶</button><button id="submitAllBtn" class="btn" style="background:#10b981;">提交答案</button></div></div></div>
 
-<!-- ===== 桌面版獨立彈窗（直接複製您的 Demo HTML） ===== -->
+<!-- ===== 桌面版獨立彈窗（全新設計，完全不影響手機版） ===== -->
 <div id="desktopQuizModal" class="modal">
     <div class="modal-content">
-
-        <!-- ===== 左側 ===== -->
-        <div class="main-panel">
+        <div class="main-panel" id="desktopMainPanel">
             <div class="question-area">
                 <div class="question-text" id="desktopQuestionText">
                     載入中...
                 </div>
                 <div class="image-area" id="desktopImageArea">
-                    <!-- 圖片由 JavaScript 動態產生 -->
                 </div>
                 <div class="options-grid" id="desktopOptions">
-                    <!-- 選項由 JavaScript 動態產生 -->
                 </div>
             </div>
         </div>
-
-        <!-- ===== 右側邊欄 ===== -->
         <div class="sidebar" id="desktopSidebar">
-
-            <!-- 第一行：難度 + 計時器 -->
             <div class="sidebar-row-1">
                 <span class="difficulty" id="desktopDifficulty">📈 Advanced</span>
                 <span class="timer" id="desktopTimer">⏱️ 00:00</span>
             </div>
-
-            <!-- 第二行：周期表 + 題號 -->
             <div class="sidebar-row-2">
                 <button class="table-btn" id="desktopPeriodicBtn">📊 周期表</button>
                 <span class="counter" id="desktopCounter">1 / 10</span>
             </div>
-
-            <!-- 題號導航 -->
             <div class="nav-grid" id="desktopNav"></div>
-
-            <!-- 三個按鈕 -->
             <div class="sidebar-actions">
                 <button class="btn btn-prev" id="desktopPrevBtn">◀</button>
                 <button class="btn btn-next" id="desktopNextBtn">▶</button>
                 <button class="btn btn-submit" id="desktopSubmitBtn">提交</button>
             </div>
         </div>
-
     </div>
 </div>
 

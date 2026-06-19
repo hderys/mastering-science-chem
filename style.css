@@ -1021,11 +1021,11 @@ body {
 }
 
 /* ============================================================
-   桌面版 — 直接複製您的 Demo CSS（手機版完全不動）
+   桌面版（全新獨立彈窗 #desktopQuizModal）
+   完全照 Demo 設計，高度固定 620px
    僅在 min-width: 641px 生效
    ============================================================ */
 @media (min-width: 641px) {
-    /* 維持其他桌面版功能正常 */
     #practicePanel, #myMistakesPanel, #pastMistakesPanel, #pinnedPanel, #historyPanel, #achievementsPanel {
         max-height: calc(100vh - 80px);
         overflow-y: auto;
@@ -1060,7 +1060,7 @@ body {
         margin-bottom: 0.15rem;
     }
 
-    /* ===== 桌面版彈窗 — 直接複製您的 Demo CSS ===== */
+    /* ===== 桌面版獨立彈窗（完全照 Demo） ===== */
     #desktopQuizModal .modal-content {
         width: 1000px;
         max-width: 98%;
@@ -1075,7 +1075,7 @@ body {
         box-shadow: 0 20px 60px rgba(74, 29, 140, 0.15);
     }
 
-    /* 左側主面板 */
+    /* ===== 左側主面板（白色） ===== */
     #desktopQuizModal .main-panel {
         flex: 1;
         padding: 24px 28px 20px 28px;
@@ -1102,6 +1102,7 @@ body {
         word-break: break-word;
     }
 
+    /* 桌面版圖片區 */
     #desktopQuizModal .image-area {
         text-align: center;
         margin-bottom: 10px;
@@ -1115,8 +1116,17 @@ body {
         border: 1px solid #e9e4f5;
         padding: 4px;
         cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #desktopQuizModal .image-area img:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    #desktopQuizModal .image-area:not(:has(img)) {
+        display: none !important;
     }
 
+    /* 桌面版選項 2x2 網格 */
     #desktopQuizModal .options-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1167,7 +1177,15 @@ body {
         color: white;
     }
 
-    /* 右側邊欄 */
+    /* 無圖片時，選項區佔更多空間 */
+    #desktopQuizModal .main-panel.no-image .options-grid {
+        align-content: center;
+    }
+    #desktopQuizModal .main-panel.no-image .question-text {
+        font-size: 20px;
+    }
+
+    /* ===== 右側邊欄（深紫色） ===== */
     #desktopQuizModal .sidebar {
         width: 210px;
         min-width: 170px;
@@ -1186,7 +1204,7 @@ body {
     #desktopQuizModal .sidebar.difficulty-advanced { background: linear-gradient(145deg, #4c1d95, #6d28d9); }
     #desktopQuizModal .sidebar.difficulty-challenge { background: linear-gradient(145deg, #78350f, #b45309); }
 
-    /* 第一行：難度 + 計時器 */
+    /* 邊欄第一行：難度 + 計時器 */
     #desktopQuizModal .sidebar-row-1 {
         display: flex;
         justify-content: space-between;
@@ -1206,7 +1224,7 @@ body {
         color: #fca5a5;
     }
 
-    /* 第二行：周期表 + 題號 */
+    /* 邊欄第二行：周期表 + 題號 */
     #desktopQuizModal .sidebar-row-2 {
         display: flex;
         justify-content: space-between;
@@ -1238,7 +1256,7 @@ body {
         color: #ffffff;
     }
 
-    /* 題號導航 */
+    /* 題號導航網格 */
     #desktopQuizModal .nav-grid {
         display: flex;
         flex-wrap: wrap;
@@ -1306,7 +1324,7 @@ body {
         transform: scale(1.1);
     }
 
-    /* 三個按鈕 */
+    /* 三個按鈕（◀ / ▶ / 提交） */
     #desktopQuizModal .sidebar-actions {
         display: flex;
         gap: 4px;
@@ -1328,7 +1346,7 @@ body {
         justify-content: center;
     }
     #desktopQuizModal .sidebar-actions .btn:disabled {
-        opacity: 0.4;
+        opacity: 0.3;
         cursor: not-allowed;
     }
     #desktopQuizModal .btn-prev {

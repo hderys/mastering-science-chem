@@ -34,10 +34,18 @@ let blinkInterval = null;
 let customCount = 10;
 let isSingleQuestionMode = false;
 let singleQuestionSource = null;
+let startTime = null;
 
 // 成績總表控制變量
 let showOnlyWrong = false;
 let showAnswers = false;
+
+// 登入相關變量
+let loginAttempts = 0;
+const MAX_LOGIN_ATTEMPTS = 5;
+
+// Firebase 同步狀態
+let firestoreEnabled = false;
 
 // 成就積分對應表
 const ACHIEVEMENT_POINTS = {
@@ -62,6 +70,56 @@ const ACHIEVEMENT_POINTS = {
     'downwardTrend': -10
 };
 
+// ==================== Firebase 初始化檢查 ====================
+function checkFirebase() {
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+        try {
+            firestoreEnabled = true;
+            console.log('✅ Firestore 已啟用');
+            return true;
+        } catch(e) {
+            firestoreEnabled = false;
+            console.log('⚠️ Firestore 未啟用，使用 localStorage');
+            return false;
+        }
+    }
+    firestoreEnabled = false;
+    console.log('⚠️ Firebase 未載入，使用 localStorage');
+    return false;
+}
+
+// ==================== Firestore 數據同步函數 ====================
+async function syncToFirestore(collection, docId, data) {
+    if (!firestoreEnabled || !currentUser) return false;
+    try {
+        await firebase.firestore()
+            .collection(collection)
+            .doc(docId)
+            .set(data, { merge: true });
+        return true;
+    } catch(e) {
+        console.warn('⚠️ Firestore 同步失敗:', e.message);
+        return false;
+    }
+}
+
+async function loadFromFirestore(collection, docId) {
+    if (!firestoreEnabled || !currentUser) return null;
+    try {
+        const doc = await firebase.firestore()
+            .collection(collection)
+            .doc(docId)
+            .get();
+        if (doc.exists) {
+            return doc.data();
+        }
+        return null;
+    } catch(e) {
+        console.warn('⚠️ Firestore 讀取失敗:', e.message);
+        return null;
+    }
+}
+
 // ==================== format 函數 ====================
 function format(date, pattern) {
     let year = date.getFullYear();
@@ -74,13 +132,54 @@ function format(date, pattern) {
 function saveUserData() {
     if (!currentUser) return;
     localStorage.setItem(`ms_chem_${currentUser.id}`, JSON.stringify(userData));
+    if (firestoreEnabled) {
+        syncToFirestore('users', currentUser.id, {
+            latestStatus: userData.latestStatus || {},
+            allAttempts: userData.allAttempts || [],
+            favorites: userData.favorites || [],
+            practiceHistory: userData.practiceHistory || [],
+            achievements: userData.achievements || {},
+            stats: userData.stats || {},
+            lastUpdated: new Date().toISOString()
+        });
+    }
 }
 
-function loadUserData() {
+async function loadUserData() {
     if (!currentUser) return;
+    
     const raw = localStorage.getItem(`ms_chem_${currentUser.id}`);
-    if (raw) userData = JSON.parse(raw);
-    else userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
+    if (raw) {
+        userData = JSON.parse(raw);
+        if (!userData.practiceHistory) userData.practiceHistory = [];
+        if (!userData.achievements) userData.achievements = {};
+        if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
+        if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
+        saveUserData();
+        return;
+    }
+    
+    if (firestoreEnabled) {
+        const cloudData = await loadFromFirestore('users', currentUser.id);
+        if (cloudData) {
+            userData = {
+                latestStatus: cloudData.latestStatus || {},
+                allAttempts: cloudData.allAttempts || [],
+                favorites: cloudData.favorites || [],
+                practiceHistory: cloudData.practiceHistory || [],
+                achievements: cloudData.achievements || {},
+                stats: cloudData.stats || { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null }
+            };
+            if (!userData.practiceHistory) userData.practiceHistory = [];
+            if (!userData.achievements) userData.achievements = {};
+            if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
+            if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
+            saveUserData();
+            return;
+        }
+    }
+    
+    userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
     if (!userData.practiceHistory) userData.practiceHistory = [];
     if (!userData.achievements) userData.achievements = {};
     if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
@@ -180,6 +279,385 @@ function hasEverWrong(qid) {
 function isNotAttempted(qid) {
     return !userData.allAttempts.some(att => att.qid === qid);
 }
+
+// ==================== 登入相關函數 ====================
+function showLoginError(msg) {
+    const errEl = document.getElementById('loginError');
+    if (!errEl) return;
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    setTimeout(() => { errEl.style.display = 'none'; }, 4000);
+}
+
+function clearLoginError() {
+    const errEl = document.getElementById('loginError');
+    if (errEl) errEl.style.display = 'none';
+}
+
+function closeModal(modalId) {
+    const el = document.getElementById(modalId);
+    if (el) el.classList.remove('show');
+}
+
+function formatTime(seconds) {
+    if (!seconds || seconds < 0) return '-';
+    let m = Math.floor(seconds / 60);
+    let s = seconds % 60;
+    if (m === 0) return `${s}秒`;
+    return `${m}分${s}秒`;
+}
+
+function getUsers() {
+    const raw = localStorage.getItem('ms_chem_users');
+    if (raw) {
+        try { return JSON.parse(raw); } catch(e) { return { users: [] }; }
+    }
+    return { users: [] };
+}
+
+function saveUsers(users) {
+    localStorage.setItem('ms_chem_users', JSON.stringify(users));
+}
+
+function findUser(userId) {
+    const db = getUsers();
+    return db.users.find(u => u.userId === userId);
+}
+
+function updateUser(userId, data) {
+    const db = getUsers();
+    const index = db.users.findIndex(u => u.userId === userId);
+    if (index !== -1) {
+        db.users[index] = { ...db.users[index], ...data };
+        saveUsers(db);
+        return db.users[index];
+    }
+    return null;
+}
+
+function generateRandomPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let pwd = '';
+    for (let i = 0; i < 8; i++) {
+        pwd += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return pwd;
+}
+
+function generateUserId(className) {
+    const db = getUsers();
+    const classUsers = db.users.filter(u => u.className === className);
+    const num = classUsers.length + 1;
+    return String(num).padStart(6, '0');
+}
+
+function createUser(name, className, phone) {
+    const db = getUsers();
+    const userId = generateUserId(className);
+    const initialPassword = generateRandomPassword();
+    const user = {
+        userId: userId,
+        name: name,
+        className: className,
+        phone: phone,
+        initialPassword: initialPassword,
+        password: null,
+        isFirstLogin: true,
+        isTeacher: false,
+        managedClasses: [className],
+        createdAt: new Date().toISOString(),
+        latestStatus: {},
+        allAttempts: [],
+        favorites: [],
+        practiceHistory: [],
+        achievements: {},
+        stats: { totalQuestionsAnswered: 0, totalCorrect: 0 }
+    };
+    db.users.push(user);
+    saveUsers(db);
+    return user;
+}
+
+function handleLogin(userId, password) {
+    clearLoginError();
+
+    const user = findUser(userId);
+
+    if (!user) {
+        showLoginError('❌ 帳號不存在，請確認登入 ID');
+        return;
+    }
+
+    const isValid = (user.password && user.password === password) ||
+                    (user.isFirstLogin && user.initialPassword === password);
+
+    if (!isValid) {
+        loginAttempts++;
+        const remaining = MAX_LOGIN_ATTEMPTS - loginAttempts;
+        if (remaining <= 0) {
+            showLoginError('❌ 密碼錯誤次數過多，請稍後再試');
+            document.getElementById('loginBtn').disabled = true;
+            setTimeout(() => {
+                document.getElementById('loginBtn').disabled = false;
+                loginAttempts = 0;
+            }, 30000);
+            return;
+        }
+        showLoginError(`❌ 密碼錯誤，剩餘嘗試次數：${remaining}`);
+        return;
+    }
+
+    loginAttempts = 0;
+    currentUser = user;
+
+    if (document.getElementById('rememberMeCheckbox').checked) {
+        localStorage.setItem('ms_chem_login', JSON.stringify({ userId: userId, password: password }));
+    } else {
+        localStorage.removeItem('ms_chem_login');
+    }
+
+    if (user.isFirstLogin) {
+        openChangePasswordModal(true);
+    } else {
+        enterMainApp(user);
+    }
+}
+
+function enterMainApp(user) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    
+    const teacherTab = document.getElementById('teacherTab');
+    if (user.isTeacher) {
+        teacherTab.style.display = 'inline-block';
+    } else {
+        teacherTab.style.display = 'none';
+    }
+    
+    updateUserLabel();
+    
+    loadUserData();
+    renderPractice();
+    initTabs();
+    document.querySelector('.tab[data-tab="practice"]').click();
+    setupLogout();
+}
+
+function logout() {
+    if (confirm('⚠️ 確定要登出嗎？\n\n登出後：\n✅ 您的學習進度、成就、錯題會完全保留\n❌ 下次登入需要重新輸入密碼\n\n如果您只是要關閉瀏覽器，可以直接關閉，不需要登出。')) {
+        currentUser = null;
+        localStorage.removeItem('ms_chem_login');
+        document.getElementById('loginScreen').style.display = 'block';
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('userLabel').innerHTML = '';
+        clearLoginError();
+        document.getElementById('loginBtn').disabled = false;
+        loginAttempts = 0;
+    }
+}
+
+function checkAutoLogin() {
+    const saved = localStorage.getItem('ms_chem_login');
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            if (data.userId && data.password) {
+                document.getElementById('loginUserId').value = data.userId;
+                document.getElementById('loginPassword').value = data.password;
+                const rememberMe = document.getElementById('rememberMeCheckbox');
+                if (rememberMe) rememberMe.checked = true;
+                setTimeout(() => {
+                    handleLogin(data.userId, data.password);
+                }, 300);
+                return true;
+            }
+        } catch(e) {}
+    }
+    return false;
+}
+
+function updateUserLabel() {
+    if (!currentUser) return;
+    document.getElementById('userLabel').innerHTML = `
+        👋 ${currentUser.name} (${currentUser.className})
+        <button id="logoutBtn" class="btn btn-small" style="background:#dc2626; margin-left:8px; padding:0.15rem 0.5rem; font-size:0.6rem;">登出</button>
+    `;
+    setupLogout();
+}
+
+// ==================== 忘記密碼 ====================
+document.getElementById('forgotPasswordLink')?.addEventListener('click', function() {
+    document.getElementById('forgotPasswordModal').classList.add('show');
+    document.getElementById('forgotUserId').value = '';
+    document.getElementById('forgotPhone').value = '';
+    document.getElementById('forgotMessage').innerHTML = '';
+    document.getElementById('forgotError').style.display = 'none';
+});
+
+document.getElementById('forgotSubmitBtn')?.addEventListener('click', function() {
+    const userId = document.getElementById('forgotUserId').value.trim();
+    const phone = document.getElementById('forgotPhone').value.trim();
+    const errEl = document.getElementById('forgotError');
+    const msgEl = document.getElementById('forgotMessage');
+
+    if (!userId || !phone) {
+        errEl.textContent = '⚠️ 請輸入學號和電話號碼';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    const user = findUser(userId);
+    if (!user) {
+        errEl.textContent = '❌ 學號不存在';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    if (user.phone !== phone) {
+        errEl.textContent = '❌ 電話號碼不正確';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    errEl.style.display = 'none';
+    const newPwd = generateRandomPassword();
+    updateUser(userId, {
+        initialPassword: newPwd,
+        password: null,
+        isFirstLogin: true
+    });
+
+    msgEl.innerHTML = `<div class="alert alert-success">✅ 驗證成功！新的初始密碼已設定：<br><strong style="font-size:20px; font-family:monospace;">${newPwd}</strong><br>請用這個密碼登入，然後修改密碼。</div>`;
+
+    setTimeout(() => {
+        closeModal('forgotPasswordModal');
+        document.getElementById('loginUserId').value = userId;
+        document.getElementById('loginPassword').value = '';
+    }, 3000);
+});
+
+// ==================== 修改密碼 ====================
+function openChangePasswordModal(isFirstLogin = false) {
+    const modal = document.getElementById('changePasswordModal');
+    const title = document.getElementById('changePasswordTitle');
+    const desc = document.getElementById('changePasswordDesc');
+    const cancelBtn = document.getElementById('changePasswordCancelBtn');
+
+    if (isFirstLogin) {
+        title.textContent = '🔐 首次登入 - 設定密碼';
+        desc.textContent = '這是您第一次登入，請設定自己的密碼。';
+        cancelBtn.style.display = 'none';
+    } else {
+        title.textContent = '🔑 修改密碼';
+        desc.textContent = '請輸入新的密碼。';
+        cancelBtn.style.display = 'block';
+    }
+
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    document.getElementById('changePasswordMessage').innerHTML = '';
+    document.getElementById('changePasswordError').style.display = 'none';
+    modal.classList.add('show');
+}
+
+document.getElementById('changePasswordCancelBtn')?.addEventListener('click', function() {
+    closeModal('changePasswordModal');
+});
+
+document.getElementById('changePasswordBtn')?.addEventListener('click', function() {
+    const newPwd = document.getElementById('newPassword').value;
+    const confirmPwd = document.getElementById('confirmPassword').value;
+    const errEl = document.getElementById('changePasswordError');
+    const msgEl = document.getElementById('changePasswordMessage');
+
+    if (newPwd.length < 4) {
+        errEl.textContent = '⚠️ 密碼至少 4 個字元';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    if (newPwd !== confirmPwd) {
+        errEl.textContent = '❌ 兩次輸入的密碼不一致';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    errEl.style.display = 'none';
+
+    if (!currentUser) {
+        errEl.textContent = '❌ 請先登入';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    updateUser(currentUser.userId, {
+        password: newPwd,
+        isFirstLogin: false
+    });
+
+    currentUser = findUser(currentUser.userId);
+    updateUserLabel();
+
+    msgEl.innerHTML = `<div class="alert alert-success">✅ 密碼已成功修改！</div>`;
+
+    setTimeout(() => {
+        closeModal('changePasswordModal');
+        if (document.getElementById('loginScreen').style.display !== 'none') {
+            document.getElementById('loginUserId').value = currentUser.userId;
+        }
+    }, 1500);
+});
+
+// ==================== 舊用戶轉移（學生端） ====================
+document.getElementById('migrateAccountLink')?.addEventListener('click', function() {
+    document.getElementById('migrateAccountModal').classList.add('show');
+    document.getElementById('migrationCodeDisplay').innerHTML = '';
+    document.getElementById('migrateMessage').innerHTML = '';
+});
+
+document.getElementById('showMigrationCodeBtn')?.addEventListener('click', function() {
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const display = document.getElementById('migrationCodeDisplay');
+    display.innerHTML = `
+        <div class="verify-code">${code}</div>
+        <div style="text-align:center; font-size:13px; color:#666;">請把這個驗證碼告訴老師</div>
+        <button class="btn btn-outline" style="margin-top:8px;" onclick="navigator.clipboard?.writeText('${code}')">📋 複製驗證碼</button>
+    `;
+    document.getElementById('migrateMessage').innerHTML = `<div class="alert alert-success">✅ 驗證碼已產生！請將驗證碼告訴老師。</div>`;
+});
+
+// ==================== 密碼顯示切換 ====================
+document.getElementById('togglePasswordBtn')?.addEventListener('click', function() {
+    const input = document.getElementById('loginPassword');
+    if (input.type === 'password') {
+        input.type = 'text';
+        this.textContent = '🙈';
+    } else {
+        input.type = 'password';
+        this.textContent = '👁️';
+    }
+});
+
+// ==================== 登入按鈕 ====================
+document.getElementById('loginBtn')?.addEventListener('click', function() {
+    const userId = document.getElementById('loginUserId').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+
+    if (!userId || !password) {
+        showLoginError('⚠️ 請輸入登入 ID 和密碼');
+        return;
+    }
+
+    handleLogin(userId, password);
+});
+
+document.getElementById('loginPassword')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+document.getElementById('loginUserId')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
 
 // ==================== 成就系統 ====================
 function showUnlockCard(title, message, date, points) {
@@ -379,7 +857,7 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     saveUserData();
 }
 
-function addPracticeHistory(unit, chapter, difficultyName, questionCount, correctCount, accuracy, mode, timeSpentPercent, consecutiveCorrectCount, isBlankPaper) {
+function addPracticeHistory(unit, chapter, difficultyName, questionCount, correctCount, accuracy, mode, timeSpentPercent, consecutiveCorrectCount, isBlankPaper, timeSpentSeconds) {
     let now = new Date(), date = now.toISOString().slice(0, 10), time = now.toTimeString().slice(0, 5);
     let unitObj = window.ALL_UNITS[unit];
     let unitName = unitObj ? unitObj.name : unit;
@@ -389,7 +867,11 @@ function addPracticeHistory(unit, chapter, difficultyName, questionCount, correc
     } else if (chapter) {
         chapterName = chapter;
     }
-    userData.practiceHistory.unshift({ id: Date.now(), date, time, unitId: unit, unitName, chapterId: chapter, chapterName, difficulty: difficultyName, questionCount, correctCount, accuracy, mode });
+    userData.practiceHistory.unshift({ 
+        id: Date.now(), date, time, unitId: unit, unitName, chapterId: chapter, chapterName, 
+        difficulty: difficultyName, questionCount, correctCount, accuracy, mode,
+        timeSpent: timeSpentSeconds || 0
+    });
     if (userData.practiceHistory.length > 100) userData.practiceHistory = userData.practiceHistory.slice(0, 100);
 
     let totalQuestions = (userData.stats?.totalQuestionsAnswered || 0) + questionCount;
@@ -437,7 +919,7 @@ function calculateClassRank(userId, userPoints) {
     return { rank: rank, total: classmates.length };
 }
 
-// ==================== 挑題邏輯（含 #9 單元測驗獨立邏輯） ====================
+// ==================== 挑題邏輯 ====================
 function selectQuestionsByDifficultyAndCount(questions, count, preference, isTrial, isUnitTest = false) {
     let filteredQuestions = excludeTranslate ? questions.filter(q => q.difficulty !== "🌐 Translate") : [...questions];
     
@@ -452,9 +934,7 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
         return sorted.slice(0, Math.min(count, 50));
     }
 
-    // ===== #9 單元測驗獨立邏輯 =====
     if (isUnitTest) {
-        // 1. 優先挑出所有曾經錯過的題目（不限難度）
         let wrongQuestions = filteredQuestions.filter(q => hasEverWrong(q.id));
         wrongQuestions = shuffleArray(wrongQuestions);
         
@@ -462,7 +942,6 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
             return wrongQuestions.slice(0, count);
         }
         
-        // 2. 從剩餘題目中（不含錯題），篩選 Advanced + Challenge
         let remainingQuestions = filteredQuestions.filter(q => !hasEverWrong(q.id));
         let advancedQuestions = remainingQuestions.filter(q => q.difficulty_level === 2);
         let challengeQuestions = remainingQuestions.filter(q => q.difficulty_level === 3);
@@ -490,7 +969,6 @@ function selectQuestionsByDifficultyAndCount(questions, count, preference, isTri
         return shuffleArray(result);
     }
 
-    // ===== 一般練習邏輯 =====
     let allowedLevels = [];
     if (preference === 0) {
         allowedLevels = [0, 1];
@@ -754,7 +1232,8 @@ function startUnitTest(unit) {
     document.getElementById('explainModal').style.display = 'none';
     document.getElementById('resultModal').style.display = 'none';
     
-    // ===== 手機/桌面分離 =====
+    startTime = Date.now();
+    
     if (isMobile()) {
         showQuizModal();
     } else {
@@ -823,6 +1302,7 @@ function startSingleQuestion(qid, source) {
     if (submitBtn) submitBtn.style.animation = '';
     
     document.getElementById('settingsModal').style.display = 'none';
+    startTime = Date.now();
     showQuizModal();
 }
 
@@ -1149,15 +1629,19 @@ function attachRemoveEvents() {
 function renderHistory() {
     let container = document.getElementById('historyPanel');
     if (!userData.practiceHistory || userData.practiceHistory.length === 0) { container.innerHTML = '<div class="card">📋 暫無做題紀錄</div>'; return; }
-    let html = `<div class="card"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;"><h3>📋 做題紀錄</h3><button id="exportHistoryBtn" class="btn export-btn">📥 匯出 CSV</button></div><div style="overflow-x:auto;"><table class="history-table"><thead><tr><th>日期</th><th>時間</th><th>單元</th><th>章節</th><th>題數</th><th>正確率</th><th>模式</th></tr></thead><tbody>`;
+    let html = `<div class="card"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;"><h3>📋 做題紀錄</h3><button id="exportHistoryBtn" class="btn export-btn">📥 匯出 CSV</button></div><div style="overflow-x:auto;"><table class="history-table"><thead><tr><th>日期</th><th>時間</th><th>單元</th><th>章節</th><th>題數</th><th>正確率</th><th>模式</th><th>花費時間</th></tr></thead><tbody>`;
     for (let h of userData.practiceHistory) {
-        html += `<tr><td>${format(new Date(h.date), 'yyyy-MM-dd')}</td><td>${h.time}</td><td>${h.unitName}</td><td>${h.chapterName}</td><td>${h.questionCount}</td><td>${h.accuracy}%</td><td>${h.mode === 'trial' ? '試煉' : '一般'}</td></tr>`;
+        let timeStr = h.timeSpent ? formatTime(h.timeSpent) : '-';
+        html += `<tr><td>${format(new Date(h.date), 'yyyy-MM-dd')}</td><td>${h.time}</td><td>${h.unitName}</td><td>${h.chapterName}</td><td>${h.questionCount}</td><td>${h.accuracy}%</td><td>${h.mode === 'trial' ? '試煉' : '一般'}</td><td>${timeStr}</td></tr>`;
     }
     html += `</tbody></table></div></div>`;
     container.innerHTML = html;
     document.getElementById('exportHistoryBtn')?.addEventListener('click', () => {
-        let csv = [["日期", "時間", "單元", "章節", "題數", "正確數", "正確率", "模式"]];
-        for (let h of userData.practiceHistory) csv.push([h.date, h.time, h.unitName, h.chapterName, h.questionCount, h.correctCount, `${h.accuracy}%`, h.mode === 'trial' ? '試煉' : '一般']);
+        let csv = [["日期", "時間", "單元", "章節", "題數", "正確數", "正確率", "模式", "花費時間"]];
+        for (let h of userData.practiceHistory) {
+            let timeStr = h.timeSpent ? formatTime(h.timeSpent) : '-';
+            csv.push([h.date, h.time, h.unitName, h.chapterName, h.questionCount, h.correctCount, `${h.accuracy}%`, h.mode === 'trial' ? '試煉' : '一般', timeStr]);
+        }
         let blob = new Blob(["\uFEFF" + csv.map(r => r.join(",")).join("\n")], { type: "text/csv;charset=utf-8;" });
         let link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `mastering_science_history_${currentUser.name}.csv`; link.click(); URL.revokeObjectURL(link.href);
     });
@@ -1165,6 +1649,7 @@ function renderHistory() {
 
 function renderAchievements() {
     let container = document.getElementById('achievementsPanel');
+    if (!container) return;
     
     let chapterList = [];
     for (let u in window.ALL_UNITS) {
@@ -1381,7 +1866,8 @@ function startPracticeWithSettings() {
     
     document.getElementById('settingsModal').style.display = 'none';
     
-    // ===== 手機/桌面分離 =====
+    startTime = Date.now();
+    
     if (isMobile()) {
         showQuizModal();
     } else {
@@ -1577,90 +2063,18 @@ function closeDSEResult() {
     }
 }
 
-// ==================== 自動登入相關（含 #10 記住我自動打勾） ====================
-function checkAutoLogin() {
-    const saved = localStorage.getItem('ms_chem_autoLogin');
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            if (data.name && data.class) {
-                document.getElementById('studentName').value = data.name;
-                document.getElementById('studentClass').value = data.class;
-                // #10 如果有儲存自動登入資訊，自動勾選「記住我」
-                const rememberMe = document.getElementById('rememberMeCheckbox');
-                if (rememberMe) rememberMe.checked = true;
-                document.getElementById('loginBtn').click();
-                return true;
-            }
-        } catch (e) {}
-    }
-    return false;
-}
-
-// ==================== 登出功能（修正：登出後保留姓名班級和勾選狀態） ====================
-function logout() {
-    // 1. 先讀取「記住我」的資料（在刪除之前）
-    const saved = localStorage.getItem('ms_chem_autoLogin');
-    let savedName = '';
-    let savedClass = '';
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            if (data.name && data.class) {
-                savedName = data.name;
-                savedClass = data.class;
-            }
-        } catch (e) {}
-    }
-    
-    // 2. 清除自動登入資訊（下次不會自動登入）
-    localStorage.removeItem('ms_chem_autoLogin');
-    
-    // 3. 清除當前使用者狀態（但保留數據）
-    currentUser = null;
-    userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
-    
-    // 4. 回到登入畫面
-    document.getElementById('loginScreen').style.display = 'block';
-    document.getElementById('mainApp').style.display = 'none';
-    
-    // 5. 如果有「記住我」的資料，填入輸入框並打勾
-    if (savedName && savedClass) {
-        document.getElementById('studentName').value = savedName;
-        document.getElementById('studentClass').value = savedClass;
-        const rememberMe = document.getElementById('rememberMeCheckbox');
-        if (rememberMe) rememberMe.checked = true;
-    } else {
-        // 沒有資料就清空
-        document.getElementById('studentName').value = '';
-        document.getElementById('studentClass').value = '';
-        const rememberMe = document.getElementById('rememberMeCheckbox');
-        if (rememberMe) rememberMe.checked = false;
-    }
-    
-    // 6. 清除使用者標籤
-    document.getElementById('userLabel').innerHTML = '';
-}
-
 // ==================== showQuizModal（手機版 - 完全不變） ====================
 function showQuizModal() { 
     renderQuizNav(); 
     renderCurrentQuestion(); 
     document.getElementById('quizModal').style.display = 'flex';
     
-    // 判斷是否為手機版
     const isMobileDevice = window.innerWidth <= 640;
-    
-    // 決定使用的 footer class
     const footerClass = isMobileDevice ? 'quiz-footer-mobile' : 'quiz-footer-desktop';
     const footer = document.querySelector(`.${footerClass}`);
-    
-    // 如果 footer 不存在，使用 .quiz-footer 作為備用
     const footerElement = footer || document.querySelector('.quiz-footer');
     
     let periodicBtn = document.getElementById('periodicTableBtn');
-    
-    // #7 判斷是否顯示：一般練習章節 >= 6，或是單元測驗模式 (currentChapter === null)
     const shouldShowPeriodicTable = (currentChapter && parseInt(currentChapter) >= 6) || currentChapter === null;
     
     if (shouldShowPeriodicTable) {
@@ -1698,16 +2112,13 @@ function renderQuizNav() {
     checkAllQuestionsAnswered();
 }
 
-// ==================== renderCurrentQuestion（手機版/桌面版 class 分離 + DOM 順序修正） ====================
+// ==================== renderCurrentQuestion（手機版/桌面版 class 分離） ====================
 function renderCurrentQuestion() {
     let q = currentQuestions[currentQIndex];
     let map = currentOptionsMapping[currentQIndex];
     let hasImage = q.imageUrl !== null;
     
-    // 判斷是否為手機版
     const isMobileDevice = window.innerWidth <= 640;
-    
-    // 根據版本選擇 class
     const layoutClass = isMobileDevice ? 'quiz-layout-mobile' : 'quiz-layout-desktop';
     const imageClass = isMobileDevice ? 'image-area-mobile' : 'image-area-desktop';
     const optionsClass = isMobileDevice ? 'options-area-mobile' : 'options-area-desktop';
@@ -1752,31 +2163,24 @@ function renderCurrentQuestion() {
         
         if (originalOptions && originalOptions.parentNode) {
             originalOptions.parentNode.insertBefore(layoutDiv, originalOptions);
-            
-            // 手機版與桌面版 DOM 順序分離
             if (isMobileDevice) {
-                // 手機版：圖片先，選項後（圖片在上方）
                 layoutDiv.appendChild(imageDiv);
                 layoutDiv.appendChild(optionsDiv);
             } else {
-                // 桌面版：選項先，圖片後（用 order 控制圖片在右側）
                 layoutDiv.appendChild(optionsDiv);
                 layoutDiv.appendChild(imageDiv);
             }
-            
             optionsDiv.appendChild(originalOptions);
         }
         if (originalImgArea) {
             imageDiv.appendChild(originalImgArea);
         }
-        
         quizLayout = layoutDiv;
     }
     
     const imageAreaContainer = document.getElementById('image-area-container');
     const optionsArea = document.getElementById('options-area-container');
     
-    // 更新 container 的 class（確保版本正確）
     if (imageAreaContainer) {
         imageAreaContainer.className = imageClass;
         imageAreaContainer.id = 'image-area-container';
@@ -1836,7 +2240,6 @@ function renderCurrentQuestion() {
         optsDiv.appendChild(btn);
     }
     
-    // 更新 footer class
     const footerElement = document.querySelector('.quiz-footer');
     if (footerElement) {
         footerElement.className = footerClass;
@@ -1872,6 +2275,7 @@ function checkAllQuestionsAnswered() {
     }
 }
 
+// ==================== submitAll ====================
 function submitAll() {
     if (blinkInterval) {
         clearInterval(blinkInterval);
@@ -1879,7 +2283,13 @@ function submitAll() {
         const submitBtn = document.getElementById('submitAllBtn');
         if (submitBtn) submitBtn.style.animation = '';
     }
-    if (timerInterval) clearInterval(timerInterval);
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    
+    const timeSpentSeconds = Math.round((Date.now() - startTime) / 1000);
+    
     let results = [], batch = [], correctCount = 0;
     let consecutiveCorrect = userData.stats.consecutiveCorrect || 0;
     let answeredCount = currentAnswers.filter(a => a !== null).length;
@@ -1926,7 +2336,7 @@ function submitAll() {
             }
         }
         recordBatch(batch);
-        addPracticeHistory(currentUnit, currentChapter, '單題練習', 1, isCorrectSingle ? 1 : 0, isCorrectSingle ? 100 : 0, 'single', 0, consecutiveCorrect, isBlankPaper);
+        addPracticeHistory(currentUnit, currentChapter, '單題練習', 1, isCorrectSingle ? 1 : 0, isCorrectSingle ? 100 : 0, 'single', 0, consecutiveCorrect, isBlankPaper, timeSpentSeconds);
         renderMyMistakes();
         renderPastMistakes();
         renderPinned();
@@ -1936,7 +2346,7 @@ function submitAll() {
         return;
     }
     
-    addPracticeHistory(currentUnit, currentChapter, diffName, currentQuestions.length, correctCount, accuracy, mode, timeSpent, consecutiveCorrect, isBlankPaper);
+    addPracticeHistory(currentUnit, currentChapter, diffName, currentQuestions.length, correctCount, accuracy, mode, timeSpent, consecutiveCorrect, isBlankPaper, timeSpentSeconds);
     lastResults = results;
     
     if (isUnitTestMode && currentQuestions.length >= 10) {
@@ -2066,19 +2476,283 @@ function displayResults(results) {
     });
 }
 
-function redoQuestion(qid) {
-    for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) {
-        let idx = window.ALL_UNITS[u].chapters[c].questions.findIndex(q => q.id === qid);
-        if (idx !== -1) { pendingUnit = u; pendingChapter = c; updateSettingsUnlockStatus(); document.getElementById('settingsModal').style.display = 'flex'; window._singleRedoQid = qid; return; }
+// ==================== 桌面版獨立函數 ====================
+
+function showDesktopQuizModal() {
+    renderDesktopQuizNav();
+    renderDesktopCurrentQuestion();
+    document.getElementById('desktopQuizModal').style.display = 'flex';
+}
+
+function renderDesktopQuizNav() {
+    let nav = document.getElementById('desktopNav');
+    if (!nav) return;
+    let html = '';
+    const total = currentQuestions.length;
+    
+    let dotClass = '';
+    if (total <= 30) dotClass = '';
+    else if (total <= 45) dotClass = 'small';
+    else dotClass = 'tiny';
+    
+    for (let i = 0; i < total; i++) {
+        let cls = dotClass;
+        if (i === currentQIndex) cls += ' current';
+        else if (currentAnswers[i] !== null) cls += ' answered';
+        else cls += ' unanswered';
+        html += `<button class="nav-dot ${cls}" data-idx="${i}">${i + 1}</button>`;
+    }
+    nav.innerHTML = html;
+    
+    document.getElementById('desktopCounter').innerHTML = `${currentQIndex + 1} / ${total}`;
+    
+    document.querySelectorAll('#desktopNav .nav-dot').forEach(btn => btn.addEventListener('click', (e) => {
+        currentQIndex = parseInt(btn.dataset.idx);
+        renderDesktopQuizNav();
+        renderDesktopCurrentQuestion();
+        updateDesktopNavButtons();
+    }));
+    
+    updateDesktopSidebarDifficulty();
+    checkDesktopAllQuestionsAnswered();
+}
+
+function updateDesktopSidebarDifficulty() {
+    if (currentQuestions.length === 0) return;
+    const q = currentQuestions[currentQIndex];
+    const sidebar = document.getElementById('desktopSidebar');
+    if (!sidebar) return;
+    
+    sidebar.classList.remove('difficulty-translate', 'difficulty-basic', 'difficulty-advanced', 'difficulty-challenge');
+    
+    if (q.difficulty === '🌐 Translate') {
+        sidebar.classList.add('difficulty-translate');
+    } else if (q.difficulty === '✅ Basic') {
+        sidebar.classList.add('difficulty-basic');
+    } else if (q.difficulty === '📈 Advanced') {
+        sidebar.classList.add('difficulty-advanced');
+    } else if (q.difficulty === '🔥 Challenge') {
+        sidebar.classList.add('difficulty-challenge');
     }
 }
 
+function renderDesktopCurrentQuestion() {
+    if (currentQuestions.length === 0) return;
+    
+    const q = currentQuestions[currentQIndex];
+    const map = currentOptionsMapping[currentQIndex];
+    const hasImage = q.imageUrl !== null;
+    
+    document.getElementById('desktopQuestionText').innerHTML = q.text;
+    document.getElementById('desktopCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
+    document.getElementById('desktopDifficulty').innerHTML = q.difficulty;
+    
+    updateDesktopTimerDisplay();
+    updateDesktopSidebarDifficulty();
+    
+    const imageArea = document.getElementById('desktopImageArea');
+    const mainPanel = document.querySelector('.main-panel');
+    
+    if (hasImage && q.imageUrl) {
+        imageArea.innerHTML = `<img src="${q.imageUrl}" class="quiz-image" id="desktopImageThumb" style="max-height:110px; max-width:100%; object-fit:contain; cursor:pointer; border-radius:8px; border:1px solid #e9e4f5; padding:4px;">`;
+        imageArea.style.display = 'block';
+        if (mainPanel) mainPanel.classList.remove('no-image');
+        
+        document.getElementById('desktopImageThumb')?.addEventListener('click', () => {
+            document.getElementById('zoomImage').src = q.imageUrl;
+            document.getElementById('imageZoomModal').style.display = 'flex';
+        });
+    } else {
+        imageArea.innerHTML = '';
+        imageArea.style.display = 'none';
+        if (mainPanel) mainPanel.classList.add('no-image');
+    }
+    
+    const optsDiv = document.getElementById('desktopOptions');
+    optsDiv.innerHTML = '';
+    optsDiv.className = 'options-grid';
+    
+    for (let l of ['A', 'B', 'C', 'D']) {
+        let btn = document.createElement('button');
+        btn.className = 'option-btn';
+        if (currentAnswers[currentQIndex] === l) btn.classList.add('selected');
+        btn.textContent = `${l}. ${map.letterToText[l]}`;
+        btn.addEventListener('click', () => {
+            currentAnswers[currentQIndex] = l;
+            renderDesktopCurrentQuestion();
+            renderDesktopQuizNav();
+            checkDesktopAllQuestionsAnswered();
+        });
+        optsDiv.appendChild(btn);
+    }
+    
+    updateDesktopNavButtons();
+    checkDesktopAllQuestionsAnswered();
+    updateDesktopPeriodicButton();
+}
+
+function updateDesktopNavButtons() {
+    let prev = document.getElementById('desktopPrevBtn'), next = document.getElementById('desktopNextBtn');
+    if (prev) prev.disabled = (currentQIndex === 0);
+    if (next) next.disabled = (currentQIndex === currentQuestions.length - 1);
+}
+
+function updateDesktopTimerDisplay() {
+    let m = Math.floor(timeRemaining / 60), s = timeRemaining % 60;
+    const timerEl = document.getElementById('desktopTimer');
+    if (timerEl) timerEl.innerText = `⏱️ ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+function checkDesktopAllQuestionsAnswered() {
+    if (currentQuestions.length === 0) return;
+    
+    const allAnswered = currentAnswers.every(a => a !== null && a !== undefined);
+    const submitBtn = document.getElementById('desktopSubmitBtn');
+    if (!submitBtn) return;
+    
+    if (allAnswered && currentAnswers.length > 0) {
+        if (!blinkInterval) {
+            blinkInterval = setInterval(() => {
+                submitBtn.style.animation = 'blink 0.3s step-end infinite';
+            }, 100);
+        }
+    } else {
+        if (blinkInterval) {
+            clearInterval(blinkInterval);
+            blinkInterval = null;
+            submitBtn.style.animation = '';
+        }
+    }
+}
+
+function updateDesktopPeriodicButton() {
+    const periodicBtn = document.getElementById('desktopPeriodicBtn');
+    if (!periodicBtn) return;
+    
+    const shouldShow = (currentChapter && parseInt(currentChapter) >= 6) || currentChapter === null;
+    
+    if (shouldShow) {
+        periodicBtn.style.display = 'inline-block';
+        periodicBtn.classList.remove('hidden');
+    } else {
+        periodicBtn.style.display = 'none';
+        periodicBtn.classList.add('hidden');
+    }
+}
+
+function submitDesktopAll() {
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+        const submitBtn = document.getElementById('desktopSubmitBtn');
+        if (submitBtn) submitBtn.style.animation = '';
+    }
+    if (timerInterval) clearInterval(timerInterval);
+    const timeSpentSeconds = Math.round((Date.now() - startTime) / 1000);
+    
+    let results = [], batch = [], correctCount = 0;
+    let consecutiveCorrect = userData.stats.consecutiveCorrect || 0;
+    let answeredCount = currentAnswers.filter(a => a !== null).length;
+    let isBlankPaper = (answeredCount === 0);
+    const isUnitTestMode = (currentChapter === null && currentQuestions.length > 1);
+
+    for (let i = 0; i < currentQuestions.length; i++) {
+        let q = currentQuestions[i], map = currentOptionsMapping[i], userLetter = currentAnswers[i];
+        let isCorrect = (userLetter === map.correctLetter);
+        if (isCorrect) {
+            correctCount++;
+            consecutiveCorrect++;
+        } else {
+            consecutiveCorrect = 0;
+        }
+        let userText = userLetter ? map.letterToText[userLetter] : '(未作答)', correctText = map.letterToText[map.correctLetter];
+        results.push({ question: q, userLetter: userLetter || '?', correctLetter: map.correctLetter, userText, correctText, isCorrect, qid: q.id });
+        batch.push({ qid: q.id, isCorrect: isCorrect });
+    }
+    userData.stats.consecutiveCorrect = consecutiveCorrect;
+    if (consecutiveCorrect > (userData.stats.maxConsecutive || 0)) userData.stats.maxConsecutive = consecutiveCorrect;
+    recordBatch(batch);
+    let accuracy = Math.round(correctCount / currentQuestions.length * 100);
+    let diffName = selectedDifficulty == 0 ? "★ 1星" : (selectedDifficulty == 1 ? "★★★ 3星" : "★★★★★ 5星");
+    let mode = isTrialMode ? 'trial' : 'normal';
+    let expectedTime = currentQuestions.length * (selectedDifficulty == 0 ? 108 : (selectedDifficulty == 2 ? 75 : 90));
+    let timeSpent = Math.round((expectedTime - timeRemaining) / expectedTime * 100);
+    
+    if (isSingleQuestionMode && currentQuestions.length === 1) {
+        const qid = currentQuestions[0].id;
+        const isCorrectSingle = results[0].isCorrect;
+        
+        if (singleQuestionSource === 'myMistakes' && isCorrectSingle) {
+            userData.latestStatus[qid] = true;
+            saveUserData();
+            alert('🎉 答對了！該題已從「我的錯題」中移除！');
+        } else if (singleQuestionSource === 'myMistakes' && !isCorrectSingle) {
+            alert('❌ 答錯了！該題仍保留在「我的錯題」中，加油！');
+        } else if (singleQuestionSource === 'pastMistakes' || singleQuestionSource === 'pinned') {
+            if (isCorrectSingle) {
+                alert('✅ 答對了！該題仍保留在列表中（歷程/收藏不會自動移除）');
+            } else {
+                alert('❌ 答錯了！再試一次吧！');
+            }
+        }
+        recordBatch(batch);
+        addPracticeHistory(currentUnit, currentChapter, '單題練習', 1, isCorrectSingle ? 1 : 0, isCorrectSingle ? 100 : 0, 'single', 0, consecutiveCorrect, isBlankPaper, timeSpentSeconds);
+        renderMyMistakes();
+        renderPastMistakes();
+        renderPinned();
+        renderHistory();
+        renderAchievements();
+        document.getElementById('desktopQuizModal').style.display = 'none';
+        return;
+    }
+    
+    addPracticeHistory(currentUnit, currentChapter, diffName, currentQuestions.length, correctCount, accuracy, mode, timeSpent, consecutiveCorrect, isBlankPaper, timeSpentSeconds);
+    lastResults = results;
+    
+    if (isUnitTestMode && currentQuestions.length >= 10) {
+        window._dseResultCallback = function() {
+            displayResults(results);
+        };
+        showDSEResult(accuracy, correctCount, currentQuestions.length);
+        document.getElementById('desktopQuizModal').style.display = 'none';
+        renderPractice();
+        renderMyMistakes();
+        renderPastMistakes();
+        renderPinned();
+        renderHistory();
+        renderAchievements();
+        updateSettingsUnlockStatus();
+        return;
+    }
+    
+    displayResults(results);
+    document.getElementById('desktopQuizModal').style.display = 'none';
+    renderPractice();
+    renderMyMistakes();
+    renderPastMistakes();
+    renderPinned();
+    renderHistory();
+    renderAchievements();
+    updateSettingsUnlockStatus();
+}
+
+// ==================== initTabs ====================
 function initTabs() {
-    let tabs = document.querySelectorAll('.tab'), panels = { practice: document.getElementById('practicePanel'), myMistakes: document.getElementById('myMistakesPanel'), pastMistakes: document.getElementById('pastMistakesPanel'), pinned: document.getElementById('pinnedPanel'), history: document.getElementById('historyPanel'), achievements: document.getElementById('achievementsPanel') };
+    let tabs = document.querySelectorAll('.tab'), panels = { 
+        practice: document.getElementById('practicePanel'), 
+        myMistakes: document.getElementById('myMistakesPanel'), 
+        pastMistakes: document.getElementById('pastMistakesPanel'), 
+        pinned: document.getElementById('pinnedPanel'), 
+        history: document.getElementById('historyPanel'), 
+        achievements: document.getElementById('achievementsPanel'),
+        teacher: document.getElementById('teacherPanel')
+    };
     tabs.forEach(tab => tab.addEventListener('click', () => {
         let target = tab.dataset.tab;
-        Object.keys(panels).forEach(p => panels[p].style.display = 'none');
-        panels[target].style.display = 'block';
+        Object.keys(panels).forEach(p => {
+            if (panels[p]) panels[p].style.display = 'none';
+        });
+        if (panels[target]) panels[target].style.display = 'block';
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         if (target === 'myMistakes') renderMyMistakes();
@@ -2086,10 +2760,349 @@ function initTabs() {
         if (target === 'pinned') renderPinned();
         if (target === 'history') renderHistory();
         if (target === 'achievements') renderAchievements();
+        if (target === 'teacher') renderTeacherPanel();
     }));
 }
 
-// ==================== 一鍵解鎖全部功能 ====================
+// ==================== renderTeacherPanel（老師後台 - 完整版，含班級管理、修改姓名、轉移可選班級） ====================
+function renderTeacherPanel() {
+    const container = document.getElementById('teacherPanel');
+    if (!container) return;
+    if (!currentUser || !currentUser.isTeacher) {
+        container.innerHTML = '<div class="card">⚠️ 只有老師可以查看此頁面</div>';
+        return;
+    }
+    
+    // 確保 managedClasses 存在
+    if (!currentUser.managedClasses) {
+        currentUser.managedClasses = [currentUser.className];
+        updateUser(currentUser.userId, { managedClasses: currentUser.managedClasses });
+    }
+    
+    const allClasses = [...new Set(getUsers().users.map(u => u.className).filter(Boolean))];
+    const managedClasses = currentUser.managedClasses || [currentUser.className];
+    const currentClass = currentUser.currentClass || currentUser.className;
+    
+    let html = `
+        <div class="card">
+            <div class="card-title">👤 教師設定</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:end;">
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">教師姓名</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="text" id="teacherNameInput" value="${currentUser.name}" style="flex:1; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
+                        <button class="btn btn-primary" id="updateTeacherNameBtn" style="padding:8px 16px; font-size:13px; white-space:nowrap;">更新姓名</button>
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">目前班級</label>
+                    <select id="teacherClassSelector" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none; background:white;">
+                        ${managedClasses.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top:8px; font-size:12px; color:#888;">
+                💡 管理班級：${managedClasses.join('、')} 
+                <button class="btn btn-small" id="manageClassesBtn" style="font-size:11px; padding:2px 10px; margin-left:6px;">管理班級</button>
+            </div>
+        </div>
+    `;
+    
+    // 建立學生帳戶
+    html += `
+        <div class="card">
+            <div class="card-title">📝 建立學生帳戶</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">姓名</label>
+                    <input type="text" id="teacherNewName" placeholder="陳小明" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">班級</label>
+                    <input type="text" id="teacherNewClass" placeholder="3A 或 VIP" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;" value="${currentClass}">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">電話號碼</label>
+                    <input type="text" id="teacherNewPhone" placeholder="91234567" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
+                </div>
+            </div>
+            <button class="btn btn-primary" id="teacherCreateStudentBtn" style="padding:8px 16px; font-size:13px;">✅ 建立帳戶</button>
+            <div id="teacherCreateResult" class="mt-8"></div>
+        </div>
+    `;
+    
+    // 學生列表
+    const classUsers = getUsers().users.filter(u => u.className === currentClass && !u.isTeacher);
+    html += `
+        <div class="card">
+            <div class="card-title">👨‍🎓 已建立的學生（${currentClass}）</div>
+            <div id="teacherStudentList">
+    `;
+    if (classUsers.length === 0) {
+        html += `<div style="text-align:center; color:#999; padding:16px 0; font-size:13px;">還沒有學生帳戶</div>`;
+    } else {
+        html += `<div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:#f5f0ff;">
+                        <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">姓名</th>
+                        <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">學號</th>
+                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">初始密碼</th>
+                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">狀態</th>
+                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        for (const s of classUsers) {
+            const status = s.isFirstLogin ? '⏳ 等待首次登入' : '✅ 已啟用';
+            const statusColor = s.isFirstLogin ? '#f59e0b' : '#10b981';
+            html += `
+                <tr style="border-bottom:1px solid #f0edf8;">
+                    <td style="padding:8px 10px; font-weight:500;">
+                        ${s.name}
+                        <button class="btn-icon" onclick="openEditNameModal('${s.userId}')" style="font-size:12px;" title="修改姓名">✏️</button>
+                    </td>
+                    <td style="padding:8px 10px; color:#666;">${s.userId}</td>
+                    <td style="padding:8px 10px; text-align:center; font-family:monospace; font-weight:700; color:#4a1d8c;">${s.initialPassword}</td>
+                    <td style="padding:8px 10px; text-align:center;">
+                        <span style="background:${statusColor}; color:white; padding:2px 12px; border-radius:12px; font-size:11px;">${status}</span>
+                    </td>
+                    <td style="padding:8px 10px; text-align:center;">
+                        <button class="btn btn-danger btn-small" onclick="deleteStudent('${s.userId}')" style="font-size:10px; padding:2px 8px;">刪除</button>
+                    </td>
+                </tr>
+            `;
+        }
+        html += `</tbody></table></div>`;
+    }
+    html += `</div></div>`;
+    
+    // 舊用戶轉移
+    html += `
+        <div class="card" style="border:2px solid #4a1d8c; background:#ede9fe;">
+            <div class="card-title">🔄 舊用戶轉移（老師操作）</div>
+            <div style="font-size:13px; color:#2e0f5a; margin-bottom:10px;">
+                學生在登入頁面點擊「已有帳號？點此轉移」，會獲得一組 6 位數驗證碼。<br>
+                請學生把驗證碼告訴您，您在下方的輸入框中輸入，即可完成轉移。
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">驗證碼</label>
+                    <input type="text" id="migrationCodeInput" placeholder="例如：482391" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;" maxlength="6">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">新學號</label>
+                    <input type="text" id="migrationNewId" placeholder="例如：VIP001" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">目標班級</label>
+                    <select id="migrationClass" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none; background:white;">
+                        ${managedClasses.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-success" id="executeMigrationBtn">✅ 執行轉移</button>
+            <div id="migrationResult" class="mt-8"></div>
+        </div>
+    `;
+    
+    // 待處理轉移請求
+    const db = getUsers();
+    const migrations = db.migrations || [];
+    const pending = migrations.filter(m => m.status === 'pending');
+    html += `
+        <div class="card" style="background:#fef3c7; border:1px solid #f59e0b;">
+            <div class="card-title">🔄 待處理的轉移請求</div>
+            <div id="migrationStatusContainer">
+    `;
+    if (pending.length === 0) {
+        html += `<div style="text-align:center; color:#999; padding:12px 0; font-size:13px;">目前沒有待處理的轉移請求</div>`;
+    } else {
+        html += `<div style="font-size:13px; line-height:2;">`;
+        for (const m of pending) {
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #f0edf8;">
+                    <span><strong>驗證碼：</strong><span style="font-family:monospace; font-weight:700; color:#4a1d8c;">${m.code}</span></span>
+                    <span style="color:#888;">⏳ 等待老師處理</span>
+                    <span style="font-size:12px; color:#999;">${new Date(m.createdAt).toLocaleString()}</span>
+                </div>
+            `;
+        }
+        html += `</div>`;
+    }
+    html += `</div></div>`;
+    
+    html += `
+        <div class="card" style="background:#f0fdf4; border:1px solid #10b981;">
+            <div class="card-title">💡 老師後台功能</div>
+            <div style="font-size:13px; color:#065f46;">
+                ✅ 修改教師姓名<br>
+                ✅ 切換管理班級<br>
+                ✅ 建立學生帳戶<br>
+                ✅ 查看學生列表<br>
+                ✅ 修改學生姓名<br>
+                ✅ 刪除學生帳戶<br>
+                ✅ 舊用戶轉移（可選班級）<br>
+                ✅ 待處理轉移請求列表
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    bindTeacherEvents();
+}
+
+function bindTeacherEvents() {
+    // 更新教師姓名
+    document.getElementById('updateTeacherNameBtn')?.addEventListener('click', function() {
+        const newName = document.getElementById('teacherNameInput').value.trim();
+        if (!newName) { alert('請輸入姓名'); return; }
+        if (newName === currentUser.name) { alert('姓名未變更'); return; }
+        updateUser(currentUser.userId, { name: newName });
+        currentUser = findUser(currentUser.userId);
+        updateUserLabel();
+        renderTeacherPanel();
+        alert('✅ 姓名已更新！');
+    });
+    
+    // 切換班級
+    document.getElementById('teacherClassSelector')?.addEventListener('change', function() {
+        const newClass = this.value;
+        if (newClass !== currentUser.className) {
+            updateUser(currentUser.userId, { className: newClass, currentClass: newClass });
+            currentUser = findUser(currentUser.userId);
+            renderTeacherPanel();
+            // 重新整理練習頁面以顯示新班級的學生進度
+            renderPractice();
+        }
+    });
+    
+    // 建立學生
+    document.getElementById('teacherCreateStudentBtn')?.addEventListener('click', function() {
+        const name = document.getElementById('teacherNewName').value.trim();
+        const className = document.getElementById('teacherNewClass').value.trim() || currentUser.className;
+        const phone = document.getElementById('teacherNewPhone').value.trim();
+        const resultEl = document.getElementById('teacherCreateResult');
+        if (!name || !phone) {
+            resultEl.innerHTML = `<div class="alert alert-danger">⚠️ 請填寫姓名和電話號碼</div>`;
+            return;
+        }
+        const newUser = createUser(name, className, phone);
+        resultEl.innerHTML = `
+            <div class="alert alert-success">✅ 帳戶已建立！<br>
+            👤 ${newUser.name}<br>
+            🆔 學號：<strong>${newUser.userId}</strong><br>
+            🔑 初始密碼：<strong style="font-family:monospace;">${newUser.initialPassword}</strong>
+            </div>
+        `;
+        document.getElementById('teacherNewName').value = '';
+        document.getElementById('teacherNewPhone').value = '';
+        renderTeacherPanel();
+    });
+    
+    // 執行轉移
+    document.getElementById('executeMigrationBtn')?.addEventListener('click', function() {
+        const code = document.getElementById('migrationCodeInput').value.trim();
+        const newId = document.getElementById('migrationNewId').value.trim();
+        const targetClass = document.getElementById('migrationClass').value;
+        const resultEl = document.getElementById('migrationResult');
+        if (!code || !newId) {
+            resultEl.innerHTML = `<div class="alert alert-danger">⚠️ 請輸入驗證碼和新學號</div>`;
+            return;
+        }
+        const db = getUsers();
+        const migration = (db.migrations || []).find(m => m.code === code && m.status === 'pending');
+        if (!migration) {
+            resultEl.innerHTML = `<div class="alert alert-danger">❌ 驗證碼不存在或已被使用</div>`;
+            return;
+        }
+        if (db.users.some(u => u.userId === newId)) {
+            resultEl.innerHTML = `<div class="alert alert-danger">❌ 學號 ${newId} 已被使用</div>`;
+            return;
+        }
+        const newStudent = {
+            userId: newId,
+            name: '已轉移用戶',
+            className: targetClass,
+            phone: '00000000',
+            initialPassword: generateRandomPassword(),
+            password: null,
+            isFirstLogin: true,
+            isTeacher: false,
+            managedClasses: [targetClass],
+            createdAt: new Date().toISOString(),
+            latestStatus: migration.oldData?.latestStatus || {},
+            allAttempts: migration.oldData?.allAttempts || [],
+            favorites: migration.oldData?.favorites || [],
+            practiceHistory: migration.oldData?.practiceHistory || [],
+            achievements: migration.oldData?.achievements || {},
+            stats: migration.oldData?.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 }
+        };
+        db.users.push(newStudent);
+        migration.status = 'completed';
+        migration.completedAt = new Date().toISOString();
+        migration.newUserId = newId;
+        saveUsers(db);
+        resultEl.innerHTML = `
+            <div class="alert alert-success">✅ 轉移成功！<br>
+            🆔 新學號：<strong>${newId}</strong><br>
+            📚 班級：${targetClass}<br>
+            🔑 初始密碼：<strong style="font-family:monospace;">${newStudent.initialPassword}</strong>
+            </div>
+        `;
+        document.getElementById('migrationCodeInput').value = '';
+        document.getElementById('migrationNewId').value = '';
+        renderTeacherPanel();
+    });
+    
+    // 管理班級
+    document.getElementById('manageClassesBtn')?.addEventListener('click', function() {
+        const currentClasses = currentUser.managedClasses || [currentUser.className];
+        const input = prompt('請輸入您要管理的班級（用逗號分隔）：\n例如：3A,3B,3C', currentClasses.join(','));
+        if (input !== null) {
+            const classes = input.split(',').map(s => s.trim()).filter(Boolean);
+            if (classes.length === 0) { alert('至少需要一個班級'); return; }
+            updateUser(currentUser.userId, { managedClasses: classes });
+            currentUser = findUser(currentUser.userId);
+            renderTeacherPanel();
+            alert('✅ 班級管理已更新！');
+        }
+    });
+}
+
+// ==================== 修改學生姓名 ====================
+function openEditNameModal(userId) {
+    const user = findUser(userId);
+    if (!user) return;
+    const newName = prompt(`修改「${user.name}」的姓名：`, user.name);
+    if (newName && newName.trim() !== '' && newName.trim() !== user.name) {
+        updateUser(userId, { name: newName.trim() });
+        renderTeacherPanel();
+        if (currentUser && currentUser.userId === userId) {
+            currentUser = findUser(userId);
+            updateUserLabel();
+        }
+    }
+}
+
+// ==================== 刪除學生帳戶 ====================
+function deleteStudent(userId) {
+    if (userId === currentUser?.userId) {
+        alert('⚠️ 無法刪除自己的帳戶');
+        return;
+    }
+    const user = findUser(userId);
+    if (!user) return;
+    if (confirm(`⚠️ 確定要刪除「${user.name}」（${user.userId}）的帳戶嗎？`)) {
+        const db = getUsers();
+        db.users = db.users.filter(u => u.userId !== userId);
+        saveUsers(db);
+        renderTeacherPanel();
+    }
+}
+
+// ==================== 一鍵解鎖全部 ====================
 function unlockAll() {
     if (!pendingUnit || !pendingChapter) {
         alert('請先選擇一個章節');
@@ -2120,23 +3133,17 @@ function setupLogout() {
 
 // ==================== DOMContentLoaded ====================
 document.addEventListener('DOMContentLoaded', function() {
-    // #10 自動登入檢查（會自動勾選記住我）
     const hasAutoLogin = checkAutoLogin();
-    
-    const rememberMeCheckbox = document.getElementById('rememberMeCheckbox');
-    if (!rememberMeCheckbox) {
-        const loginScreen = document.getElementById('loginScreen');
-        if (loginScreen) {
-            const loginBtn = document.getElementById('loginBtn');
-            const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'display:flex; align-items:center; gap:8px; margin:8px 0 12px 0;';
-            wrapper.innerHTML = `
-                <input type="checkbox" id="rememberMeCheckbox" style="width:16px; height:16px; cursor:pointer;">
-                <label for="rememberMeCheckbox" style="font-size:0.85rem; color:#2e0f5a; cursor:pointer;">🔒 記住我（下次自動登入）</label>
-            `;
-            if (loginBtn && loginBtn.parentNode) {
-                loginBtn.parentNode.insertBefore(wrapper, loginBtn);
-            }
+    checkFirebase();
+    if (!hasAutoLogin) {
+        const saved = localStorage.getItem('ms_chem_login');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.userId) {
+                    document.getElementById('loginUserId').value = data.userId;
+                }
+            } catch(e) {}
         }
     }
     
@@ -2190,27 +3197,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     document.getElementById('devUnlockBtn').addEventListener('click', unlockAll);
-    
-    document.getElementById('loginBtn').addEventListener('click', () => { 
-        let name = document.getElementById('studentName').value.trim(), 
-            cls = document.getElementById('studentClass').value.trim(); 
-        if (!name || !cls) { alert('請輸入姓名與班級'); return; } 
-        currentUser = { id: `${cls}_${name}`, name, class: cls }; 
-        loadUserData(); 
-        
-        const rememberMe = document.getElementById('rememberMeCheckbox');
-        if (rememberMe && rememberMe.checked) {
-            localStorage.setItem('ms_chem_autoLogin', JSON.stringify({ name: name, class: cls }));
-        }
-        
-        document.getElementById('loginScreen').style.display = 'none'; 
-        document.getElementById('mainApp').style.display = 'block'; 
-        document.getElementById('userLabel').innerHTML = `👋 ${name} (${cls}) <button id="logoutBtn" class="btn btn-small" style="background:#dc2626; margin-left:8px; padding:0.15rem 0.5rem; font-size:0.6rem;">登出</button>`;
-        renderPractice(); 
-        initTabs(); 
-        document.querySelector('.tab[data-tab="practice"]').click();
-        setupLogout();
-    });
     
     const excludeTranslateCheckbox = document.getElementById('excludeTranslate');
     if (excludeTranslateCheckbox) {
@@ -2267,286 +3253,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('closeZoomBtn').addEventListener('click', closeImageZoom);
     document.getElementById('prevBtn').addEventListener('click', () => { if (currentQIndex > 0) { currentQIndex--; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
     document.getElementById('nextBtn').addEventListener('click', () => { if (currentQIndex < currentQuestions.length - 1) { currentQIndex++; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
-    document.getElementById('studentName').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
-    document.getElementById('studentClass').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
-});
-
-// ==================== 桌面版獨立函數 ====================
-
-// ===== 桌面版 showDesktopQuizModal =====
-function showDesktopQuizModal() {
-    renderDesktopQuizNav();
-    renderDesktopCurrentQuestion();
-    document.getElementById('desktopQuizModal').style.display = 'flex';
-}
-
-// ===== 桌面版 renderDesktopQuizNav =====
-function renderDesktopQuizNav() {
-    let nav = document.getElementById('desktopNav');
-    if (!nav) return;
-    let html = '';
-    const total = currentQuestions.length;
     
-    let dotClass = '';
-    if (total <= 30) dotClass = '';
-    else if (total <= 45) dotClass = 'small';
-    else dotClass = 'tiny';
-    
-    for (let i = 0; i < total; i++) {
-        let cls = dotClass;
-        if (i === currentQIndex) cls += ' current';
-        else if (currentAnswers[i] !== null) cls += ' answered';
-        else cls += ' unanswered';
-        html += `<button class="nav-dot ${cls}" data-idx="${i}">${i + 1}</button>`;
-    }
-    nav.innerHTML = html;
-    
-    document.getElementById('desktopCounter').innerHTML = `${currentQIndex + 1} / ${total}`;
-    
-    document.querySelectorAll('#desktopNav .nav-dot').forEach(btn => btn.addEventListener('click', (e) => {
-        currentQIndex = parseInt(btn.dataset.idx);
-        renderDesktopQuizNav();
-        renderDesktopCurrentQuestion();
-        updateDesktopNavButtons();
-    }));
-    
-    updateDesktopSidebarDifficulty();
-    checkDesktopAllQuestionsAnswered();
-}
-
-// ===== 桌面版 updateDesktopSidebarDifficulty =====
-function updateDesktopSidebarDifficulty() {
-    if (currentQuestions.length === 0) return;
-    const q = currentQuestions[currentQIndex];
-    const sidebar = document.getElementById('desktopSidebar');
-    if (!sidebar) return;
-    
-    sidebar.classList.remove('difficulty-translate', 'difficulty-basic', 'difficulty-advanced', 'difficulty-challenge');
-    
-    if (q.difficulty === '🌐 Translate') {
-        sidebar.classList.add('difficulty-translate');
-    } else if (q.difficulty === '✅ Basic') {
-        sidebar.classList.add('difficulty-basic');
-    } else if (q.difficulty === '📈 Advanced') {
-        sidebar.classList.add('difficulty-advanced');
-    } else if (q.difficulty === '🔥 Challenge') {
-        sidebar.classList.add('difficulty-challenge');
-    }
-}
-
-// ===== 桌面版 renderDesktopCurrentQuestion =====
-function renderDesktopCurrentQuestion() {
-    if (currentQuestions.length === 0) return;
-    
-    const q = currentQuestions[currentQIndex];
-    const map = currentOptionsMapping[currentQIndex];
-    const hasImage = q.imageUrl !== null;
-    
-    document.getElementById('desktopQuestionText').innerHTML = q.text;
-    document.getElementById('desktopCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
-    document.getElementById('desktopDifficulty').innerHTML = q.difficulty;
-    
-    updateDesktopTimerDisplay();
-    updateDesktopSidebarDifficulty();
-    
-    const imageArea = document.getElementById('desktopImageArea');
-    const mainPanel = document.querySelector('.main-panel');
-    
-    if (hasImage && q.imageUrl) {
-        imageArea.innerHTML = `<img src="${q.imageUrl}" class="quiz-image" id="desktopImageThumb" style="max-height:110px; max-width:100%; object-fit:contain; cursor:pointer; border-radius:8px; border:1px solid #e9e4f5; padding:4px;">`;
-        imageArea.style.display = 'block';
-        if (mainPanel) mainPanel.classList.remove('no-image');
-        
-        document.getElementById('desktopImageThumb')?.addEventListener('click', () => {
-            document.getElementById('zoomImage').src = q.imageUrl;
-            document.getElementById('imageZoomModal').style.display = 'flex';
-        });
-    } else {
-        imageArea.innerHTML = '';
-        imageArea.style.display = 'none';
-        if (mainPanel) mainPanel.classList.add('no-image');
-    }
-    
-    const optsDiv = document.getElementById('desktopOptions');
-    optsDiv.innerHTML = '';
-    optsDiv.className = 'options-grid';
-    
-    for (let l of ['A', 'B', 'C', 'D']) {
-        let btn = document.createElement('button');
-        btn.className = 'option-btn';
-        if (currentAnswers[currentQIndex] === l) btn.classList.add('selected');
-        btn.textContent = `${l}. ${map.letterToText[l]}`;
-        btn.addEventListener('click', () => {
-            currentAnswers[currentQIndex] = l;
-            renderDesktopCurrentQuestion();
-            renderDesktopQuizNav();
-            checkDesktopAllQuestionsAnswered();
-        });
-        optsDiv.appendChild(btn);
-    }
-    
-    updateDesktopNavButtons();
-    checkDesktopAllQuestionsAnswered();
-    updateDesktopPeriodicButton();
-}
-
-// ===== 桌面版 updateDesktopNavButtons =====
-function updateDesktopNavButtons() {
-    let prev = document.getElementById('desktopPrevBtn'), next = document.getElementById('desktopNextBtn');
-    if (prev) prev.disabled = (currentQIndex === 0);
-    if (next) next.disabled = (currentQIndex === currentQuestions.length - 1);
-}
-
-// ===== 桌面版 updateDesktopTimerDisplay =====
-function updateDesktopTimerDisplay() {
-    let m = Math.floor(timeRemaining / 60), s = timeRemaining % 60;
-    const timerEl = document.getElementById('desktopTimer');
-    if (timerEl) timerEl.innerText = `⏱️ ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-}
-
-// ===== 桌面版 checkDesktopAllQuestionsAnswered =====
-function checkDesktopAllQuestionsAnswered() {
-    if (currentQuestions.length === 0) return;
-    
-    const allAnswered = currentAnswers.every(a => a !== null && a !== undefined);
-    const submitBtn = document.getElementById('desktopSubmitBtn');
-    if (!submitBtn) return;
-    
-    if (allAnswered && currentAnswers.length > 0) {
-        if (!blinkInterval) {
-            blinkInterval = setInterval(() => {
-                submitBtn.style.animation = 'blink 0.3s step-end infinite';
-            }, 100);
-        }
-    } else {
-        if (blinkInterval) {
-            clearInterval(blinkInterval);
-            blinkInterval = null;
-            submitBtn.style.animation = '';
-        }
-    }
-}
-
-// ===== 桌面版 updateDesktopPeriodicButton =====
-function updateDesktopPeriodicButton() {
-    const periodicBtn = document.getElementById('desktopPeriodicBtn');
-    if (!periodicBtn) return;
-    
-    const shouldShow = (currentChapter && parseInt(currentChapter) >= 6) || currentChapter === null;
-    
-    if (shouldShow) {
-        periodicBtn.style.display = 'inline-block';
-        periodicBtn.classList.remove('hidden');
-    } else {
-        periodicBtn.style.display = 'none';
-        periodicBtn.classList.add('hidden');
-    }
-}
-
-// ===== 桌面版 submitDesktopAll =====
-function submitDesktopAll() {
-    if (blinkInterval) {
-        clearInterval(blinkInterval);
-        blinkInterval = null;
-        const submitBtn = document.getElementById('desktopSubmitBtn');
-        if (submitBtn) submitBtn.style.animation = '';
-    }
-    if (timerInterval) clearInterval(timerInterval);
-    let results = [], batch = [], correctCount = 0;
-    let consecutiveCorrect = userData.stats.consecutiveCorrect || 0;
-    let answeredCount = currentAnswers.filter(a => a !== null).length;
-    let isBlankPaper = (answeredCount === 0);
-    const isUnitTestMode = (currentChapter === null && currentQuestions.length > 1);
-
-    for (let i = 0; i < currentQuestions.length; i++) {
-        let q = currentQuestions[i], map = currentOptionsMapping[i], userLetter = currentAnswers[i];
-        let isCorrect = (userLetter === map.correctLetter);
-        if (isCorrect) {
-            correctCount++;
-            consecutiveCorrect++;
-        } else {
-            consecutiveCorrect = 0;
-        }
-        let userText = userLetter ? map.letterToText[userLetter] : '(未作答)', correctText = map.letterToText[map.correctLetter];
-        results.push({ question: q, userLetter: userLetter || '?', correctLetter: map.correctLetter, userText, correctText, isCorrect, qid: q.id });
-        batch.push({ qid: q.id, isCorrect: isCorrect });
-    }
-    userData.stats.consecutiveCorrect = consecutiveCorrect;
-    if (consecutiveCorrect > (userData.stats.maxConsecutive || 0)) userData.stats.maxConsecutive = consecutiveCorrect;
-    recordBatch(batch);
-    let accuracy = Math.round(correctCount / currentQuestions.length * 100);
-    let diffName = selectedDifficulty == 0 ? "★ 1星" : (selectedDifficulty == 1 ? "★★★ 3星" : "★★★★★ 5星");
-    let mode = isTrialMode ? 'trial' : 'normal';
-    let expectedTime = currentQuestions.length * (selectedDifficulty == 0 ? 108 : (selectedDifficulty == 2 ? 75 : 90));
-    let timeSpent = Math.round((expectedTime - timeRemaining) / expectedTime * 100);
-    
-    if (isSingleQuestionMode && currentQuestions.length === 1) {
-        const qid = currentQuestions[0].id;
-        const isCorrectSingle = results[0].isCorrect;
-        
-        if (singleQuestionSource === 'myMistakes' && isCorrectSingle) {
-            userData.latestStatus[qid] = true;
-            saveUserData();
-            alert('🎉 答對了！該題已從「我的錯題」中移除！');
-        } else if (singleQuestionSource === 'myMistakes' && !isCorrectSingle) {
-            alert('❌ 答錯了！該題仍保留在「我的錯題」中，加油！');
-        } else if (singleQuestionSource === 'pastMistakes' || singleQuestionSource === 'pinned') {
-            if (isCorrectSingle) {
-                alert('✅ 答對了！該題仍保留在列表中（歷程/收藏不會自動移除）');
-            } else {
-                alert('❌ 答錯了！再試一次吧！');
-            }
-        }
-        recordBatch(batch);
-        addPracticeHistory(currentUnit, currentChapter, '單題練習', 1, isCorrectSingle ? 1 : 0, isCorrectSingle ? 100 : 0, 'single', 0, consecutiveCorrect, isBlankPaper);
-        renderMyMistakes();
-        renderPastMistakes();
-        renderPinned();
-        renderHistory();
-        renderAchievements();
-        document.getElementById('desktopQuizModal').style.display = 'none';
-        return;
-    }
-    
-    addPracticeHistory(currentUnit, currentChapter, diffName, currentQuestions.length, correctCount, accuracy, mode, timeSpent, consecutiveCorrect, isBlankPaper);
-    lastResults = results;
-    
-    if (isUnitTestMode && currentQuestions.length >= 10) {
-        window._dseResultCallback = function() {
-            displayResults(results);
-        };
-        showDSEResult(accuracy, correctCount, currentQuestions.length);
-        document.getElementById('desktopQuizModal').style.display = 'none';
-        renderPractice();
-        renderMyMistakes();
-        renderPastMistakes();
-        renderPinned();
-        renderHistory();
-        renderAchievements();
-        updateSettingsUnlockStatus();
-        return;
-    }
-    
-    displayResults(results);
-    document.getElementById('desktopQuizModal').style.display = 'none';
-    renderPractice();
-    renderMyMistakes();
-    renderPastMistakes();
-    renderPinned();
-    renderHistory();
-    renderAchievements();
-    updateSettingsUnlockStatus();
-}
-
-// ===== 桌面版按鈕事件綁定 =====
-document.addEventListener('DOMContentLoaded', function() {
-    // 綁定桌面版提交按鈕
     const desktopSubmitBtn = document.getElementById('desktopSubmitBtn');
     if (desktopSubmitBtn) {
         desktopSubmitBtn.addEventListener('click', submitDesktopAll);
     }
     
-    // 綁定桌面版上一題/下一題
     const desktopPrevBtn = document.getElementById('desktopPrevBtn');
     const desktopNextBtn = document.getElementById('desktopNextBtn');
     if (desktopPrevBtn) {
@@ -2570,7 +3282,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // 綁定桌面版周期表按鈕
     const desktopPeriodicBtn = document.getElementById('desktopPeriodicBtn');
     if (desktopPeriodicBtn) {
         desktopPeriodicBtn.addEventListener('click', showPeriodicTable);
