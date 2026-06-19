@@ -754,7 +754,12 @@ function startUnitTest(unit) {
     document.getElementById('explainModal').style.display = 'none';
     document.getElementById('resultModal').style.display = 'none';
     
-    showQuizModal();
+    // ===== 手機/桌面分離 =====
+    if (isMobile()) {
+        showQuizModal();
+    } else {
+        showDesktopQuizModal();
+    }
 }
 
 // ==================== 單題練習功能 ====================
@@ -1375,7 +1380,13 @@ function startPracticeWithSettings() {
     if (submitBtn) submitBtn.style.animation = '';
     
     document.getElementById('settingsModal').style.display = 'none';
-    showQuizModal();
+    
+    // ===== 手機/桌面分離 =====
+    if (isMobile()) {
+        showQuizModal();
+    } else {
+        showDesktopQuizModal();
+    }
 }
 
 // ==================== showExplainModal ====================
@@ -1631,7 +1642,7 @@ function logout() {
     document.getElementById('userLabel').innerHTML = '';
 }
 
-// ==================== showQuizModal（含 #7 單元測驗周期表按鈕） ====================
+// ==================== showQuizModal（手機版 - 完全不變） ====================
 function showQuizModal() { 
     renderQuizNav(); 
     renderCurrentQuestion(); 
@@ -2107,6 +2118,7 @@ function setupLogout() {
     }
 }
 
+// ==================== DOMContentLoaded ====================
 document.addEventListener('DOMContentLoaded', function() {
     // #10 自動登入檢查（會自動勾選記住我）
     const hasAutoLogin = checkAutoLogin();
@@ -2257,4 +2269,310 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('nextBtn').addEventListener('click', () => { if (currentQIndex < currentQuestions.length - 1) { currentQIndex++; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
     document.getElementById('studentName').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
     document.getElementById('studentClass').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
+});
+
+// ==================== 桌面版獨立函數 ====================
+
+// ===== 桌面版 showDesktopQuizModal =====
+function showDesktopQuizModal() {
+    renderDesktopQuizNav();
+    renderDesktopCurrentQuestion();
+    document.getElementById('desktopQuizModal').style.display = 'flex';
+}
+
+// ===== 桌面版 renderDesktopQuizNav =====
+function renderDesktopQuizNav() {
+    let nav = document.getElementById('desktopNav');
+    if (!nav) return;
+    let html = '';
+    const total = currentQuestions.length;
+    
+    let dotClass = '';
+    if (total <= 30) dotClass = '';
+    else if (total <= 45) dotClass = 'small';
+    else dotClass = 'tiny';
+    
+    for (let i = 0; i < total; i++) {
+        let cls = dotClass;
+        if (i === currentQIndex) cls += ' current';
+        else if (currentAnswers[i] !== null) cls += ' answered';
+        else cls += ' unanswered';
+        html += `<button class="nav-dot ${cls}" data-idx="${i}">${i + 1}</button>`;
+    }
+    nav.innerHTML = html;
+    
+    document.getElementById('desktopCounter').innerHTML = `${currentQIndex + 1} / ${total}`;
+    
+    document.querySelectorAll('#desktopNav .nav-dot').forEach(btn => btn.addEventListener('click', (e) => {
+        currentQIndex = parseInt(btn.dataset.idx);
+        renderDesktopQuizNav();
+        renderDesktopCurrentQuestion();
+        updateDesktopNavButtons();
+    }));
+    
+    updateDesktopSidebarDifficulty();
+    checkDesktopAllQuestionsAnswered();
+}
+
+// ===== 桌面版 updateDesktopSidebarDifficulty =====
+function updateDesktopSidebarDifficulty() {
+    if (currentQuestions.length === 0) return;
+    const q = currentQuestions[currentQIndex];
+    const sidebar = document.getElementById('desktopSidebar');
+    if (!sidebar) return;
+    
+    sidebar.classList.remove('difficulty-translate', 'difficulty-basic', 'difficulty-advanced', 'difficulty-challenge');
+    
+    if (q.difficulty === '🌐 Translate') {
+        sidebar.classList.add('difficulty-translate');
+    } else if (q.difficulty === '✅ Basic') {
+        sidebar.classList.add('difficulty-basic');
+    } else if (q.difficulty === '📈 Advanced') {
+        sidebar.classList.add('difficulty-advanced');
+    } else if (q.difficulty === '🔥 Challenge') {
+        sidebar.classList.add('difficulty-challenge');
+    }
+}
+
+// ===== 桌面版 renderDesktopCurrentQuestion =====
+function renderDesktopCurrentQuestion() {
+    if (currentQuestions.length === 0) return;
+    
+    const q = currentQuestions[currentQIndex];
+    const map = currentOptionsMapping[currentQIndex];
+    const hasImage = q.imageUrl !== null;
+    
+    document.getElementById('desktopQuestionText').innerHTML = q.text;
+    document.getElementById('desktopCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
+    document.getElementById('desktopDifficulty').innerHTML = q.difficulty;
+    
+    updateDesktopTimerDisplay();
+    updateDesktopSidebarDifficulty();
+    
+    const imageArea = document.getElementById('desktopImageArea');
+    const mainPanel = document.querySelector('.main-panel');
+    
+    if (hasImage && q.imageUrl) {
+        imageArea.innerHTML = `<img src="${q.imageUrl}" class="quiz-image" id="desktopImageThumb" style="max-height:110px; max-width:100%; object-fit:contain; cursor:pointer; border-radius:8px; border:1px solid #e9e4f5; padding:4px;">`;
+        imageArea.style.display = 'block';
+        if (mainPanel) mainPanel.classList.remove('no-image');
+        
+        document.getElementById('desktopImageThumb')?.addEventListener('click', () => {
+            document.getElementById('zoomImage').src = q.imageUrl;
+            document.getElementById('imageZoomModal').style.display = 'flex';
+        });
+    } else {
+        imageArea.innerHTML = '';
+        imageArea.style.display = 'none';
+        if (mainPanel) mainPanel.classList.add('no-image');
+    }
+    
+    const optsDiv = document.getElementById('desktopOptions');
+    optsDiv.innerHTML = '';
+    optsDiv.className = 'options-grid';
+    
+    for (let l of ['A', 'B', 'C', 'D']) {
+        let btn = document.createElement('button');
+        btn.className = 'option-btn';
+        if (currentAnswers[currentQIndex] === l) btn.classList.add('selected');
+        btn.textContent = `${l}. ${map.letterToText[l]}`;
+        btn.addEventListener('click', () => {
+            currentAnswers[currentQIndex] = l;
+            renderDesktopCurrentQuestion();
+            renderDesktopQuizNav();
+            checkDesktopAllQuestionsAnswered();
+        });
+        optsDiv.appendChild(btn);
+    }
+    
+    updateDesktopNavButtons();
+    checkDesktopAllQuestionsAnswered();
+    updateDesktopPeriodicButton();
+}
+
+// ===== 桌面版 updateDesktopNavButtons =====
+function updateDesktopNavButtons() {
+    let prev = document.getElementById('desktopPrevBtn'), next = document.getElementById('desktopNextBtn');
+    if (prev) prev.disabled = (currentQIndex === 0);
+    if (next) next.disabled = (currentQIndex === currentQuestions.length - 1);
+}
+
+// ===== 桌面版 updateDesktopTimerDisplay =====
+function updateDesktopTimerDisplay() {
+    let m = Math.floor(timeRemaining / 60), s = timeRemaining % 60;
+    const timerEl = document.getElementById('desktopTimer');
+    if (timerEl) timerEl.innerText = `⏱️ ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+// ===== 桌面版 checkDesktopAllQuestionsAnswered =====
+function checkDesktopAllQuestionsAnswered() {
+    if (currentQuestions.length === 0) return;
+    
+    const allAnswered = currentAnswers.every(a => a !== null && a !== undefined);
+    const submitBtn = document.getElementById('desktopSubmitBtn');
+    if (!submitBtn) return;
+    
+    if (allAnswered && currentAnswers.length > 0) {
+        if (!blinkInterval) {
+            blinkInterval = setInterval(() => {
+                submitBtn.style.animation = 'blink 0.3s step-end infinite';
+            }, 100);
+        }
+    } else {
+        if (blinkInterval) {
+            clearInterval(blinkInterval);
+            blinkInterval = null;
+            submitBtn.style.animation = '';
+        }
+    }
+}
+
+// ===== 桌面版 updateDesktopPeriodicButton =====
+function updateDesktopPeriodicButton() {
+    const periodicBtn = document.getElementById('desktopPeriodicBtn');
+    if (!periodicBtn) return;
+    
+    const shouldShow = (currentChapter && parseInt(currentChapter) >= 6) || currentChapter === null;
+    
+    if (shouldShow) {
+        periodicBtn.style.display = 'inline-block';
+        periodicBtn.classList.remove('hidden');
+    } else {
+        periodicBtn.style.display = 'none';
+        periodicBtn.classList.add('hidden');
+    }
+}
+
+// ===== 桌面版 submitDesktopAll =====
+function submitDesktopAll() {
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+        const submitBtn = document.getElementById('desktopSubmitBtn');
+        if (submitBtn) submitBtn.style.animation = '';
+    }
+    if (timerInterval) clearInterval(timerInterval);
+    let results = [], batch = [], correctCount = 0;
+    let consecutiveCorrect = userData.stats.consecutiveCorrect || 0;
+    let answeredCount = currentAnswers.filter(a => a !== null).length;
+    let isBlankPaper = (answeredCount === 0);
+    const isUnitTestMode = (currentChapter === null && currentQuestions.length > 1);
+
+    for (let i = 0; i < currentQuestions.length; i++) {
+        let q = currentQuestions[i], map = currentOptionsMapping[i], userLetter = currentAnswers[i];
+        let isCorrect = (userLetter === map.correctLetter);
+        if (isCorrect) {
+            correctCount++;
+            consecutiveCorrect++;
+        } else {
+            consecutiveCorrect = 0;
+        }
+        let userText = userLetter ? map.letterToText[userLetter] : '(未作答)', correctText = map.letterToText[map.correctLetter];
+        results.push({ question: q, userLetter: userLetter || '?', correctLetter: map.correctLetter, userText, correctText, isCorrect, qid: q.id });
+        batch.push({ qid: q.id, isCorrect: isCorrect });
+    }
+    userData.stats.consecutiveCorrect = consecutiveCorrect;
+    if (consecutiveCorrect > (userData.stats.maxConsecutive || 0)) userData.stats.maxConsecutive = consecutiveCorrect;
+    recordBatch(batch);
+    let accuracy = Math.round(correctCount / currentQuestions.length * 100);
+    let diffName = selectedDifficulty == 0 ? "★ 1星" : (selectedDifficulty == 1 ? "★★★ 3星" : "★★★★★ 5星");
+    let mode = isTrialMode ? 'trial' : 'normal';
+    let expectedTime = currentQuestions.length * (selectedDifficulty == 0 ? 108 : (selectedDifficulty == 2 ? 75 : 90));
+    let timeSpent = Math.round((expectedTime - timeRemaining) / expectedTime * 100);
+    
+    if (isSingleQuestionMode && currentQuestions.length === 1) {
+        const qid = currentQuestions[0].id;
+        const isCorrectSingle = results[0].isCorrect;
+        
+        if (singleQuestionSource === 'myMistakes' && isCorrectSingle) {
+            userData.latestStatus[qid] = true;
+            saveUserData();
+            alert('🎉 答對了！該題已從「我的錯題」中移除！');
+        } else if (singleQuestionSource === 'myMistakes' && !isCorrectSingle) {
+            alert('❌ 答錯了！該題仍保留在「我的錯題」中，加油！');
+        } else if (singleQuestionSource === 'pastMistakes' || singleQuestionSource === 'pinned') {
+            if (isCorrectSingle) {
+                alert('✅ 答對了！該題仍保留在列表中（歷程/收藏不會自動移除）');
+            } else {
+                alert('❌ 答錯了！再試一次吧！');
+            }
+        }
+        recordBatch(batch);
+        addPracticeHistory(currentUnit, currentChapter, '單題練習', 1, isCorrectSingle ? 1 : 0, isCorrectSingle ? 100 : 0, 'single', 0, consecutiveCorrect, isBlankPaper);
+        renderMyMistakes();
+        renderPastMistakes();
+        renderPinned();
+        renderHistory();
+        renderAchievements();
+        document.getElementById('desktopQuizModal').style.display = 'none';
+        return;
+    }
+    
+    addPracticeHistory(currentUnit, currentChapter, diffName, currentQuestions.length, correctCount, accuracy, mode, timeSpent, consecutiveCorrect, isBlankPaper);
+    lastResults = results;
+    
+    if (isUnitTestMode && currentQuestions.length >= 10) {
+        window._dseResultCallback = function() {
+            displayResults(results);
+        };
+        showDSEResult(accuracy, correctCount, currentQuestions.length);
+        document.getElementById('desktopQuizModal').style.display = 'none';
+        renderPractice();
+        renderMyMistakes();
+        renderPastMistakes();
+        renderPinned();
+        renderHistory();
+        renderAchievements();
+        updateSettingsUnlockStatus();
+        return;
+    }
+    
+    displayResults(results);
+    document.getElementById('desktopQuizModal').style.display = 'none';
+    renderPractice();
+    renderMyMistakes();
+    renderPastMistakes();
+    renderPinned();
+    renderHistory();
+    renderAchievements();
+    updateSettingsUnlockStatus();
+}
+
+// ===== 桌面版按鈕事件綁定 =====
+document.addEventListener('DOMContentLoaded', function() {
+    // 綁定桌面版提交按鈕
+    const desktopSubmitBtn = document.getElementById('desktopSubmitBtn');
+    if (desktopSubmitBtn) {
+        desktopSubmitBtn.addEventListener('click', submitDesktopAll);
+    }
+    
+    // 綁定桌面版上一題/下一題
+    const desktopPrevBtn = document.getElementById('desktopPrevBtn');
+    const desktopNextBtn = document.getElementById('desktopNextBtn');
+    if (desktopPrevBtn) {
+        desktopPrevBtn.addEventListener('click', function() {
+            if (currentQIndex > 0) {
+                currentQIndex--;
+                renderDesktopQuizNav();
+                renderDesktopCurrentQuestion();
+                updateDesktopNavButtons();
+            }
+        });
+    }
+    if (desktopNextBtn) {
+        desktopNextBtn.addEventListener('click', function() {
+            if (currentQIndex < currentQuestions.length - 1) {
+                currentQIndex++;
+                renderDesktopQuizNav();
+                renderDesktopCurrentQuestion();
+                updateDesktopNavButtons();
+            }
+        });
+    }
+    
+    // 綁定桌面版周期表按鈕
+    const desktopPeriodicBtn = document.getElementById('desktopPeriodicBtn');
+    if (desktopPeriodicBtn) {
+        desktopPeriodicBtn.addEventListener('click', showPeriodicTable);
+    }
 });

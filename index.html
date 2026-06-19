@@ -108,7 +108,58 @@
 </div>
 
 <div id="explainModal" class="modal"><div class="modal-content"><div id="explainContent" class="explain-content"></div><button id="closeExplainBtn" class="btn">返回成績總表</button></div></div>
+
+<!-- ===== 手機版問題彈窗（完全不變） ===== -->
 <div id="quizModal" class="modal"><div class="modal-content"><div class="quiz-header"><span id="quizDifficulty"></span><span id="quizCounter"></span><span id="timerDisplay" class="quiz-timer">00:00</span></div><div id="questionNav" class="question-nav"></div><div class="quiz-body"><div id="modalQuestionText" class="question-text"></div><div id="modalImageArea"></div><div id="modalOptions"></div></div><div class="quiz-footer"><button id="prevBtn" class="btn btn-outline">◀ 上一題</button><button id="nextBtn" class="btn btn-outline">下一題 ▶</button><button id="submitAllBtn" class="btn" style="background:#10b981;">提交答案</button></div></div></div>
+
+<!-- ===== 桌面版獨立彈窗（直接複製您的 Demo HTML） ===== -->
+<div id="desktopQuizModal" class="modal">
+    <div class="modal-content">
+
+        <!-- ===== 左側 ===== -->
+        <div class="main-panel">
+            <div class="question-area">
+                <div class="question-text" id="desktopQuestionText">
+                    載入中...
+                </div>
+                <div class="image-area" id="desktopImageArea">
+                    <!-- 圖片由 JavaScript 動態產生 -->
+                </div>
+                <div class="options-grid" id="desktopOptions">
+                    <!-- 選項由 JavaScript 動態產生 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 右側邊欄 ===== -->
+        <div class="sidebar" id="desktopSidebar">
+
+            <!-- 第一行：難度 + 計時器 -->
+            <div class="sidebar-row-1">
+                <span class="difficulty" id="desktopDifficulty">📈 Advanced</span>
+                <span class="timer" id="desktopTimer">⏱️ 00:00</span>
+            </div>
+
+            <!-- 第二行：周期表 + 題號 -->
+            <div class="sidebar-row-2">
+                <button class="table-btn" id="desktopPeriodicBtn">📊 周期表</button>
+                <span class="counter" id="desktopCounter">1 / 10</span>
+            </div>
+
+            <!-- 題號導航 -->
+            <div class="nav-grid" id="desktopNav"></div>
+
+            <!-- 三個按鈕 -->
+            <div class="sidebar-actions">
+                <button class="btn btn-prev" id="desktopPrevBtn">◀</button>
+                <button class="btn btn-next" id="desktopNextBtn">▶</button>
+                <button class="btn btn-submit" id="desktopSubmitBtn">提交</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
 <div id="resultModal" class="modal"><div class="modal-content"><h3>成績總表</h3><div id="resultContent" class="result-container"></div><button id="closeResultBtn" class="btn">關閉</button></div></div>
 <div id="imageZoomModal" class="modal"><div class="modal-content"><button onclick="closeImageZoom()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666; position:absolute; top:10px; right:16px; z-index:10;">✕</button><img id="zoomImage" src="" style="width:100%; max-height:70vh; object-fit:contain;"><button id="closeZoomBtn" class="btn" style="margin-top:0.8rem;">關閉</button></div></div>
 
@@ -1673,6 +1724,22 @@ window.ALL_UNITS = {
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
             "sf": 0
+          },
+          {
+            "id": "C25C001",
+            "text": "<1990 CE 4><br>Which of the following combinations concerning the isotopes of an element is correct?",
+            "options": [
+              "A. same no. of proton, different no. of neutron, same no. of electron",
+              "B. same no. of proton, same no. of neutron, different no. of electron",
+              "C. different no. of proton, same no. of neutron, different no. of electron",
+              "D. same no. of proton, different no. of neutron, different no. of electron"
+            ],
+            "correct": "A",
+            "explanation": "Isotopes have the same number of protons, and same number of electrons in their outermost shell.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
           }
         ]
       },
@@ -3070,6 +3137,22 @@ window.ALL_UNITS = {
             "difficulty": "🔥 Challenge",
             "difficulty_level": 3,
             "sf": 0
+          },
+          {
+            "id": "C26C001",
+            "text": "<1991 CE 1><br>Which of the following elements are likely to be metals?<br>𝑊 - Atomic number 4; 𝑋 - Atomic number 8;<br>𝑌 - Atomic number 14; 𝑍 - Atomic number 20",
+            "options": [
+              "A. 𝑊 and 𝑋",
+              "B. 𝑊 and 𝑍",
+              "C. 𝑋 and 𝑌",
+              "D. 𝑌 and 𝑍"
+            ],
+            "correct": "B",
+            "explanation": "4 - Be; 8 - O; 14 - Si; 20 - Ca<br>Only Be and Ca are metals.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
           }
         ]
       },
@@ -5011,6 +5094,70 @@ window.ALL_UNITS = {
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
             "sf": 0
+          },
+          {
+            "id": "C27C001",
+            "text": "<1990 CE 2><br>A cation of a certain element has 22 electrons and a mass number of 55. If the charge on the cation is +3, the number of neutrons in the cation is",
+            "options": [
+              "A. 19",
+              "B. 23",
+              "C. 25",
+              "D. 30"
+            ],
+            "correct": "D",
+            "explanation": "A cation with a charge +3 means it has lost 3 electrons. So originally it should have 22+3=25 electrons.<br>No. of protons = No. of electrons in an atom = 25<br>Mass number = No. of proton + No. of neutron<br>Hence no. of neutron = 55 - 25 = 30",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C27C002",
+            "text": "<1990 CE 3><br>The atomic numbers of element 𝑋 and element 𝑌 are 13 and 16 respectively. The formula of the compound formed between 𝑋 and 𝑌 is likely to be",
+            "options": [
+              "A. 𝑋𝑌₂",
+              "B. 𝑋₂𝑌",
+              "C. 𝑋₂𝑌₃",
+              "D. 𝑋₃𝑌₂"
+            ],
+            "correct": "C",
+            "explanation": "𝑋 and 𝑌 is Group III and Group VI respectively. The ions form are +3 and -2 in charge respectively.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C27C003",
+            "text": "<1991 CE 2><br>The formula of the compound formed between 𝑋 and 𝑍 is <br>𝑋 - Atomic number 8;; 𝑍 - Atomic number 20",
+            "options": [
+              "A. 𝑋𝑍",
+              "B. 𝑋𝑍₂",
+              "C. 𝑋₂𝑍",
+              "D. 𝑋₂𝑍₃"
+            ],
+            "correct": "A",
+            "explanation": "Ions of 𝑋 and 𝑍 are -2 and +2 respectively.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27C004",
+            "text": "<1991 CE 4><br>Which of the following groups of ions/atoms has the same number of electrons?",
+            "options": [
+              "A. K⁺, Ca²⁺",
+              "B. Cl⁻, S\t",
+              "C. H⁺, He",
+              "D. O²⁻, Ar"
+            ],
+            "correct": "A",
+            "explanation": "Both K⁺ and Ca²⁺ has 18 electrons.<br>Cl⁻ has 18 electrons while S has 16 only.<br>H⁺ has no electron while He has 2.<br>O²⁻ has 10 electrons while Ar has 18.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
           }
         ]
       },
@@ -6005,6 +6152,22 @@ window.ALL_UNITS = {
             "correct": "A",
             "explanation": "Covalent bonds are directional. The formation of covalent bond does not involve the transfer of electrons. It involves the sharing of electrons between two atoms.",
             "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C28C001",
+            "text": "<1992 CE 3><br>Which of the following electron diagrams is correct?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "C",
+            "explanation": "Fluorine does not form a double bond.<br>Oxide's charge should be -2.<br>Helium is stable enough it does not form bond.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08C001.webp",
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
             "sf": 0
@@ -7708,6 +7871,54 @@ window.ALL_UNITS = {
             "imageUrl": null,
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29C001",
+            "text": "<1990 CE 25><br>Bromine has a low melting point because",
+            "options": [
+              "A. it is a non-metal.",
+              "B. it is a member of the halogen family.",
+              "C. the atoms in each bromine molecule are bonded together by a covalent bond.",
+              "D. the bromine molecules are attracted together by van der Waals’ forces."
+            ],
+            "correct": "D",
+            "explanation": "Although all the statements are correct.<br>Yet melting refers to the breaking the intermolecular force. Only the one with van der Waals' force is related.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29C002",
+            "text": "<1990 CE 26><br>Dry zinc chloride solid is a non-conductor of electricity because",
+            "options": [
+              "A. it is a non-electrolyte.",
+              "B. it exists as molecules.",
+              "C. its ions are not mobile.",
+              "D. metallic bonding is not present."
+            ],
+            "correct": "C",
+            "explanation": "Either mobile ion or delocalized electrons are needed for conducting electricity.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29C003",
+            "text": "<1992 CE 2><br>𝑋 and 𝑌 are elements. The melting points of their chlorides are 772 and -68 degrees Celsius respectively. Which of the following statements is correct?",
+            "options": [
+              "A. Both 𝑋 and 𝑌 are metals.",
+              "B. The chloride of 𝑌 is a solid at room temperature.",
+              "C. The chloride of 𝑋 conducts electricity in the solid state.",
+              "D. The chloride of 𝑌 is a covalent compound."
+            ],
+            "correct": "A",
+            "explanation": "From the melting point, 𝑋 should be a metal whose chloride is ionic compound; while 𝑌 should be a non-metal whose chloride is a simple molecule. Chloride of 𝑌 is a liquid at room temp.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
             "sf": 1
           }
         ]
