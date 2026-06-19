@@ -285,9 +285,14 @@ function format(date, pattern) {
 // ==================== 數據操作函數 ====================
 function saveUserData() {
     if (!currentUser) return;
-    localStorage.setItem(`ms_chem_${currentUser.id}`, JSON.stringify(userData));
+    
+    // 存入 localStorage
+    localStorage.setItem(`ms_chem_${currentUser.id || currentUser.userId}`, JSON.stringify(userData));
+    
+    // 同步到 Firebase
     if (firestoreEnabled) {
-        syncToFirestore('users', currentUser.id, {
+        const userId = currentUser.id || currentUser.userId;
+        syncToFirestore('users', userId, {
             latestStatus: userData.latestStatus || {},
             allAttempts: userData.allAttempts || [],
             favorites: userData.favorites || [],
@@ -302,37 +307,60 @@ function saveUserData() {
 async function loadUserData() {
     if (!currentUser) return;
     
-    const raw = localStorage.getItem(`ms_chem_${currentUser.id}`);
+    const userId = currentUser.id || currentUser.userId;
+    
+    // 先從 Firebase 讀取（優先）
+    if (firestoreEnabled) {
+        try {
+            const cloudData = await loadFromFirestore('users', userId);
+            if (cloudData) {
+                userData = {
+                    latestStatus: cloudData.latestStatus || {},
+                    allAttempts: cloudData.allAttempts || [],
+                    favorites: cloudData.favorites || [],
+                    practiceHistory: cloudData.practiceHistory || [],
+                    achievements: cloudData.achievements || {},
+                    stats: cloudData.stats || { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null }
+                };
+                if (!userData.practiceHistory) userData.practiceHistory = [];
+                if (!userData.achievements) userData.achievements = {};
+                if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
+                if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
+                // 同步到 localStorage
+                localStorage.setItem(`ms_chem_${userId}`, JSON.stringify(userData));
+                console.log('✅ 從 Firebase 載入數據');
+                return;
+            }
+        } catch(e) {
+            console.warn('⚠️ Firebase 讀取失敗:', e.message);
+        }
+    }
+    
+    // 如果 Firebase 沒有數據，從 localStorage 讀取
+    const raw = localStorage.getItem(`ms_chem_${userId}`);
     if (raw) {
         userData = JSON.parse(raw);
         if (!userData.practiceHistory) userData.practiceHistory = [];
         if (!userData.achievements) userData.achievements = {};
         if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
         if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
-        saveUserData();
+        console.log('✅ 從 localStorage 載入數據');
+        // 如果有 Firebase，同步上去
+        if (firestoreEnabled) {
+            syncToFirestore('users', userId, {
+                latestStatus: userData.latestStatus || {},
+                allAttempts: userData.allAttempts || [],
+                favorites: userData.favorites || [],
+                practiceHistory: userData.practiceHistory || [],
+                achievements: userData.achievements || {},
+                stats: userData.stats || {},
+                lastUpdated: new Date().toISOString()
+            });
+        }
         return;
     }
     
-    if (firestoreEnabled) {
-        const cloudData = await loadFromFirestore('users', currentUser.id);
-        if (cloudData) {
-            userData = {
-                latestStatus: cloudData.latestStatus || {},
-                allAttempts: cloudData.allAttempts || [],
-                favorites: cloudData.favorites || [],
-                practiceHistory: cloudData.practiceHistory || [],
-                achievements: cloudData.achievements || {},
-                stats: cloudData.stats || { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null }
-            };
-            if (!userData.practiceHistory) userData.practiceHistory = [];
-            if (!userData.achievements) userData.achievements = {};
-            if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
-            if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
-            saveUserData();
-            return;
-        }
-    }
-    
+    // 完全沒有數據，初始化
     userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
     if (!userData.practiceHistory) userData.practiceHistory = [];
     if (!userData.achievements) userData.achievements = {};
@@ -484,6 +512,21 @@ function updateUser(userId, data) {
     if (index !== -1) {
         db.users[index] = { ...db.users[index], ...data };
         saveUsers(db);
+        
+        // 同步到 Firebase
+        if (firestoreEnabled) {
+            firebase.firestore()
+                .collection('users')
+                .doc(userId)
+                .set(db.users[index], { merge: true })
+                .then(() => {
+                    console.log('✅ 用戶資料已同步到 Firebase:', userId);
+                })
+                .catch(e => {
+                    console.warn('⚠️ Firebase 更新失敗:', e.message);
+                });
+        }
+        
         return db.users[index];
     }
     return null;
@@ -555,7 +598,6 @@ async function handleLogin(userId, password) {
     clearLoginError();
     
     let user = null;
-    let userSource = 'local';
     
     // 1. 先從 Firebase 查詢
     if (firestoreEnabled) {
@@ -566,7 +608,6 @@ async function handleLogin(userId, password) {
                 .get();
             if (doc.exists) {
                 user = doc.data();
-                userSource = 'firebase';
                 console.log('✅ 從 Firebase 找到用戶:', userId);
                 
                 // 同步到 localStorage
@@ -588,7 +629,6 @@ async function handleLogin(userId, password) {
     if (!user) {
         user = findUser(userId);
         if (user) {
-            userSource = 'local';
             console.log('✅ 從 localStorage 找到用戶:', userId);
         }
     }
@@ -649,11 +689,13 @@ function enterMainApp(user) {
     
     updateUserLabel();
     
-    loadUserData();
-    renderPractice();
-    initTabs();
-    document.querySelector('.tab[data-tab="practice"]').click();
-    setupLogout();
+    // 強制從 Firebase 載入最新數據
+    loadUserData().then(() => {
+        renderPractice();
+        initTabs();
+        document.querySelector('.tab[data-tab="practice"]').click();
+        setupLogout();
+    });
 }
 
 function logout() {
@@ -804,12 +846,44 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', function
         return;
     }
 
-    updateUser(currentUser.userId, {
+    const userId = currentUser.id || currentUser.userId;
+    
+    // 更新本地用戶資料
+    updateUser(userId, {
         password: newPwd,
         isFirstLogin: false
     });
 
-    currentUser = findUser(currentUser.userId);
+    // 同步到 Firebase Auth
+    if (firestoreEnabled) {
+        const email = userId + '@ms.com';
+        firebase.auth().signInWithEmailAndPassword(email, currentUser.password || '')
+            .then(() => {
+                const user = firebase.auth().currentUser;
+                if (user) {
+                    user.updatePassword(newPwd)
+                        .then(() => {
+                            console.log('✅ Firebase Auth 密碼已更新');
+                        })
+                        .catch(e => {
+                            console.warn('⚠️ Firebase Auth 密碼更新失敗:', e.message);
+                        });
+                }
+            })
+            .catch(() => {
+                // 如果無法登入，嘗試建立帳戶
+                const email = userId + '@ms.com';
+                firebase.auth().createUserWithEmailAndPassword(email, newPwd)
+                    .then(() => {
+                        console.log('✅ Firebase Auth 帳戶已建立');
+                    })
+                    .catch(e => {
+                        console.warn('⚠️ Firebase Auth 建立失敗:', e.message);
+                    });
+            });
+    }
+
+    currentUser = findUser(userId);
     updateUserLabel();
 
     msgEl.innerHTML = `<div class="alert alert-success">✅ 密碼已成功修改！</div>`;
@@ -817,55 +891,112 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', function
     setTimeout(() => {
         closeModal('changePasswordModal');
         if (document.getElementById('loginScreen').style.display !== 'none') {
-            document.getElementById('loginUserId').value = currentUser.userId;
+            document.getElementById('loginUserId').value = userId;
         }
     }, 1500);
 });
 
-// ==================== 舊用戶轉移（學生端） ====================
+// ==================== 舊用戶轉移（學生端 - 無需登入） ====================
 document.getElementById('migrateAccountLink')?.addEventListener('click', function() {
     document.getElementById('migrateAccountModal').classList.add('show');
-    document.getElementById('migrationCodeDisplay').innerHTML = '';
+    document.getElementById('migrateCodeDisplay').innerHTML = '';
     document.getElementById('migrateMessage').innerHTML = '';
+    document.getElementById('migrateAccountInfo').style.display = 'none';
+    document.getElementById('migrateError').style.display = 'none';
+    document.getElementById('migrateOldName').value = '';
+    document.getElementById('migrateOldClass').value = '';
 });
 
-document.getElementById('showMigrationCodeBtn')?.addEventListener('click', async function() {
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    const display = document.getElementById('migrationCodeDisplay');
-    
-    if (!currentUser) {
-        display.innerHTML = `<div class="alert alert-danger">⚠️ 請先登入再產生驗證碼</div>`;
+document.getElementById('findOldAccountBtn')?.addEventListener('click', async function() {
+    const name = document.getElementById('migrateOldName').value.trim();
+    const className = document.getElementById('migrateOldClass').value.trim();
+    const errEl = document.getElementById('migrateError');
+    const infoEl = document.getElementById('migrateAccountInfo');
+    const codeDisplay = document.getElementById('migrateCodeDisplay');
+
+    // 重置顯示
+    errEl.style.display = 'none';
+    infoEl.style.display = 'none';
+    codeDisplay.innerHTML = '';
+
+    if (!name || !className) {
+        errEl.textContent = '⚠️ 請輸入姓名和班級';
+        errEl.style.display = 'block';
         return;
     }
-    
-    const oldData = {
-        latestStatus: userData.latestStatus || {},
-        allAttempts: userData.allAttempts || [],
-        favorites: userData.favorites || [],
-        practiceHistory: userData.practiceHistory || [],
-        achievements: userData.achievements || {},
-        stats: userData.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 }
-    };
-    
-    const migrationData = {
-        code: code,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        oldUserId: currentUser.id || currentUser.userId,
-        oldData: oldData
-    };
-    
-    await saveMigrationToFirebase(migrationData);
-    
-    display.innerHTML = `
-        <div style="text-align:center; padding:8px 0;">
-            <div style="font-size:13px; color:#666;">您的驗證碼是：</div>
-            <div class="verify-code">${code}</div>
-            <div style="font-size:12px; color:#999;">請把這個驗證碼告訴老師</div>
-            <button class="btn btn-sm btn-outline mt-8" onclick="navigator.clipboard?.writeText('${code}')">📋 複製驗證碼</button>
+
+    // 從 localStorage 查找舊帳戶（格式：{班級}_{姓名}）
+    const db = getUsers();
+    const oldUserId = `${className}_${name}`;
+    const oldUser = db.users.find(u => u.userId === oldUserId);
+
+    if (!oldUser) {
+        errEl.textContent = `❌ 找不到「${name}」在「${className}」班的帳戶，請確認輸入正確`;
+        errEl.style.display = 'block';
+        return;
+    }
+
+    // 計算簡單的進度統計
+    const totalQ = oldUser.stats?.totalQuestionsAnswered || 0;
+    const totalCorrect = oldUser.stats?.totalCorrect || 0;
+    const acc = totalQ > 0 ? Math.round(totalCorrect / totalQ * 100) : 0;
+
+    // 顯示找到的帳戶資訊
+    infoEl.style.display = 'block';
+    infoEl.innerHTML = `
+        <div class="alert alert-success">
+            <strong>✅ 找到您的帳戶！</strong><br>
+            👤 姓名：${oldUser.name}<br>
+            📚 班級：${oldUser.className}<br>
+            📊 進度：已做 ${totalQ} 題，正確率 ${acc}%
         </div>
+        <button class="btn btn-primary" id="generateMigrationCodeBtn">📋 產生驗證碼</button>
     `;
-    document.getElementById('migrateMessage').innerHTML = `<div class="alert alert-success">✅ 驗證碼已產生並儲存！請將驗證碼告訴老師。</div>`;
+
+    // 儲存找到的舊用戶資訊供後續使用
+    window._foundOldUser = oldUser;
+
+    // 綁定產生驗證碼按鈕
+    document.getElementById('generateMigrationCodeBtn')?.addEventListener('click', async function() {
+        const user = window._foundOldUser;
+        if (!user) {
+            codeDisplay.innerHTML = `<div class="alert alert-danger">⚠️ 請先尋找您的帳戶</div>`;
+            return;
+        }
+
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        
+        const oldData = {
+            latestStatus: user.latestStatus || {},
+            allAttempts: user.allAttempts || [],
+            favorites: user.favorites || [],
+            practiceHistory: user.practiceHistory || [],
+            achievements: user.achievements || {},
+            stats: user.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 }
+        };
+        
+        const migrationData = {
+            code: code,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+            oldUserId: user.userId,
+            oldName: user.name,
+            oldClass: user.className,
+            oldData: oldData
+        };
+        
+        await saveMigrationToFirebase(migrationData);
+        
+        codeDisplay.innerHTML = `
+            <div style="text-align:center; padding:8px 0;">
+                <div style="font-size:13px; color:#666;">您的驗證碼是：</div>
+                <div class="verify-code">${code}</div>
+                <div style="font-size:12px; color:#999;">請把這個驗證碼告訴老師</div>
+                <button class="btn btn-sm btn-outline mt-8" onclick="navigator.clipboard?.writeText('${code}')">📋 複製驗證碼</button>
+            </div>
+        `;
+        document.getElementById('migrateMessage').innerHTML = `<div class="alert alert-success">✅ 驗證碼已產生並儲存！請將驗證碼告訴老師。</div>`;
+    });
 });
 
 // ==================== 密碼顯示切換 ====================
@@ -2303,7 +2434,7 @@ function closeDSEResult() {
     }
 }
 
-// ==================== showQuizModal（手機版 - 完全不變） ====================
+// ==================== showQuizModal（手機版） ====================
 function showQuizModal() { 
     renderQuizNav(); 
     renderCurrentQuestion(); 
@@ -2352,7 +2483,7 @@ function renderQuizNav() {
     checkAllQuestionsAnswered();
 }
 
-// ==================== renderCurrentQuestion（手機版/桌面版 class 分離） ====================
+// ==================== renderCurrentQuestion（手機版） ====================
 function renderCurrentQuestion() {
     let q = currentQuestions[currentQIndex];
     let map = currentOptionsMapping[currentQIndex];
@@ -3004,7 +3135,7 @@ function initTabs() {
     }));
 }
 
-// ==================== renderTeacherPanel（老師後台 - 完整版） ====================
+// ==================== renderTeacherPanel（老師後台） ====================
 async function renderTeacherPanel() {
     const container = document.getElementById('teacherPanel');
     if (!container) return;
@@ -3451,7 +3582,7 @@ function bindTeacherEvents() {
         const initialPassword = generateRandomPassword();
         const newStudent = {
             userId: newId,
-            name: '已轉移用戶',
+            name: migration.oldName || '已轉移用戶',
             className: targetClass,
             phone: '00000000',
             initialPassword: initialPassword,
