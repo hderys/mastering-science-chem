@@ -120,6 +120,160 @@ async function loadFromFirestore(collection, docId) {
     }
 }
 
+// ==================== Firebase 遷移相關函數 ====================
+async function saveMigrationToFirebase(migrationData) {
+    if (!firestoreEnabled) {
+        console.warn('⚠️ Firestore 未啟用，遷移請求儲存到 localStorage');
+        const db = getUsers();
+        if (!db.migrations) db.migrations = [];
+        db.migrations.push(migrationData);
+        saveUsers(db);
+        return migrationData;
+    }
+    
+    try {
+        await firebase.firestore()
+            .collection('migrations')
+            .doc(migrationData.code)
+            .set(migrationData, { merge: true });
+        console.log('✅ 遷移請求已儲存到 Firebase');
+        return migrationData;
+    } catch(e) {
+        console.warn('⚠️ Firebase 儲存失敗，改用 localStorage:', e.message);
+        const db = getUsers();
+        if (!db.migrations) db.migrations = [];
+        db.migrations.push(migrationData);
+        saveUsers(db);
+        return migrationData;
+    }
+}
+
+async function getMigrationsFromFirebase() {
+    if (!firestoreEnabled) {
+        const db = getUsers();
+        return db.migrations || [];
+    }
+    
+    try {
+        const snapshot = await firebase.firestore()
+            .collection('migrations')
+            .where('status', '==', 'pending')
+            .get();
+        const migrations = [];
+        snapshot.forEach(doc => {
+            migrations.push(doc.data());
+        });
+        console.log(`✅ 從 Firebase 讀取 ${migrations.length} 個待處理遷移請求`);
+        return migrations;
+    } catch(e) {
+        console.warn('⚠️ Firebase 讀取失敗，改用 localStorage:', e.message);
+        const db = getUsers();
+        return db.migrations || [];
+    }
+}
+
+async function getMigrationByCodeFromFirebase(code) {
+    if (!firestoreEnabled) {
+        const db = getUsers();
+        return (db.migrations || []).find(m => m.code === code && m.status === 'pending');
+    }
+    
+    try {
+        const doc = await firebase.firestore()
+            .collection('migrations')
+            .doc(code)
+            .get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data.status === 'pending') {
+                return data;
+            }
+        }
+        return null;
+    } catch(e) {
+        console.warn('⚠️ Firebase 讀取失敗，改用 localStorage:', e.message);
+        const db = getUsers();
+        return (db.migrations || []).find(m => m.code === code && m.status === 'pending');
+    }
+}
+
+async function updateMigrationStatusInFirebase(code, status, newUserId) {
+    if (!firestoreEnabled) {
+        const db = getUsers();
+        if (!db.migrations) db.migrations = [];
+        const migration = db.migrations.find(m => m.code === code);
+        if (migration) {
+            migration.status = status;
+            migration.completedAt = new Date().toISOString();
+            migration.newUserId = newUserId;
+            saveUsers(db);
+        }
+        return;
+    }
+    
+    try {
+        await firebase.firestore()
+            .collection('migrations')
+            .doc(code)
+            .update({
+                status: status,
+                completedAt: new Date().toISOString(),
+                newUserId: newUserId
+            });
+        console.log(`✅ 遷移請求 ${code} 已更新為 ${status}`);
+    } catch(e) {
+        console.warn('⚠️ Firebase 更新失敗，改用 localStorage:', e.message);
+        const db = getUsers();
+        if (!db.migrations) db.migrations = [];
+        const migration = db.migrations.find(m => m.code === code);
+        if (migration) {
+            migration.status = status;
+            migration.completedAt = new Date().toISOString();
+            migration.newUserId = newUserId;
+            saveUsers(db);
+        }
+    }
+}
+
+// ==================== 從 Firebase 讀取學生數據 ====================
+async function loadAllStudentsFromFirebase(className) {
+    console.log('📥 從 Firebase 讀取學生數據:', className);
+    
+    // 先從 localStorage 讀取
+    const db = getUsers();
+    const localStudents = db.users.filter(u => u.className === className && !u.isTeacher);
+    console.log(`📊 localStorage: ${localStudents.length} 位學生`);
+    
+    if (!firestoreEnabled) {
+        return localStudents;
+    }
+    
+    try {
+        const snapshot = await firebase.firestore()
+            .collection('users')
+            .where('className', '==', className)
+            .where('isTeacher', '==', false)
+            .get();
+        const firebaseStudents = [];
+        snapshot.forEach(doc => {
+            firebaseStudents.push(doc.data());
+        });
+        console.log(`📊 Firebase: ${firebaseStudents.length} 位學生`);
+        
+        // 合併：Firebase 優先
+        const merged = [...firebaseStudents];
+        for (const s of localStudents) {
+            if (!merged.find(m => m.userId === s.userId)) {
+                merged.push(s);
+            }
+        }
+        return merged;
+    } catch(e) {
+        console.warn('⚠️ Firebase 讀取失敗，使用 localStorage:', e.message);
+        return localStudents;
+    }
+}
+
 // ==================== format 函數 ====================
 function format(date, pattern) {
     let year = date.getFullYear();
@@ -351,6 +505,7 @@ function generateUserId(className) {
     return String(num).padStart(6, '0');
 }
 
+// ==================== 建立用戶（同時存入 Firebase） ====================
 function createUser(name, className, phone) {
     const db = getUsers();
     const userId = generateUserId(className);
@@ -373,24 +528,80 @@ function createUser(name, className, phone) {
         achievements: {},
         stats: { totalQuestionsAnswered: 0, totalCorrect: 0 }
     };
+    
+    // 存入 localStorage
     db.users.push(user);
     saveUsers(db);
+    
+    // 存入 Firebase
+    if (firestoreEnabled) {
+        firebase.firestore()
+            .collection('users')
+            .doc(userId)
+            .set(user, { merge: true })
+            .then(() => {
+                console.log('✅ 用戶已存入 Firebase:', userId);
+            })
+            .catch(e => {
+                console.warn('⚠️ Firebase 儲存失敗:', e.message);
+            });
+    }
+    
     return user;
 }
 
-function handleLogin(userId, password) {
+// ==================== 登入處理（先 Firebase，再 localStorage） ====================
+async function handleLogin(userId, password) {
     clearLoginError();
-
-    const user = findUser(userId);
-
+    
+    let user = null;
+    let userSource = 'local';
+    
+    // 1. 先從 Firebase 查詢
+    if (firestoreEnabled) {
+        try {
+            const doc = await firebase.firestore()
+                .collection('users')
+                .doc(userId)
+                .get();
+            if (doc.exists) {
+                user = doc.data();
+                userSource = 'firebase';
+                console.log('✅ 從 Firebase 找到用戶:', userId);
+                
+                // 同步到 localStorage
+                const db = getUsers();
+                const existing = db.users.find(u => u.userId === userId);
+                if (existing) {
+                    Object.assign(existing, user);
+                } else {
+                    db.users.push(user);
+                }
+                saveUsers(db);
+            }
+        } catch(e) {
+            console.warn('⚠️ Firebase 讀取失敗:', e.message);
+        }
+    }
+    
+    // 2. 如果 Firebase 找不到，從 localStorage 查詢
+    if (!user) {
+        user = findUser(userId);
+        if (user) {
+            userSource = 'local';
+            console.log('✅ 從 localStorage 找到用戶:', userId);
+        }
+    }
+    
     if (!user) {
         showLoginError('❌ 帳號不存在，請確認登入 ID');
         return;
     }
-
+    
+    // 檢查密碼
     const isValid = (user.password && user.password === password) ||
                     (user.isFirstLogin && user.initialPassword === password);
-
+    
     if (!isValid) {
         loginAttempts++;
         const remaining = MAX_LOGIN_ATTEMPTS - loginAttempts;
@@ -406,16 +617,18 @@ function handleLogin(userId, password) {
         showLoginError(`❌ 密碼錯誤，剩餘嘗試次數：${remaining}`);
         return;
     }
-
+    
+    // 登入成功
     loginAttempts = 0;
     currentUser = user;
-
+    
+    // 記住我
     if (document.getElementById('rememberMeCheckbox').checked) {
         localStorage.setItem('ms_chem_login', JSON.stringify({ userId: userId, password: password }));
     } else {
         localStorage.removeItem('ms_chem_login');
     }
-
+    
     if (user.isFirstLogin) {
         openChangePasswordModal(true);
     } else {
@@ -467,8 +680,8 @@ function checkAutoLogin() {
                 document.getElementById('loginPassword').value = data.password;
                 const rememberMe = document.getElementById('rememberMeCheckbox');
                 if (rememberMe) rememberMe.checked = true;
-                setTimeout(() => {
-                    handleLogin(data.userId, data.password);
+                setTimeout(async () => {
+                    await handleLogin(data.userId, data.password);
                 }, 300);
                 return true;
             }
@@ -616,15 +829,43 @@ document.getElementById('migrateAccountLink')?.addEventListener('click', functio
     document.getElementById('migrateMessage').innerHTML = '';
 });
 
-document.getElementById('showMigrationCodeBtn')?.addEventListener('click', function() {
+document.getElementById('showMigrationCodeBtn')?.addEventListener('click', async function() {
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const display = document.getElementById('migrationCodeDisplay');
+    
+    if (!currentUser) {
+        display.innerHTML = `<div class="alert alert-danger">⚠️ 請先登入再產生驗證碼</div>`;
+        return;
+    }
+    
+    const oldData = {
+        latestStatus: userData.latestStatus || {},
+        allAttempts: userData.allAttempts || [],
+        favorites: userData.favorites || [],
+        practiceHistory: userData.practiceHistory || [],
+        achievements: userData.achievements || {},
+        stats: userData.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 }
+    };
+    
+    const migrationData = {
+        code: code,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        oldUserId: currentUser.id || currentUser.userId,
+        oldData: oldData
+    };
+    
+    await saveMigrationToFirebase(migrationData);
+    
     display.innerHTML = `
-        <div class="verify-code">${code}</div>
-        <div style="text-align:center; font-size:13px; color:#666;">請把這個驗證碼告訴老師</div>
-        <button class="btn btn-outline" style="margin-top:8px;" onclick="navigator.clipboard?.writeText('${code}')">📋 複製驗證碼</button>
+        <div style="text-align:center; padding:8px 0;">
+            <div style="font-size:13px; color:#666;">您的驗證碼是：</div>
+            <div class="verify-code">${code}</div>
+            <div style="font-size:12px; color:#999;">請把這個驗證碼告訴老師</div>
+            <button class="btn btn-sm btn-outline mt-8" onclick="navigator.clipboard?.writeText('${code}')">📋 複製驗證碼</button>
+        </div>
     `;
-    document.getElementById('migrateMessage').innerHTML = `<div class="alert alert-success">✅ 驗證碼已產生！請將驗證碼告訴老師。</div>`;
+    document.getElementById('migrateMessage').innerHTML = `<div class="alert alert-success">✅ 驗證碼已產生並儲存！請將驗證碼告訴老師。</div>`;
 });
 
 // ==================== 密碼顯示切換 ====================
@@ -640,16 +881,16 @@ document.getElementById('togglePasswordBtn')?.addEventListener('click', function
 });
 
 // ==================== 登入按鈕 ====================
-document.getElementById('loginBtn')?.addEventListener('click', function() {
+document.getElementById('loginBtn')?.addEventListener('click', async function() {
     const userId = document.getElementById('loginUserId').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
-
+    
     if (!userId || !password) {
         showLoginError('⚠️ 請輸入登入 ID 和密碼');
         return;
     }
-
-    handleLogin(userId, password);
+    
+    await handleLogin(userId, password);
 });
 
 document.getElementById('loginPassword')?.addEventListener('keypress', function(e) {
@@ -1649,7 +1890,6 @@ function renderHistory() {
 
 function renderAchievements() {
     let container = document.getElementById('achievementsPanel');
-    if (!container) return;
     
     let chapterList = [];
     for (let u in window.ALL_UNITS) {
@@ -2764,8 +3004,8 @@ function initTabs() {
     }));
 }
 
-// ==================== renderTeacherPanel（老師後台 - 完整版，含班級管理、修改姓名、轉移可選班級） ====================
-function renderTeacherPanel() {
+// ==================== renderTeacherPanel（老師後台 - 完整版） ====================
+async function renderTeacherPanel() {
     const container = document.getElementById('teacherPanel');
     if (!container) return;
     if (!currentUser || !currentUser.isTeacher) {
@@ -2779,9 +3019,15 @@ function renderTeacherPanel() {
         updateUser(currentUser.userId, { managedClasses: currentUser.managedClasses });
     }
     
-    const allClasses = [...new Set(getUsers().users.map(u => u.className).filter(Boolean))];
     const managedClasses = currentUser.managedClasses || [currentUser.className];
     const currentClass = currentUser.currentClass || currentUser.className;
+    
+    // 從 Firebase 讀取學生數據
+    const students = await loadAllStudentsFromFirebase(currentClass);
+    
+    // 讀取班級設定（開放章節）
+    const classSettings = await loadClassSettings(currentClass) || {};
+    const openChapters = classSettings.openChapters || [];
     
     let html = `
         <div class="card">
@@ -2806,10 +3052,7 @@ function renderTeacherPanel() {
                 <button class="btn btn-small" id="manageClassesBtn" style="font-size:11px; padding:2px 10px; margin-left:6px;">管理班級</button>
             </div>
         </div>
-    `;
-    
-    // 建立學生帳戶
-    html += `
+        
         <div class="card">
             <div class="card-title">📝 建立學生帳戶</div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
@@ -2819,7 +3062,7 @@ function renderTeacherPanel() {
                 </div>
                 <div>
                     <label style="font-size:12px; font-weight:500; color:#2e0f5a;">班級</label>
-                    <input type="text" id="teacherNewClass" placeholder="3A 或 VIP" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;" value="${currentClass}">
+                    <input type="text" id="teacherNewClass" placeholder="3A" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;" value="${currentClass}">
                 </div>
                 <div>
                     <label style="font-size:12px; font-weight:500; color:#2e0f5a;">電話號碼</label>
@@ -2829,16 +3072,13 @@ function renderTeacherPanel() {
             <button class="btn btn-primary" id="teacherCreateStudentBtn" style="padding:8px 16px; font-size:13px;">✅ 建立帳戶</button>
             <div id="teacherCreateResult" class="mt-8"></div>
         </div>
-    `;
-    
-    // 學生列表
-    const classUsers = getUsers().users.filter(u => u.className === currentClass && !u.isTeacher);
-    html += `
+        
         <div class="card">
             <div class="card-title">👨‍🎓 已建立的學生（${currentClass}）</div>
             <div id="teacherStudentList">
     `;
-    if (classUsers.length === 0) {
+    
+    if (students.length === 0) {
         html += `<div style="text-align:center; color:#999; padding:16px 0; font-size:13px;">還沒有學生帳戶</div>`;
     } else {
         html += `<div style="overflow-x:auto;">
@@ -2847,15 +3087,19 @@ function renderTeacherPanel() {
                     <tr style="background:#f5f0ff;">
                         <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">姓名</th>
                         <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">學號</th>
-                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">初始密碼</th>
+                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">總題數</th>
+                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">正確率</th>
                         <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">狀態</th>
                         <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">操作</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
-        for (const s of classUsers) {
-            const status = s.isFirstLogin ? '⏳ 等待首次登入' : '✅ 已啟用';
+        for (const s of students) {
+            const stats = s.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 };
+            const total = stats.totalQuestionsAnswered || 0;
+            const acc = total > 0 ? Math.round((stats.totalCorrect || 0) / total * 100) : 0;
+            const status = s.isFirstLogin ? '⏳ 首次登入' : '✅ 已啟用';
             const statusColor = s.isFirstLogin ? '#f59e0b' : '#10b981';
             html += `
                 <tr style="border-bottom:1px solid #f0edf8;">
@@ -2864,7 +3108,8 @@ function renderTeacherPanel() {
                         <button class="btn-icon" onclick="openEditNameModal('${s.userId}')" style="font-size:12px;" title="修改姓名">✏️</button>
                     </td>
                     <td style="padding:8px 10px; color:#666;">${s.userId}</td>
-                    <td style="padding:8px 10px; text-align:center; font-family:monospace; font-weight:700; color:#4a1d8c;">${s.initialPassword}</td>
+                    <td style="padding:8px 10px; text-align:center;">${total}</td>
+                    <td style="padding:8px 10px; text-align:center; font-weight:600; color:${acc >= 70 ? '#10b981' : (acc >= 40 ? '#f59e0b' : '#dc2626')};">${acc}%</td>
                     <td style="padding:8px 10px; text-align:center;">
                         <span style="background:${statusColor}; color:white; padding:2px 12px; border-radius:12px; font-size:11px;">${status}</span>
                     </td>
@@ -2878,7 +3123,136 @@ function renderTeacherPanel() {
     }
     html += `</div></div>`;
     
-    // 舊用戶轉移
+    // 章節管理
+    html += `
+        <div class="card">
+            <div class="card-title">📖 章節開放管理</div>
+            <div style="font-size:13px; color:#666; margin-bottom:10px;">
+                勾選 = 學生可以看見該章節
+            </div>
+            <div id="chapterManagement">
+    `;
+    
+    const allChapters = [
+        { id: 5, name: '5. Atomic Structure' },
+        { id: 6, name: '6. Periodic Table' },
+        { id: 7, name: '7. Ionic Bond' },
+        { id: 8, name: '8. Covalent Bond' },
+        { id: 9, name: '9. Structures & Properties' }
+    ];
+    
+    for (const ch of allChapters) {
+        const isOpen = openChapters.includes(ch.id);
+        html += `
+            <div style="display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid #f0edf8;">
+                <input type="checkbox" id="ch_${ch.id}" ${isOpen ? 'checked' : ''} data-chapter="${ch.id}">
+                <label for="ch_${ch.id}" style="font-size:13px;">${ch.name}</label>
+                <span style="font-size:11px; color:${isOpen ? '#10b981' : '#999'}; margin-left:auto;">${isOpen ? '🔓 已開放' : '🔒 已隱藏'}</span>
+            </div>
+        `;
+    }
+    
+    html += `
+            </div>
+            <button class="btn btn-success" id="saveChaptersBtn" style="margin-top:10px; padding:8px 16px; font-size:13px;">💾 儲存章節設定</button>
+            <div id="chapterSaveResult" class="mt-8"></div>
+        </div>
+    `;
+    
+    // 錯題統計
+    html += `
+        <div class="card">
+            <div class="card-title">❌ 錯題統計</div>
+            <div id="wrongStatsContainer">
+    `;
+    
+    // 計算錯題統計
+    const wrongCount = {};
+    for (const s of students) {
+        const attempts = s.allAttempts || [];
+        for (const att of attempts) {
+            if (!att.isCorrect) {
+                wrongCount[att.qid] = (wrongCount[att.qid] || 0) + 1;
+            }
+        }
+    }
+    
+    const sortedWrong = Object.entries(wrongCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    
+    if (sortedWrong.length === 0) {
+        html += `<div style="text-align:center; color:#999; padding:12px 0; font-size:13px;">🎉 全班沒有錯題！繼續保持！</div>`;
+    } else {
+        // 從題庫中查找題目文字
+        let qTexts = {};
+        for (let u in window.ALL_UNITS) {
+            for (let c in window.ALL_UNITS[u].chapters) {
+                for (let q of window.ALL_UNITS[u].chapters[c].questions) {
+                    qTexts[q.id] = q.text;
+                }
+            }
+        }
+        for (const [qid, count] of sortedWrong) {
+            const text = qTexts[qid] || qid;
+            const shortText = text.length > 60 ? text.substring(0, 60) + '...' : text;
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f0edf8;">
+                    <span style="font-size:13px;">${shortText}</span>
+                    <span style="font-size:13px; font-weight:600; color:#dc2626;">${count} 人錯</span>
+                </div>
+            `;
+        }
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    // 成就/積分排名
+    html += `
+        <div class="card">
+            <div class="card-title">🏆 成就/積分排名</div>
+            <div id="rankContainer">
+    `;
+    
+    const ranked = [...students].sort((a, b) => {
+        const aPoints = calculateTotalPoints(a.achievements || {});
+        const bPoints = calculateTotalPoints(b.achievements || {});
+        return bPoints - aPoints;
+    }).slice(0, 10);
+    
+    if (ranked.length === 0) {
+        html += `<div style="text-align:center; color:#999; padding:12px 0; font-size:13px;">暫無數據</div>`;
+    } else {
+        const medals = ['🥇', '🥈', '🥉'];
+        for (let i = 0; i < ranked.length; i++) {
+            const s = ranked[i];
+            const points = calculateTotalPoints(s.achievements || {});
+            const medal = i < 3 ? medals[i] : `${i+1}.`;
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #f0edf8;">
+                    <span style="font-size:14px;">${medal} ${s.name}</span>
+                    <span style="font-size:14px; font-weight:600; color:#4a1d8c;">${points} 分</span>
+                </div>
+            `;
+        }
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    // 匯出全班成績
+    html += `
+        <div class="card">
+            <div class="card-title">📥 匯出數據</div>
+            <button class="btn btn-primary" id="exportClassDataBtn" style="padding:8px 16px; font-size:13px;">📥 匯出全班成績 CSV</button>
+            <div id="exportResult" class="mt-8"></div>
+        </div>
+    `;
+    
+    // 舊用戶轉移（老師操作）
     html += `
         <div class="card" style="border:2px solid #4a1d8c; background:#ede9fe;">
             <div class="card-title">🔄 舊用戶轉移（老師操作）</div>
@@ -2908,8 +3282,7 @@ function renderTeacherPanel() {
     `;
     
     // 待處理轉移請求
-    const db = getUsers();
-    const migrations = db.migrations || [];
+    const migrations = await getMigrationsFromFirebase();
     const pending = migrations.filter(m => m.status === 'pending');
     html += `
         <div class="card" style="background:#fef3c7; border:1px solid #f59e0b;">
@@ -2940,9 +3313,13 @@ function renderTeacherPanel() {
                 ✅ 修改教師姓名<br>
                 ✅ 切換管理班級<br>
                 ✅ 建立學生帳戶<br>
-                ✅ 查看學生列表<br>
+                ✅ 查看學生進度（即時）<br>
                 ✅ 修改學生姓名<br>
                 ✅ 刪除學生帳戶<br>
+                ✅ 章節開放/隱藏<br>
+                ✅ 錯題統計<br>
+                ✅ 成就/積分排名<br>
+                ✅ 匯出全班成績 CSV<br>
                 ✅ 舊用戶轉移（可選班級）<br>
                 ✅ 待處理轉移請求列表
             </div>
@@ -2973,7 +3350,6 @@ function bindTeacherEvents() {
             updateUser(currentUser.userId, { className: newClass, currentClass: newClass });
             currentUser = findUser(currentUser.userId);
             renderTeacherPanel();
-            // 重新整理練習頁面以顯示新班級的學生進度
             renderPractice();
         }
     });
@@ -3001,8 +3377,56 @@ function bindTeacherEvents() {
         renderTeacherPanel();
     });
     
+    // 儲存章節設定
+    document.getElementById('saveChaptersBtn')?.addEventListener('click', async function() {
+        const checkboxes = document.querySelectorAll('#chapterManagement input[type="checkbox"]');
+        const openChapters = [];
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                openChapters.push(parseInt(cb.dataset.chapter));
+            }
+        });
+        const className = currentUser.currentClass || currentUser.className;
+        await saveClassSettings(className, { openChapters: openChapters });
+        document.getElementById('chapterSaveResult').innerHTML = `<div class="alert alert-success">✅ 章節設定已儲存！學生重新整理後即可看到變化。</div>`;
+        setTimeout(() => {
+            document.getElementById('chapterSaveResult').innerHTML = '';
+        }, 3000);
+    });
+    
+    // 匯出全班成績
+    document.getElementById('exportClassDataBtn')?.addEventListener('click', async function() {
+        const className = currentUser.currentClass || currentUser.className;
+        const students = await loadAllStudentsFromFirebase(className);
+        if (students.length === 0) {
+            document.getElementById('exportResult').innerHTML = `<div class="alert alert-warning">⚠️ 該班級沒有學生數據</div>`;
+            return;
+        }
+        
+        let csv = [["姓名", "學號", "總題數", "正確率", "總積分", "狀態"]];
+        for (const s of students) {
+            const stats = s.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 };
+            const total = stats.totalQuestionsAnswered || 0;
+            const acc = total > 0 ? Math.round((stats.totalCorrect || 0) / total * 100) : 0;
+            const points = calculateTotalPoints(s.achievements || {});
+            const status = s.isFirstLogin ? '首次登入' : '已啟用';
+            csv.push([s.name, s.userId, total, acc + '%', points, status]);
+        }
+        
+        const blob = new Blob(["\uFEFF" + csv.map(r => r.join(",")).join("\n")], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `全班成績_${className}_${new Date().toISOString().slice(0,10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        document.getElementById('exportResult').innerHTML = `<div class="alert alert-success">✅ 匯出成功！</div>`;
+        setTimeout(() => {
+            document.getElementById('exportResult').innerHTML = '';
+        }, 3000);
+    });
+    
     // 執行轉移
-    document.getElementById('executeMigrationBtn')?.addEventListener('click', function() {
+    document.getElementById('executeMigrationBtn')?.addEventListener('click', async function() {
         const code = document.getElementById('migrationCodeInput').value.trim();
         const newId = document.getElementById('migrationNewId').value.trim();
         const targetClass = document.getElementById('migrationClass').value;
@@ -3011,22 +3435,26 @@ function bindTeacherEvents() {
             resultEl.innerHTML = `<div class="alert alert-danger">⚠️ 請輸入驗證碼和新學號</div>`;
             return;
         }
-        const db = getUsers();
-        const migration = (db.migrations || []).find(m => m.code === code && m.status === 'pending');
+        
+        const migration = await getMigrationByCodeFromFirebase(code);
         if (!migration) {
             resultEl.innerHTML = `<div class="alert alert-danger">❌ 驗證碼不存在或已被使用</div>`;
             return;
         }
+        
+        const db = getUsers();
         if (db.users.some(u => u.userId === newId)) {
             resultEl.innerHTML = `<div class="alert alert-danger">❌ 學號 ${newId} 已被使用</div>`;
             return;
         }
+        
+        const initialPassword = generateRandomPassword();
         const newStudent = {
             userId: newId,
             name: '已轉移用戶',
             className: targetClass,
             phone: '00000000',
-            initialPassword: generateRandomPassword(),
+            initialPassword: initialPassword,
             password: null,
             isFirstLogin: true,
             isTeacher: false,
@@ -3039,16 +3467,32 @@ function bindTeacherEvents() {
             achievements: migration.oldData?.achievements || {},
             stats: migration.oldData?.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 }
         };
+        
+        // 存入 localStorage
         db.users.push(newStudent);
-        migration.status = 'completed';
-        migration.completedAt = new Date().toISOString();
-        migration.newUserId = newId;
         saveUsers(db);
+        
+        // 存入 Firebase
+        if (firestoreEnabled) {
+            try {
+                await firebase.firestore()
+                    .collection('users')
+                    .doc(newId)
+                    .set(newStudent, { merge: true });
+                console.log('✅ 轉移用戶已存入 Firebase:', newId);
+            } catch(e) {
+                console.warn('⚠️ Firebase 儲存失敗:', e.message);
+            }
+        }
+        
+        await updateMigrationStatusInFirebase(code, 'completed', newId);
+        
         resultEl.innerHTML = `
             <div class="alert alert-success">✅ 轉移成功！<br>
             🆔 新學號：<strong>${newId}</strong><br>
             📚 班級：${targetClass}<br>
-            🔑 初始密碼：<strong style="font-family:monospace;">${newStudent.initialPassword}</strong>
+            🔑 初始密碼：<strong style="font-family:monospace;">${initialPassword}</strong><br>
+            📊 舊數據已完整轉移（${Object.keys(migration.oldData?.latestStatus || {}).length} 題進度）
             </div>
         `;
         document.getElementById('migrationCodeInput').value = '';
@@ -3128,6 +3572,49 @@ function setupLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', logout);
+    }
+}
+
+// ==================== 載入班級設定 ====================
+async function loadClassSettings(className) {
+    if (!firestoreEnabled) {
+        const db = getUsers();
+        return db.classSettings || {};
+    }
+    try {
+        const doc = await firebase.firestore()
+            .collection('classes')
+            .doc(className)
+            .get();
+        if (doc.exists) {
+            return doc.data() || {};
+        }
+        return {};
+    } catch(e) {
+        console.warn('⚠️ Firebase 讀取失敗:', e.message);
+        const db = getUsers();
+        return db.classSettings || {};
+    }
+}
+
+async function saveClassSettings(className, settings) {
+    if (!firestoreEnabled) {
+        const db = getUsers();
+        db.classSettings = { ...db.classSettings, [className]: settings };
+        saveUsers(db);
+        return;
+    }
+    try {
+        await firebase.firestore()
+            .collection('classes')
+            .doc(className)
+            .set(settings, { merge: true });
+        console.log(`✅ 班級 ${className} 設定已儲存`);
+    } catch(e) {
+        console.warn('⚠️ Firebase 儲存失敗:', e.message);
+        const db = getUsers();
+        db.classSettings = { ...db.classSettings, [className]: settings };
+        saveUsers(db);
     }
 }
 
