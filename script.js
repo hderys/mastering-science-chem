@@ -528,7 +528,7 @@ function generateUserId(className) {
     return String(num).padStart(6, '0');
 }
 
-// ==================== 建立用戶（支援自訂學號） ====================
+// ==================== 建立用戶（支援自訂學號 + Firebase Auth） ====================
 function createUser(name, className, phone, customUserId = null) {
     const db = getUsers();
     const userId = customUserId || generateUserId(className);
@@ -562,6 +562,19 @@ function createUser(name, className, phone, customUserId = null) {
             .set(user, { merge: true })
             .then(() => console.log('✅ 用戶已存入 Firebase:', userId))
             .catch(e => console.warn('⚠️ Firebase 儲存失敗:', e.message));
+    }
+    
+    // 建立 Firebase Auth 帳戶（重要！手機登入需要）
+    if (firestoreEnabled) {
+        const email = userId + '@ms.com';
+        firebase.auth().createUserWithEmailAndPassword(email, initialPassword)
+            .then(() => console.log('✅ Firebase Auth 帳戶已建立:', userId))
+            .catch(e => {
+                // 如果帳戶已存在，不視為錯誤
+                if (e.code !== 'auth/email-already-in-use') {
+                    console.warn('⚠️ Firebase Auth 建立失敗:', e.message);
+                }
+            });
     }
     
     return user;
@@ -859,105 +872,6 @@ document.getElementById('confirmPassword')?.addEventListener('keypress', functio
         document.getElementById('changePasswordBtn').click();
     }
 });
-
-// ==================== 舊帳戶轉移（點選方式，無需登入） ====================
-document.getElementById('migrateAccountLink')?.addEventListener('click', function() {
-    const modal = document.getElementById('migrateAccountModal');
-    modal.classList.add('show');
-    
-    const listEl = document.getElementById('migrateAccountList');
-    const codeDisplay = document.getElementById('migrateCodeDisplay');
-    const msgEl = document.getElementById('migrateMessage');
-    codeDisplay.innerHTML = '';
-    msgEl.innerHTML = '';
-    
-    // 掃描所有舊帳戶（包含 _ 的，如 VIP_張小華）
-    const db = getUsers();
-    const oldAccounts = db.users.filter(u => u.userId && u.userId.includes('_'));
-    
-    if (oldAccounts.length === 0) {
-        listEl.innerHTML = `<div class="no-accounts-msg">📭 沒有找到舊帳戶。<br>如果您之前是用學號登入，請直接使用學號登入。</div>`;
-        return;
-    }
-    
-    let html = `<div style="display:flex; flex-direction:column; gap:8px;">
-        <div style="font-size:13px; color:#666; margin-bottom:4px;">請選擇您的舊帳戶：</div>`;
-    
-    for (const acc of oldAccounts) {
-        const totalQ = acc.stats?.totalQuestionsAnswered || 0;
-        const totalCorrect = acc.stats?.totalCorrect || 0;
-        const accRate = totalQ > 0 ? Math.round(totalCorrect / totalQ * 100) : 0;
-        const rateClass = accRate >= 70 ? 'high' : (accRate >= 40 ? 'medium' : 'low');
-        
-        html += `
-            <button class="old-account-item" data-userid="${acc.userId}">
-                <div>
-                    <div class="account-name">👤 ${acc.name}</div>
-                    <div class="account-class">📚 ${acc.className} 班</div>
-                </div>
-                <div class="account-stats">
-                    <div class="count">${totalQ} 題</div>
-                    <div class="accuracy ${rateClass}">正確率 ${accRate}%</div>
-                </div>
-            </button>
-        `;
-    }
-    html += `</div>`;
-    listEl.innerHTML = html;
-    
-    // 綁定點擊事件
-    document.querySelectorAll('.old-account-item').forEach(btn => {
-        btn.addEventListener('click', async function() {
-            const userId = this.dataset.userid;
-            await generateMigrationCode(userId);
-        });
-    });
-});
-
-async function generateMigrationCode(userId) {
-    const db = getUsers();
-    const user = db.users.find(u => u.userId === userId);
-    const codeDisplay = document.getElementById('migrateCodeDisplay');
-    const msgEl = document.getElementById('migrateMessage');
-    
-    if (!user) {
-        msgEl.innerHTML = `<div class="alert alert-danger">❌ 找不到該帳戶</div>`;
-        return;
-    }
-    
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    
-    const oldData = {
-        latestStatus: user.latestStatus || {},
-        allAttempts: user.allAttempts || [],
-        favorites: user.favorites || [],
-        practiceHistory: user.practiceHistory || [],
-        achievements: user.achievements || {},
-        stats: user.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 }
-    };
-    
-    const migrationData = {
-        code: code,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        oldUserId: user.userId,
-        oldName: user.name,
-        oldClass: user.className,
-        oldData: oldData
-    };
-    
-    await saveMigrationToFirebase(migrationData);
-    
-    codeDisplay.innerHTML = `
-        <div style="text-align:center; padding:8px 0;">
-            <div style="font-size:13px; color:#666;">您的驗證碼是：</div>
-            <div class="verify-code">${code}</div>
-            <div style="font-size:12px; color:#999;">請把這個驗證碼告訴老師</div>
-            <button class="btn btn-sm btn-outline mt-8" onclick="navigator.clipboard?.writeText('${code}')">📋 複製驗證碼</button>
-        </div>
-    `;
-    msgEl.innerHTML = `<div class="alert alert-success">✅ 驗證碼已產生並儲存！請將驗證碼告訴老師。</div>`;
-}
 
 // ==================== 密碼顯示切換 ====================
 document.getElementById('togglePasswordBtn')?.addEventListener('click', function() {
@@ -3139,7 +3053,7 @@ async function renderTeacherPanel() {
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
                 <div>
                     <label style="font-size:12px; font-weight:500; color:#2e0f5a;">學號（可自訂）</label>
-                    <input type="text" id="teacherNewId" placeholder="VIP123 或留空自動" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
+                    <input type="text" id="teacherNewId" placeholder="留空自動產生" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
                 </div>
                 <div>
                     <label style="font-size:12px; font-weight:500; color:#2e0f5a;">姓名</label>
@@ -3341,59 +3255,7 @@ async function renderTeacherPanel() {
         </div>
     `;
     
-    // 舊用戶轉移（老師操作）
-    html += `
-        <div class="card" style="border:2px solid #4a1d8c; background:#ede9fe;">
-            <div class="card-title">🔄 舊用戶轉移（老師操作）</div>
-            <div style="font-size:13px; color:#2e0f5a; margin-bottom:10px;">
-                學生在登入頁面點擊「已有帳號？點此轉移」，會獲得一組 6 位數驗證碼。<br>
-                請學生把驗證碼告訴您，您在下方的輸入框中輸入，即可完成轉移。
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
-                <div>
-                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">驗證碼</label>
-                    <input type="text" id="migrationCodeInput" placeholder="例如：482391" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;" maxlength="6">
-                </div>
-                <div>
-                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">新學號</label>
-                    <input type="text" id="migrationNewId" placeholder="例如：VIP001" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
-                </div>
-                <div>
-                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">目標班級</label>
-                    <select id="migrationClass" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none; background:white;">
-                        ${managedClasses.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>`).join('')}
-                    </select>
-                </div>
-            </div>
-            <button class="btn btn-success" id="executeMigrationBtn">✅ 執行轉移</button>
-            <div id="migrationResult" class="mt-8"></div>
-        </div>
-    `;
-    
-    // 待處理轉移請求
-    const migrations = await getMigrationsFromFirebase();
-    const pending = migrations.filter(m => m.status === 'pending');
-    html += `
-        <div class="card" style="background:#fef3c7; border:1px solid #f59e0b;">
-            <div class="card-title">🔄 待處理的轉移請求</div>
-            <div id="migrationStatusContainer">
-    `;
-    if (pending.length === 0) {
-        html += `<div style="text-align:center; color:#999; padding:12px 0; font-size:13px;">目前沒有待處理的轉移請求</div>`;
-    } else {
-        html += `<div style="font-size:13px; line-height:2;">`;
-        for (const m of pending) {
-            html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #f0edf8;">
-                    <span><strong>驗證碼：</strong><span style="font-family:monospace; font-weight:700; color:#4a1d8c;">${m.code}</span></span>
-                    <span style="color:#888;">⏳ 等待老師處理</span>
-                    <span style="font-size:12px; color:#999;">${new Date(m.createdAt).toLocaleString()}</span>
-                </div>
-            `;
-        }
-        html += `</div>`;
-    }
-    html += `</div></div>`;
+    // 舊用戶轉移功能已移除，不再顯示
     
     html += `
         <div class="card" style="background:#f0fdf4; border:1px solid #10b981;">
@@ -3405,13 +3267,11 @@ async function renderTeacherPanel() {
                 ✅ 查看學生進度（即時）<br>
                 ✅ 修改學生姓名<br>
                 ✅ 刪除學生帳戶<br>
-                ✅ 查看學生初始密碼<br>
+                ✅ 查看學生初始密碼（可複製）<br>
                 ✅ 章節開放/隱藏<br>
                 ✅ 錯題統計<br>
                 ✅ 成就/積分排名<br>
-                ✅ 匯出全班成績 CSV<br>
-                ✅ 舊用戶轉移（可選班級）<br>
-                ✅ 待處理轉移請求列表
+                ✅ 匯出全班成績 CSV
             </div>
         </div>
     `;
@@ -3420,6 +3280,7 @@ async function renderTeacherPanel() {
     bindTeacherEvents();
 }
 
+// ==================== 顯示學生密碼（可複製） ====================
 function showStudentPassword(userId) {
     const user = findUser(userId);
     if (!user) {
@@ -3427,7 +3288,43 @@ function showStudentPassword(userId) {
         return;
     }
     const password = user.initialPassword || '（已修改密碼）';
-    alert(`🔑 ${user.name}（${user.userId}）的初始密碼：\n\n${password}\n\n⚠️ 如果學生已修改過密碼，這個密碼可能已經無效。`);
+    
+    // 用獨立彈窗顯示，含複製按鈕
+    const modalHtml = `
+        <div id="passwordModal" style="
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
+            z-index: 10000;
+        ">
+            <div style="
+                background: white; border-radius: 24px; padding: 32px; 
+                max-width: 420px; width: 90%; text-align: center;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            ">
+                <div style="font-size: 36px; margin-bottom: 8px;">🔑</div>
+                <h2 style="color: #2e0f5a; margin-bottom: 4px;">學生初始密碼</h2>
+                <div style="color: #888; font-size: 14px; margin-bottom: 16px;">${user.name}（${user.userId}）</div>
+                <div style="
+                    font-family: monospace; font-size: 24px; 
+                    background: #f0f0f0; padding: 12px 20px; border-radius: 8px;
+                    display: inline-block; margin-bottom: 16px;
+                    letter-spacing: 2px;
+                ">${password}</div>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="navigator.clipboard?.writeText('${password}').then(() => alert('✅ 密碼已複製！')).catch(() => alert('⚠️ 請手動複製'))" style="
+                        background: #4a1d8c; color: white; border: none; 
+                        padding: 8px 24px; border-radius: 40px; font-size: 14px; cursor: pointer;
+                    ">📋 複製密碼</button>
+                    <button onclick="document.getElementById('passwordModal').remove()" style="
+                        background: white; color: #666; border: 1px solid #ddd; 
+                        padding: 8px 24px; border-radius: 40px; font-size: 14px; cursor: pointer;
+                    ">關閉</button>
+                </div>
+                <div style="font-size: 12px; color: #f59e0b; margin-top: 12px;">⚠️ 如果學生已修改過密碼，這個密碼可能已經無效</div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
 function bindTeacherEvents() {
@@ -3452,33 +3349,63 @@ function bindTeacherEvents() {
         }
     });
     
+    // 建立學生（包含獨立彈窗顯示密碼）
     document.getElementById('teacherCreateStudentBtn')?.addEventListener('click', function() {
         const customId = document.getElementById('teacherNewId').value.trim() || null;
         const name = document.getElementById('teacherNewName').value.trim();
         const className = document.getElementById('teacherNewClass').value.trim() || currentUser.className;
         const phone = document.getElementById('teacherNewPhone').value.trim();
         const resultEl = document.getElementById('teacherCreateResult');
+        
         if (!name || !phone) {
             resultEl.innerHTML = `<div class="alert alert-danger">⚠️ 請填寫姓名和電話號碼</div>`;
             return;
         }
+        
         const newUser = createUser(name, className, phone, customId);
-        resultEl.innerHTML = `
-            <div class="alert alert-success" style="position:relative; border-left:4px solid #10b981; padding:16px;">
-                <button onclick="this.parentElement.remove()" style="position:absolute; top:8px; right:12px; background:none; border:none; font-size:20px; cursor:pointer; color:#999;">✕</button>
-                <div style="font-size:16px; font-weight:700; color:#065f46;">✅ 帳戶已建立！</div>
-                <div style="margin-top:8px; line-height:1.8;">
-                    <div>👤 姓名：<strong>${newUser.name}</strong></div>
-                    <div>🆔 學號：<strong style="font-size:20px; color:#4a1d8c;">${newUser.userId}</strong></div>
-                    <div>🔑 初始密碼：<strong style="font-size:20px; font-family:monospace; background:#f0f0f0; padding:2px 12px; border-radius:6px;">${newUser.initialPassword}</strong></div>
-                    <div style="font-size:13px; color:#666; margin-top:6px;">📌 請將學號和密碼告訴學生</div>
-                    <div style="font-size:13px; color:#f59e0b; margin-top:4px;">⚠️ 學生第一次登入時會要求修改密碼</div>
-                </div>
-            </div>
-        `;
+        
+        // 清空輸入框
         document.getElementById('teacherNewId').value = '';
         document.getElementById('teacherNewName').value = '';
         document.getElementById('teacherNewPhone').value = '';
+        
+        // 用獨立彈窗顯示結果（不會消失，可複製）
+        const modalHtml = `
+            <div id="createSuccessModal" style="
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
+                z-index: 10000;
+            ">
+                <div style="
+                    background: white; border-radius: 24px; padding: 32px; 
+                    max-width: 420px; width: 90%; text-align: center;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                ">
+                    <div style="font-size: 48px; margin-bottom: 8px;">✅</div>
+                    <h2 style="color: #065f46; margin-bottom: 12px;">帳戶已建立！</h2>
+                    <div style="text-align: left; line-height: 2; font-size: 15px;">
+                        <div>👤 姓名：<strong>${newUser.name}</strong></div>
+                        <div>🆔 學號：<strong style="font-size: 20px; color: #4a1d8c;">${newUser.userId}</strong></div>
+                        <div>
+                            🔑 密碼：
+                            <span style="font-family: monospace; font-size: 20px; background: #f0f0f0; padding: 2px 12px; border-radius: 6px; display: inline-block;">${newUser.initialPassword}</span>
+                            <button onclick="navigator.clipboard?.writeText('${newUser.initialPassword}').then(() => alert('✅ 密碼已複製！')).catch(() => alert('⚠️ 請手動複製'))" style="
+                                background: #4a1d8c; color: white; border: none; 
+                                padding: 2px 14px; border-radius: 20px; cursor: pointer; font-size: 13px;
+                            ">📋 複製</button>
+                        </div>
+                    </div>
+                    <div style="font-size: 13px; color: #f59e0b; margin: 8px 0;">⚠️ 學生第一次登入時會要求修改密碼</div>
+                    <button onclick="document.getElementById('createSuccessModal').remove()" style="
+                        background: #4a1d8c; color: white; border: none; 
+                        padding: 10px 40px; border-radius: 40px; font-size: 16px; cursor: pointer; font-weight: 600;
+                    ">我知道了</button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // 重新整理老師後台（但保留彈窗）
         renderTeacherPanel();
     });
     
@@ -3528,78 +3455,6 @@ function bindTeacherEvents() {
         }, 3000);
     });
     
-    document.getElementById('executeMigrationBtn')?.addEventListener('click', async function() {
-        const code = document.getElementById('migrationCodeInput').value.trim();
-        const newId = document.getElementById('migrationNewId').value.trim();
-        const targetClass = document.getElementById('migrationClass').value;
-        const resultEl = document.getElementById('migrationResult');
-        if (!code || !newId) {
-            resultEl.innerHTML = `<div class="alert alert-danger">⚠️ 請輸入驗證碼和新學號</div>`;
-            return;
-        }
-        
-        const migration = await getMigrationByCodeFromFirebase(code);
-        if (!migration) {
-            resultEl.innerHTML = `<div class="alert alert-danger">❌ 驗證碼不存在或已被使用</div>`;
-            return;
-        }
-        
-        const db = getUsers();
-        if (db.users.some(u => u.userId === newId)) {
-            resultEl.innerHTML = `<div class="alert alert-danger">❌ 學號 ${newId} 已被使用</div>`;
-            return;
-        }
-        
-        const initialPassword = generateRandomPassword();
-        const newStudent = {
-            userId: newId,
-            name: migration.oldName || '已轉移用戶',
-            className: targetClass,
-            phone: '00000000',
-            initialPassword: initialPassword,
-            password: null,
-            isFirstLogin: true,
-            isTeacher: false,
-            managedClasses: [targetClass],
-            createdAt: new Date().toISOString(),
-            latestStatus: migration.oldData?.latestStatus || {},
-            allAttempts: migration.oldData?.allAttempts || [],
-            favorites: migration.oldData?.favorites || [],
-            practiceHistory: migration.oldData?.practiceHistory || [],
-            achievements: migration.oldData?.achievements || {},
-            stats: migration.oldData?.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 }
-        };
-        
-        db.users.push(newStudent);
-        saveUsers(db);
-        
-        if (firestoreEnabled) {
-            try {
-                await firebase.firestore()
-                    .collection('users')
-                    .doc(newId)
-                    .set(newStudent, { merge: true });
-                console.log('✅ 轉移用戶已存入 Firebase:', newId);
-            } catch(e) {
-                console.warn('⚠️ Firebase 儲存失敗:', e.message);
-            }
-        }
-        
-        await updateMigrationStatusInFirebase(code, 'completed', newId);
-        
-        resultEl.innerHTML = `
-            <div class="alert alert-success">✅ 轉移成功！<br>
-            🆔 新學號：<strong>${newId}</strong><br>
-            📚 班級：${targetClass}<br>
-            🔑 初始密碼：<strong style="font-family:monospace;">${initialPassword}</strong><br>
-            📊 舊數據已完整轉移（${Object.keys(migration.oldData?.latestStatus || {}).length} 題進度）
-            </div>
-        `;
-        document.getElementById('migrationCodeInput').value = '';
-        document.getElementById('migrationNewId').value = '';
-        renderTeacherPanel();
-    });
-    
     document.getElementById('manageClassesBtn')?.addEventListener('click', function() {
         const currentClasses = currentUser.managedClasses || [currentUser.className];
         const input = prompt('請輸入您要管理的班級（用逗號分隔）：\n例如：3A,3B,3C', currentClasses.join(','));
@@ -3612,6 +3467,8 @@ function bindTeacherEvents() {
             alert('✅ 班級管理已更新！');
         }
     });
+    
+    // 移除舊用戶轉移相關事件
 }
 
 function openEditNameModal(userId) {
@@ -3728,9 +3585,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // 難度選擇
     document.getElementById('diff-easy').addEventListener('click', () => { selectedDifficulty = 0; document.getElementById('diff-easy').classList.add('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
     document.getElementById('diff-medium').addEventListener('click', () => { if (document.getElementById('diff-medium').disabled) return; selectedDifficulty = 1; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.add('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
     document.getElementById('diff-hard').addEventListener('click', () => { if (document.getElementById('diff-hard').disabled) return; selectedDifficulty = 2; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.add('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
+    
+    // 題數選擇
     document.getElementById('count-10').addEventListener('click', () => {
         selectedCount = 10;
         customCount = 10;
@@ -3760,6 +3620,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const customInput = document.getElementById('customCount');
         if (customInput) customInput.value = 36;
     });
+    
+    // 試煉模式
     document.getElementById('trial-mode').addEventListener('click', () => {
         if (document.getElementById('trial-mode').disabled) return;
         isTrialMode = true;
@@ -3777,8 +3639,10 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSettingsUnlockStatus();
     });
     
+    // 一鍵解鎖
     document.getElementById('devUnlockBtn').addEventListener('click', unlockAll);
     
+    // 排除翻譯題
     const excludeTranslateCheckbox = document.getElementById('excludeTranslate');
     if (excludeTranslateCheckbox) {
         excludeTranslateCheckbox.addEventListener('change', (e) => {
@@ -3787,6 +3651,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // 自訂題數
     const customInput = document.getElementById('customCount');
     if (customInput) {
         customInput.addEventListener('change', (e) => {
@@ -3804,6 +3669,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // 開始練習
     document.getElementById('startPracticeBtn').addEventListener('click', () => {
         if (window._singleRedoQid) {
             let qid = window._singleRedoQid;
@@ -3827,19 +3693,29 @@ document.addEventListener('DOMContentLoaded', function() {
             startPracticeWithSettings();
         }
     });
+    
+    // 取消
     document.getElementById('cancelSettingsBtn').addEventListener('click', () => document.getElementById('settingsModal').style.display = 'none');
+    
+    // 關閉題解
     document.getElementById('closeExplainBtn').addEventListener('click', () => { document.getElementById('explainModal').style.display = 'none'; if (lastResults) displayResults(lastResults); });
+    
+    // 提交答案（手機版）
     document.getElementById('submitAllBtn').addEventListener('click', () => submitAll());
+    
+    // 關閉結果
     document.getElementById('closeResultBtn').addEventListener('click', () => document.getElementById('resultModal').style.display = 'none');
     document.getElementById('closeZoomBtn').addEventListener('click', closeImageZoom);
+    
+    // 上一題 / 下一題（手機版）
     document.getElementById('prevBtn').addEventListener('click', () => { if (currentQIndex > 0) { currentQIndex--; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
     document.getElementById('nextBtn').addEventListener('click', () => { if (currentQIndex < currentQuestions.length - 1) { currentQIndex++; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
     
+    // 桌面版
     const desktopSubmitBtn = document.getElementById('desktopSubmitBtn');
     if (desktopSubmitBtn) {
         desktopSubmitBtn.addEventListener('click', submitDesktopAll);
     }
-    
     const desktopPrevBtn = document.getElementById('desktopPrevBtn');
     const desktopNextBtn = document.getElementById('desktopNextBtn');
     if (desktopPrevBtn) {
@@ -3862,7 +3738,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
     const desktopPeriodicBtn = document.getElementById('desktopPeriodicBtn');
     if (desktopPeriodicBtn) {
         desktopPeriodicBtn.addEventListener('click', showPeriodicTable);

@@ -237,60 +237,31 @@
             display: none !important;
         }
 
-        /* ===== 舊帳戶列表樣式 ===== */
-        .old-account-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            border: 2px solid #e0d6f5;
-            border-radius: 12px;
+        /* ===== 複製按鈕 ===== */
+        .copy-btn {
+            background: #f0f0f0;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
             cursor: pointer;
-            transition: all 0.2s;
-            background: white;
-            margin-bottom: 8px;
-            width: 100%;
-            text-align: left;
-        }
-        .old-account-item:hover {
-            border-color: #4a1d8c;
-            background: #f5f0ff;
-            transform: translateY(-1px);
-        }
-        .old-account-item .account-name {
-            font-weight: 600;
-            font-size: 15px;
-            color: #2e0f5a;
-        }
-        .old-account-item .account-class {
-            font-size: 13px;
-            color: #888;
-        }
-        .old-account-item .account-stats {
-            font-size: 13px;
-            text-align: right;
-        }
-        .old-account-item .account-stats .count {
-            font-weight: 600;
+            font-weight: 500;
             color: #4a1d8c;
+            margin-left: 8px;
         }
-        .old-account-item .account-stats .accuracy {
-            font-weight: 600;
+        .copy-btn:hover {
+            background: #e0d6f5;
         }
-        .old-account-item .account-stats .accuracy.high {
-            color: #10b981;
-        }
-        .old-account-item .account-stats .accuracy.medium {
-            color: #f59e0b;
-        }
-        .old-account-item .account-stats .accuracy.low {
-            color: #dc2626;
-        }
-        .no-accounts-msg {
-            text-align: center;
-            color: #999;
-            padding: 20px 0;
-            font-size: 14px;
+
+        /* ===== 密碼顯示 ===== */
+        .password-display {
+            font-family: monospace;
+            font-size: 20px;
+            background: #f0f0f0;
+            padding: 4px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 4px 0;
         }
     </style>
     
@@ -329,7 +300,7 @@
     <button id="dismissOrientationBtn" class="dismiss-btn">我知道了 / Got it</button>
 </div>
 
-<!-- ===== 登入畫面（新版：ID + 密碼） ===== -->
+<!-- ===== 登入畫面 ===== -->
 <div id="loginScreen" style="max-width: 400px; margin: 80px auto;" class="card">
     <h2 style="color: var(--deep-purple); font-size: clamp(1.2rem, 6vw, 1.6rem);">🧪 Mastering Science</h2>
     <div style="margin: 8px 0 16px;"><div>一步步掌握科學概念</div><div>Master science, one step at a time</div></div>
@@ -360,8 +331,6 @@
         <span>第一次登入？請向老師索取初始密碼</span>
         <br>
         <button id="forgotPasswordLink" style="background:none; border:none; color:#4a1d8c; cursor:pointer; text-decoration:underline; font-size:0.8rem; margin-top:4px;">🔑 忘記密碼？</button>
-        <br>
-        <button id="migrateAccountLink" style="background:none; border:none; color:#4a1d8c; cursor:pointer; text-decoration:underline; font-size:0.8rem; margin-top:4px;">🔄 已有帳號？點此轉移</button>
     </div>
 </div>
 
@@ -406,25 +375,6 @@
         <button class="btn btn-success" id="changePasswordBtn">✅ 確認修改</button>
         <button class="btn btn-outline mt-8" id="changePasswordCancelBtn">取消</button>
         <div id="changePasswordMessage" class="mt-8"></div>
-    </div>
-</div>
-
-<!-- ===== 舊用戶轉移彈窗（學生端 - 無需登入，點選方式） ===== -->
-<div class="modal-overlay" id="migrateAccountModal">
-    <div class="modal-box">
-        <button class="close-btn" onclick="closeModal('migrateAccountModal')">✕</button>
-        <h2>🔄 舊帳戶轉移</h2>
-        <div class="sub">如果您之前是用「姓名 + 班級」登入，請選擇您的舊帳戶。</div>
-
-        <div id="migrateAccountList" class="mt-8">
-            <!-- 動態顯示帳戶列表 -->
-            <div class="no-accounts-msg">⏳ 正在掃描帳戶...</div>
-        </div>
-
-        <div id="migrateCodeDisplay" class="mt-8"></div>
-        <div id="migrateMessage" class="mt-8"></div>
-
-        <button class="btn btn-outline mt-8" onclick="closeModal('migrateAccountModal')">返回登入</button>
     </div>
 </div>
 
@@ -507,10 +457,10 @@
 
 <div id="explainModal" class="modal"><div class="modal-content"><div id="explainContent" class="explain-content"></div><button id="closeExplainBtn" class="btn">返回成績總表</button></div></div>
 
-<!-- ===== 手機版問題彈窗（完全不變） ===== -->
+<!-- ===== 手機版問題彈窗 ===== -->
 <div id="quizModal" class="modal"><div class="modal-content"><div class="quiz-header"><span id="quizDifficulty"></span><span id="quizCounter"></span><span id="timerDisplay" class="quiz-timer">00:00</span></div><div id="questionNav" class="question-nav"></div><div class="quiz-body"><div id="modalQuestionText" class="question-text"></div><div id="modalImageArea"></div><div id="modalOptions"></div></div><div class="quiz-footer"><button id="prevBtn" class="btn btn-outline">◀ 上一題</button><button id="nextBtn" class="btn btn-outline">下一題 ▶</button><button id="submitAllBtn" class="btn" style="background:#10b981;">提交答案</button></div></div></div>
 
-<!-- ===== 桌面版獨立彈窗（全新設計，完全不影響手機版） ===== -->
+<!-- ===== 桌面版獨立彈窗 ===== -->
 <div id="desktopQuizModal" class="modal">
     <div class="modal-content">
         <div class="main-panel" id="desktopMainPanel">
