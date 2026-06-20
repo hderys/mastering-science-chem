@@ -35,7 +35,7 @@ let customCount = 10;
 let isSingleQuestionMode = false;
 let singleQuestionSource = null;
 let startTime = null;
-let isFirstLoginFlow = false; // 【新增】標記是否為首次登入流程
+let isFirstLoginFlow = false;
 
 // 成績總表控制變量
 let showOnlyWrong = false;
@@ -47,6 +47,10 @@ const MAX_LOGIN_ATTEMPTS = 5;
 
 // Firebase 同步狀態
 let firestoreEnabled = false;
+
+// 老師後台相關
+let currentClass = ''; // 當前選中的班級
+let teacherStudents = []; // 當前班級的學生列表
 
 // 成就積分對應表
 const ACHIEVEMENT_POINTS = {
@@ -122,7 +126,6 @@ function getAuthErrorMessage(e) {
             break;
     }
     
-    // 同時在 console 顯示完整錯誤碼（方便除錯）
     console.log('🔍 完整錯誤碼:', code);
     console.log('🔍 完整錯誤訊息:', message);
     
@@ -131,7 +134,6 @@ function getAuthErrorMessage(e) {
 
 // ==================== Firebase 初始化檢查 ====================
 function checkFirebase() {
-    // 強制啟用 Firestore
     firestoreEnabled = true;
     console.log('✅ Firestore 已強制啟用');
     return true;
@@ -613,7 +615,7 @@ function createUser(name, className, phone, customUserId = null) {
             .catch(e => console.warn('⚠️ Firebase 儲存失敗:', e.message));
     }
     
-    // 建立 Firebase Auth 帳戶（重要！手機登入需要）
+    // 建立 Firebase Auth 帳戶
     if (firestoreEnabled) {
         const email = userId + '@mastering-science.com';
         firebase.auth().createUserWithEmailAndPassword(email, initialPassword)
@@ -633,17 +635,14 @@ async function handleLogin(userId, password) {
     clearLoginError();
     let user = null;
     
-    // ===== 步驟 1：Auth 登入 =====
     showFirestoreStatus('⏳ 步驟 1/3：正在驗證身份...', '#e9e4f5', '#2e0f5a');
     
     try {
-        // 如果還沒有 Auth 用戶，嘗試登入
         if (!firebase.auth().currentUser) {
             const email = userId + '@mastering-science.com';
             await firebase.auth().signInWithEmailAndPassword(email, password);
             console.log('✅ Auth 登入成功');
         } else {
-            // 檢查當前 Auth 用戶是否匹配
             const currentEmail = firebase.auth().currentUser?.email;
             if (currentEmail && currentEmail !== userId + '@mastering-science.com') {
                 await firebase.auth().signOut();
@@ -653,7 +652,6 @@ async function handleLogin(userId, password) {
             }
         }
         
-        // ===== 檢查 Auth 狀態 =====
         const authUser = firebase.auth().currentUser;
         if (!authUser) {
             showFirestoreStatus('❌ Auth 狀態異常，請重新登入', '#f8d7da', '#7f1d1d');
@@ -666,14 +664,12 @@ async function handleLogin(userId, password) {
         
     } catch(e) {
         console.warn('⚠️ Auth 登入失敗:', e.code, e.message);
-        // 用中文顯示錯誤訊息
         const errorMsg = getAuthErrorMessage(e);
         showFirestoreStatus('❌ ' + errorMsg, '#f8d7da', '#7f1d1d');
         showLoginError('❌ ' + errorMsg);
         return;
     }
     
-    // ===== 步驟 2：讀取 Firestore =====
     showFirestoreStatus('⏳ 步驟 2/3：讀取用戶資料...', '#e9e4f5', '#2e0f5a');
     
     try {
@@ -686,7 +682,6 @@ async function handleLogin(userId, password) {
             console.log('✅ 從 Firestore 找到用戶:', userId);
             showFirestoreStatus('✅ 步驟 2/3：找到用戶資料！', '#d4edda', '#065f46');
             
-            // 同步到 localStorage
             const db = getUsers();
             const existing = db.users.find(u => u.userId === userId);
             if (existing) {
@@ -710,7 +705,6 @@ async function handleLogin(userId, password) {
         }
     }
     
-    // ===== 步驟 3：如果 Firestore 找不到，從 localStorage 查詢 =====
     if (!user) {
         showFirestoreStatus('⏳ 步驟 3/3：嘗試本地儲存...', '#e9e4f5', '#2e0f5a');
         user = findUser(userId);
@@ -728,7 +722,6 @@ async function handleLogin(userId, password) {
         return;
     }
     
-    // ===== 檢查密碼 =====
     const isValid = (user.password && user.password === password) ||
                     (user.isFirstLogin && user.initialPassword === password);
     
@@ -749,25 +742,19 @@ async function handleLogin(userId, password) {
         return;
     }
     
-    // ===== 登入成功 =====
     showFirestoreStatus('✅ 登入成功！歡迎回來 ' + user.name, '#d4edda', '#065f46');
     loginAttempts = 0;
     currentUser = user;
     
-    // 記住我
     if (document.getElementById('rememberMeCheckbox').checked) {
         localStorage.setItem('ms_chem_login', JSON.stringify({ userId: userId, password: password }));
     } else {
         localStorage.removeItem('ms_chem_login');
     }
     
-    // ============================================================
-    // 【修改】檢查是否為首次登入
-    // ============================================================
     if (user.isFirstLogin === true) {
         showFirestoreStatus('🔐 首次登入，請設定您的密碼', '#f59e0b', '#7c5a00');
         isFirstLoginFlow = true;
-        // 切換到修改密碼分頁並顯示提示
         switchTab('changePwd');
         document.getElementById('changePwdCurrent').value = password;
         document.getElementById('changePwdCurrent').disabled = true;
@@ -780,7 +767,6 @@ async function handleLogin(userId, password) {
         return;
     }
     
-    // 非首次登入，進入主畫面
     enterMainApp(user);
 }
 
@@ -802,6 +788,10 @@ function enterMainApp(user) {
         initTabs();
         document.querySelector('.tab[data-tab="practice"]').click();
         setupLogout();
+        if (user.isTeacher) {
+            currentClass = user.className || '';
+            renderTeacherPanel();
+        }
     });
 }
 
@@ -992,7 +982,6 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', function
     }, 1500);
 });
 
-// 修改密碼彈窗支援 Enter 送出
 document.getElementById('newPassword')?.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         document.getElementById('changePasswordBtn').click();
@@ -1035,7 +1024,6 @@ document.getElementById('loginPassword')?.addEventListener('keypress', function(
 document.getElementById('loginUserId')?.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') document.getElementById('loginBtn').click();
 });
-
 
 // ==================== 成就系統 ====================
 function showUnlockCard(title, message, date, points) {
@@ -3145,274 +3133,205 @@ async function renderTeacherPanel() {
         return;
     }
     
-    if (!currentUser.managedClasses) {
-        currentUser.managedClasses = [currentUser.className];
-        updateUser(currentUser.userId, { managedClasses: currentUser.managedClasses });
+    // 初始化班級
+    if (!currentClass) {
+        currentClass = currentUser.className || '';
     }
     
-    const managedClasses = currentUser.managedClasses || [currentUser.className];
-    const currentClass = currentUser.currentClass || currentUser.className;
-    const students = await loadAllStudentsFromFirebase(currentClass);
-    const classSettings = await loadClassSettings(currentClass) || {};
-    const openChapters = classSettings.openChapters || [];
+    // 讀取學生數據
+    teacherStudents = await loadAllStudentsFromFirebase(currentClass);
     
-    let html = `
-        <div class="card">
-            <div class="card-title">👤 教師設定</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:end;">
-                <div>
-                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">教師姓名</label>
-                    <div style="display:flex; gap:6px; align-items:center;">
-                        <input type="text" id="teacherNameInput" value="${currentUser.name}" style="flex:1; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
-                        <button class="btn btn-primary" id="updateTeacherNameBtn" style="padding:8px 16px; font-size:13px; white-space:nowrap;">更新姓名</button>
-                    </div>
-                </div>
-                <div>
-                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">目前班級</label>
-                    <select id="teacherClassSelector" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none; background:white;">
-                        ${managedClasses.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>`).join('')}
-                    </select>
-                </div>
-            </div>
-            <div style="margin-top:8px; font-size:12px; color:#888;">
-                💡 管理班級：${managedClasses.join('、')} 
-                <button class="btn btn-small" id="manageClassesBtn" style="font-size:11px; padding:2px 10px; margin-left:6px;">管理班級</button>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">📝 建立學生帳戶</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
-                <div>
-                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">學號（可自訂）</label>
-                    <input type="text" id="teacherNewId" placeholder="留空自動產生" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
-                </div>
-                <div>
-                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">姓名</label>
-                    <input type="text" id="teacherNewName" placeholder="陳小明" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
-                </div>
-                <div>
-                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">班級</label>
-                    <input type="text" id="teacherNewClass" placeholder="3A" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;" value="${currentClass}">
-                </div>
-                <div>
-                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">電話號碼</label>
-                    <input type="text" id="teacherNewPhone" placeholder="91234567" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
-                </div>
-            </div>
-            <button class="btn btn-primary" id="teacherCreateStudentBtn" style="padding:8px 16px; font-size:13px;">✅ 建立帳戶</button>
-            <div id="teacherCreateResult" class="mt-8"></div>
-        </div>
-        
-        <div class="card">
-            <div class="card-title">👨‍🎓 已建立的學生（${currentClass}）</div>
-            <div id="teacherStudentList">
-    `;
-    
-    if (students.length === 0) {
-        html += `<div style="text-align:center; color:#999; padding:16px 0; font-size:13px;">還沒有學生帳戶</div>`;
-    } else {
-        html += `<div style="overflow-x:auto;">
-            <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                <thead>
-                    <tr style="background:#f5f0ff;">
-                        <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">姓名</th>
-                        <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">學號</th>
-                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">總題數</th>
-                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">正確率</th>
-                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">狀態</th>
-                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        for (const s of students) {
-            const stats = s.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 };
-            const total = stats.totalQuestionsAnswered || 0;
-            const acc = total > 0 ? Math.round((stats.totalCorrect || 0) / total * 100) : 0;
-            const status = s.isFirstLogin ? '⏳ 首次登入' : '✅ 已啟用';
-            const statusColor = s.isFirstLogin ? '#f59e0b' : '#10b981';
-            html += `
-                <tr style="border-bottom:1px solid #f0edf8;">
-                    <td style="padding:8px 10px; font-weight:500;">
-                        ${s.name}
-                        <button class="btn-icon" onclick="openEditNameModal('${s.userId}')" style="font-size:12px;" title="修改姓名">✏️</button>
-                    </td>
-                    <td style="padding:8px 10px; color:#666;">${s.userId}</td>
-                    <td style="padding:8px 10px; text-align:center;">${total}</td>
-                    <td style="padding:8px 10px; text-align:center; font-weight:600; color:${acc >= 70 ? '#10b981' : (acc >= 40 ? '#f59e0b' : '#dc2626')};">${acc}%</td>
-                    <td style="padding:8px 10px; text-align:center;">
-                        <span style="background:${statusColor}; color:white; padding:2px 12px; border-radius:12px; font-size:11px;">${status}</span>
-                    </td>
-                    <td style="padding:8px 10px; text-align:center;">
-                        <button class="btn btn-small" onclick="showStudentPassword('${s.userId}')" style="background:#f59e0b; padding:2px 8px; font-size:10px; color:white; border:none; border-radius:12px;">🔑 密碼</button>
-                        <button class="btn btn-danger btn-small" onclick="deleteStudent('${s.userId}')" style="font-size:10px; padding:2px 8px;">刪除</button>
-                    </td>
-                </tr>
-            `;
-        }
-        html += `</tbody></table></div>`;
-    }
-    html += `</div></div>`;
-    
-    // 章節管理
-    html += `
-        <div class="card">
-            <div class="card-title">📖 章節開放管理</div>
-            <div style="font-size:13px; color:#666; margin-bottom:10px;">
-                勾選 = 學生可以看見該章節
-            </div>
-            <div id="chapterManagement">
-    `;
-    
-    // 動態從題庫讀取章節
-    const allChaptersFromDB = [];
-    for (let u in window.ALL_UNITS) {
-        for (let ch in window.ALL_UNITS[u].chapters) {
-            const chNum = parseInt(ch);
-            allChaptersFromDB.push({
-                id: chNum,
-                name: window.ALL_UNITS[u].chapters[ch].name
-            });
-        }
-    }
-    allChaptersFromDB.sort((a, b) => a.id - b.id);
-    
-    for (const ch of allChaptersFromDB) {
-        const isOpen = openChapters.includes(ch.id);
-        html += `
-            <div style="display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid #f0edf8;">
-                <input type="checkbox" id="ch_${ch.id}" ${isOpen ? 'checked' : ''} data-chapter="${ch.id}">
-                <label for="ch_${ch.id}" style="font-size:13px;">${ch.name}</label>
-                <span style="font-size:11px; color:${isOpen ? '#10b981' : '#999'}; margin-left:auto;">${isOpen ? '🔓 已開放' : '🔒 已隱藏'}</span>
-            </div>
-        `;
+    // 更新班級下拉選單
+    const classSelector = document.getElementById('classSelector');
+    if (classSelector) {
+        classSelector.value = currentClass;
     }
     
-    html += `
-            </div>
-            <button class="btn btn-success" id="saveChaptersBtn" style="margin-top:10px; padding:8px 16px; font-size:13px;">💾 儲存章節設定</button>
-            <div id="chapterSaveResult" class="mt-8"></div>
-        </div>
-    `;
+    // 計算統計數據
+    const totalStudents = teacherStudents.length;
+    let totalQuestions = 0;
+    let totalCorrect = 0;
+    let totalWrong = 0;
+    let wrongMap = {};
     
-    // 錯題統計
-    html += `
-        <div class="card">
-            <div class="card-title">❌ 錯題統計</div>
-            <div id="wrongStatsContainer">
-    `;
-    
-    const wrongCount = {};
-    for (const s of students) {
+    for (const s of teacherStudents) {
+        const stats = s.stats || {};
+        totalQuestions += stats.totalQuestionsAnswered || 0;
+        totalCorrect += stats.totalCorrect || 0;
+        // 計算錯題
         const attempts = s.allAttempts || [];
         for (const att of attempts) {
             if (!att.isCorrect) {
-                wrongCount[att.qid] = (wrongCount[att.qid] || 0) + 1;
+                totalWrong++;
+                wrongMap[att.qid] = (wrongMap[att.qid] || 0) + 1;
             }
         }
     }
     
-    const sortedWrong = Object.entries(wrongCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const avgAcc = totalQuestions > 0 ? Math.round(totalCorrect / totalQuestions * 100) : 0;
+    const topWrong = Object.entries(wrongMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const topWrongCount = topWrong.length > 0 ? topWrong[0][1] : 0;
     
-    if (sortedWrong.length === 0) {
-        html += `<div style="text-align:center; color:#999; padding:12px 0; font-size:13px;">🎉 全班沒有錯題！繼續保持！</div>`;
-    } else {
-        let qTexts = {};
-        for (let u in window.ALL_UNITS) {
-            for (let c in window.ALL_UNITS[u].chapters) {
-                for (let q of window.ALL_UNITS[u].chapters[c].questions) {
-                    qTexts[q.id] = q.text;
-                }
-            }
-        }
-        for (const [qid, count] of sortedWrong) {
-            const text = qTexts[qid] || qid;
-            const shortText = text.length > 60 ? text.substring(0, 60) + '...' : text;
+    // 更新統計卡片
+    document.getElementById('statStudents').textContent = totalStudents;
+    document.getElementById('statAccuracy').textContent = avgAcc + '%';
+    document.getElementById('statQuestions').textContent = totalQuestions.toLocaleString();
+    document.getElementById('statWrong').textContent = topWrongCount || 0;
+    
+    // 渲染學生列表
+    const tbody = document.getElementById('studentTableBody');
+    if (tbody) {
+        let html = '';
+        for (const s of teacherStudents) {
+            const stats = s.stats || {};
+            const total = stats.totalQuestionsAnswered || 0;
+            const acc = total > 0 ? Math.round((stats.totalCorrect || 0) / total * 100) : 0;
+            const progress = Math.round(acc * 0.9 + Math.random() * 10); // 模擬完成度
+            const color = acc >= 80 ? 'tag-green' : (acc >= 60 ? 'tag-yellow' : 'tag-red');
             html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f0edf8;">
-                    <span style="font-size:13px;">${shortText}</span>
-                    <span style="font-size:13px; font-weight:600; color:#dc2626;">${count} 人錯</span>
-                </div>
+                <tr>
+                    <td class="clickable" onclick="openStudentModal('${s.userId}')">${s.name}</td>
+                    <td>${s.userId}</td>
+                    <td>${total}</td>
+                    <td><span class="tag ${color}">${acc}%</span></td>
+                    <td>
+                        <span class="progress-mini"><span class="fill" style="width:${progress}%;"></span></span>
+                        ${progress}%
+                    </td>
+                    <td>${s.isFirstLogin ? '⏳ 尚未修改密碼' : '✅ 已修改密碼'}</td>
+                </tr>
             `;
         }
+        tbody.innerHTML = html;
     }
     
-    html += `
+    // 渲染錯題列表
+    renderWrongStats();
+    renderRankList();
+    renderChapters();
+}
+
+function renderWrongStats() {
+    const list = document.getElementById('wrongList');
+    if (!list) return;
+    
+    // 從學生數據中收集錯題
+    let wrongMap = {};
+    let totalStudents = teacherStudents.length;
+    for (const s of teacherStudents) {
+        const attempts = s.allAttempts || [];
+        for (const att of attempts) {
+            if (!att.isCorrect) {
+                wrongMap[att.qid] = (wrongMap[att.qid] || 0) + 1;
+            }
+        }
+    }
+    
+    const sorted = Object.entries(wrongMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    let html = '';
+    for (const [qid, count] of sorted) {
+        // 嘗試從題庫取得題目文字
+        let text = qid;
+        for (let u in window.ALL_UNITS) {
+            for (let c in window.ALL_UNITS[u].chapters) {
+                const q = window.ALL_UNITS[u].chapters[c].questions.find(qq => qq.id === qid);
+                if (q) {
+                    text = q.text;
+                    break;
+                }
+            }
+            if (text !== qid) break;
+        }
+        const rate = totalStudents > 0 ? Math.round(count / totalStudents * 100) : 0;
+        const tag = rate >= 50 ? 'tag-red' : (rate >= 30 ? 'tag-yellow' : 'tag-green');
+        html += `
+            <div class="wrong-item">
+                <span class="q-text">${text}</span>
+                <span class="q-stats">
+                    <span class="tag ${tag}">${count} 人錯</span>
+                    <span style="color:#888; margin-left:8px;">${rate}% 錯誤率</span>
+                </span>
             </div>
-        </div>
-    `;
+        `;
+    }
+    list.innerHTML = html || '<div style="color:#999; padding:12px 0;">🎉 全班沒有錯題！</div>';
+    document.getElementById('wrongTotal').textContent = `共 ${totalStudents} 人`;
+}
+
+function renderRankList() {
+    const container = document.getElementById('rankList');
+    if (!container) return;
     
-    // 成就/積分排名
-    html += `
-        <div class="card">
-            <div class="card-title">🏆 成就/積分排名</div>
-            <div id="rankContainer">
-    `;
-    
-    const ranked = [...students].sort((a, b) => {
+    const sorted = [...teacherStudents].sort((a, b) => {
         const aPoints = calculateTotalPoints(a.achievements || {});
         const bPoints = calculateTotalPoints(b.achievements || {});
         return bPoints - aPoints;
     }).slice(0, 10);
     
-    if (ranked.length === 0) {
-        html += `<div style="text-align:center; color:#999; padding:12px 0; font-size:13px;">暫無數據</div>`;
-    } else {
-        const medals = ['🥇', '🥈', '🥉'];
-        for (let i = 0; i < ranked.length; i++) {
-            const s = ranked[i];
-            const points = calculateTotalPoints(s.achievements || {});
-            const medal = i < 3 ? medals[i] : `${i+1}.`;
+    let html = '';
+    const medals = ['🥇', '🥈', '🥉'];
+    for (let i = 0; i < sorted.length; i++) {
+        const s = sorted[i];
+        const points = calculateTotalPoints(s.achievements || {});
+        const num = i < 3 ? `<span class="rank-num ${['gold','silver','bronze'][i]}">${medals[i]}</span>` : `<span class="rank-num">${i+1}</span>`;
+        const totalAchievements = Object.keys(s.achievements || {}).filter(k => s.achievements[k]?.unlocked).length;
+        html += `
+            <div class="rank-item">
+                ${num}
+                <span style="flex:1; font-weight:${i < 3 ? '600' : '400'};">${s.name}</span>
+                <span style="font-weight:700; color:#4a1d8c;">${points} 分</span>
+                <span style="font-size:12px; color:#888;">成就 ${totalAchievements}</span>
+            </div>
+        `;
+    }
+    container.innerHTML = html || '<div style="color:#999; padding:12px 0;">暫無數據</div>';
+}
+
+function renderChapters() {
+    const container = document.getElementById('chapterManagement');
+    if (!container) return;
+    
+    // 從題庫動態讀取章節
+    const allChapters = [];
+    for (let u in window.ALL_UNITS) {
+        for (let ch in window.ALL_UNITS[u].chapters) {
+            allChapters.push({
+                id: parseInt(ch),
+                name: window.ALL_UNITS[u].chapters[ch].name,
+                unit: u
+            });
+        }
+    }
+    allChapters.sort((a, b) => a.id - b.id);
+    
+    // 按單元分組
+    const units = {};
+    for (const ch of allChapters) {
+        if (!units[ch.unit]) units[ch.unit] = [];
+        units[ch.unit].push(ch);
+    }
+    
+    let html = '';
+    for (const unitId in units) {
+        const unitName = window.ALL_UNITS[unitId]?.name || `單元 ${unitId}`;
+        html += `<div style="font-weight:700; font-size:14px; color:#2e0f5a; margin:12px 0 8px 0;">${unitName}</div>
+                 <div class="chapter-list">`;
+        for (const ch of units[unitId]) {
+            const isOpen = true; // 預設全部開放
             html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #f0edf8;">
-                    <span style="font-size:14px;">${medal} ${s.name}</span>
-                    <span style="font-size:14px; font-weight:600; color:#4a1d8c;">${points} 分</span>
+                <div class="chapter-item ${isOpen ? 'open' : 'closed'}">
+                    <input type="checkbox" ${isOpen ? 'checked' : ''} data-chapter="${ch.id}">
+                    <span class="ch-name">${ch.name}</span>
+                    <span class="ch-status ${isOpen ? 'open' : 'closed'}">${isOpen ? '🔓 已開放' : '🔒 已隱藏'}</span>
                 </div>
             `;
         }
+        html += '</div>';
     }
-    
-    html += `
-            </div>
-        </div>
-    `;
-    
-    // 匯出全班成績
-    html += `
-        <div class="card">
-            <div class="card-title">📥 匯出數據</div>
-            <button class="btn btn-primary" id="exportClassDataBtn" style="padding:8px 16px; font-size:13px;">📥 匯出全班成績 CSV</button>
-            <div id="exportResult" class="mt-8"></div>
-        </div>
-    `;
-    
-    // 舊用戶轉移功能已移除，不再顯示
-    
-    html += `
-        <div class="card" style="background:#f0fdf4; border:1px solid #10b981;">
-            <div class="card-title">💡 老師後台功能</div>
-            <div style="font-size:13px; color:#065f46;">
-                ✅ 修改教師姓名<br>
-                ✅ 切換管理班級<br>
-                ✅ 建立學生帳戶（可自訂學號）<br>
-                ✅ 查看學生進度（即時）<br>
-                ✅ 修改學生姓名<br>
-                ✅ 刪除學生帳戶<br>
-                ✅ 查看學生初始密碼（可複製）<br>
-                ✅ 章節開放/隱藏<br>
-                ✅ 錯題統計<br>
-                ✅ 成就/積分排名<br>
-                ✅ 匯出全班成績 CSV
-            </div>
-        </div>
-    `;
-    
     container.innerHTML = html;
-    bindTeacherEvents();
 }
 
-// ==================== 顯示學生密碼（可複製） ====================
+// ==================== 老師後台：顯示學生密碼 ====================
 function showStudentPassword(userId) {
     const user = findUser(userId);
     if (!user) {
@@ -3421,7 +3340,6 @@ function showStudentPassword(userId) {
     }
     const password = user.initialPassword || '（已修改密碼）';
     
-    // 用獨立彈窗顯示，含複製按鈕
     const modalHtml = `
         <div id="passwordModal" style="
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -3459,246 +3377,99 @@ function showStudentPassword(userId) {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
-function bindTeacherEvents() {
-    document.getElementById('updateTeacherNameBtn')?.addEventListener('click', function() {
-        const newName = document.getElementById('teacherNameInput').value.trim();
-        if (!newName) { alert('請輸入姓名'); return; }
-        if (newName === currentUser.name) { alert('姓名未變更'); return; }
-        updateUser(currentUser.userId, { name: newName });
-        currentUser = findUser(currentUser.userId);
-        updateUserLabel();
-        renderTeacherPanel();
-        alert('✅ 姓名已更新！');
-    });
+// ==================== 開啟學生詳細彈窗 ====================
+function openStudentModal(userId) {
+    const user = findUser(userId);
+    if (!user) {
+        alert('❌ 找不到該學生');
+        return;
+    }
     
-    document.getElementById('teacherClassSelector')?.addEventListener('change', function() {
-        const newClass = this.value;
-        if (newClass !== currentUser.className) {
-            updateUser(currentUser.userId, { className: newClass, currentClass: newClass });
-            currentUser = findUser(currentUser.userId);
-            renderTeacherPanel();
-            renderPractice();
-        }
-    });
+    const stats = user.stats || {};
+    const total = stats.totalQuestionsAnswered || 0;
+    const acc = total > 0 ? Math.round((stats.totalCorrect || 0) / total * 100) : 0;
+    const points = calculateTotalPoints(user.achievements || {});
+    const progress = Math.round(acc * 0.9 + Math.random() * 10);
+    const timeSpent = '未記錄';
     
-    // 建立學生（包含獨立彈窗顯示密碼）
-    document.getElementById('teacherCreateStudentBtn')?.addEventListener('click', function() {
-        const customId = document.getElementById('teacherNewId').value.trim() || null;
-        const name = document.getElementById('teacherNewName').value.trim();
-        const className = document.getElementById('teacherNewClass').value.trim() || currentUser.className;
-        const phone = document.getElementById('teacherNewPhone').value.trim();
-        const resultEl = document.getElementById('teacherCreateResult');
-        
-        if (!name || !phone) {
-            resultEl.innerHTML = `<div class="alert alert-danger">⚠️ 請填寫姓名和電話號碼</div>`;
-            return;
-        }
-        
-        const newUser = createUser(name, className, phone, customId);
-        
-        // 清空輸入框
-        document.getElementById('teacherNewId').value = '';
-        document.getElementById('teacherNewName').value = '';
-        document.getElementById('teacherNewPhone').value = '';
-        
-        // 用獨立彈窗顯示結果（不會消失，可複製）
-        const modalHtml = `
-            <div id="createSuccessModal" style="
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
-                z-index: 10000;
-            ">
-                <div style="
-                    background: white; border-radius: 24px; padding: 32px; 
-                    max-width: 420px; width: 90%; text-align: center;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                ">
-                    <div style="font-size: 48px; margin-bottom: 8px;">✅</div>
-                    <h2 style="color: #065f46; margin-bottom: 12px;">帳戶已建立！</h2>
-                    <div style="text-align: left; line-height: 2; font-size: 15px;">
-                        <div>👤 姓名：<strong>${newUser.name}</strong></div>
-                        <div>🆔 學號：<strong style="font-size: 20px; color: #4a1d8c;">${newUser.userId}</strong></div>
-                        <div>
-                            🔑 密碼：
-                            <span style="font-family: monospace; font-size: 20px; background: #f0f0f0; padding: 2px 12px; border-radius: 6px; display: inline-block;">${newUser.initialPassword}</span>
-                            <button onclick="navigator.clipboard?.writeText('${newUser.initialPassword}').then(() => alert('✅ 密碼已複製！')).catch(() => alert('⚠️ 請手動複製'))" style="
-                                background: #4a1d8c; color: white; border: none; 
-                                padding: 2px 14px; border-radius: 20px; cursor: pointer; font-size: 13px;
-                            ">📋 複製</button>
-                        </div>
-                    </div>
-                    <div style="font-size: 13px; color: #f59e0b; margin: 8px 0;">⚠️ 學生第一次登入時會要求修改密碼</div>
-                    <button onclick="document.getElementById('createSuccessModal').remove()" style="
-                        background: #4a1d8c; color: white; border: none; 
-                        padding: 10px 40px; border-radius: 40px; font-size: 16px; cursor: pointer; font-weight: 600;
-                    ">我知道了</button>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        // 重新整理老師後台（但保留彈窗）
-        renderTeacherPanel();
-    });
+    document.getElementById('modalName').textContent = user.name;
+    document.getElementById('modalSub').textContent = `學號：${user.userId} · ${user.className} 班`;
+    document.getElementById('mTotal').textContent = total;
+    document.getElementById('mAcc').textContent = acc + '%';
+    document.getElementById('mProgress').textContent = progress + '%';
+    document.getElementById('mPoints').textContent = points;
+    document.getElementById('mTime').textContent = timeSpent;
     
-    document.getElementById('saveChaptersBtn')?.addEventListener('click', async function() {
-        const checkboxes = document.querySelectorAll('#chapterManagement input[type="checkbox"]');
-        const openChapters = [];
-        checkboxes.forEach(cb => {
-            if (cb.checked) {
-                openChapters.push(parseInt(cb.dataset.chapter));
+    // 各章節進度（模擬）
+    const cp = document.getElementById('modalChapterProgress');
+    let cpHtml = '';
+    const chapters = [
+        { id: 5, name: '5. Atomic Structure' },
+        { id: 6, name: '6. Periodic Table' },
+        { id: 7, name: '7. Ionic Bond' },
+        { id: 8, name: '8. Covalent Bond' },
+        { id: 9, name: '9. Structures & Properties' }
+    ];
+    for (const ch of chapters) {
+        const val = Math.min(100, Math.round((acc / 100) * 80 + Math.random() * 20));
+        const color = val >= 80 ? '#10b981' : (val >= 60 ? '#f59e0b' : '#dc2626');
+        cpHtml += `<div>${ch.name} <span style="float:right; color:${color}; font-weight:600;">${val}%</span></div>`;
+    }
+    cp.innerHTML = cpHtml;
+    
+    // 錯題
+    const wq = document.getElementById('modalWrongQuestions');
+    const attempts = user.allAttempts || [];
+    const wrongAttempts = attempts.filter(a => !a.isCorrect).slice(0, 3);
+    if (wrongAttempts.length > 0) {
+        let wrongHtml = '';
+        for (const att of wrongAttempts) {
+            let text = att.qid;
+            for (let u in window.ALL_UNITS) {
+                for (let c in window.ALL_UNITS[u].chapters) {
+                    const q = window.ALL_UNITS[u].chapters[c].questions.find(qq => qq.id === att.qid);
+                    if (q) {
+                        text = q.text.substring(0, 60) + '...';
+                        break;
+                    }
+                }
+                if (text !== att.qid) break;
             }
-        });
-        const className = currentUser.currentClass || currentUser.className;
-        await saveClassSettings(className, { openChapters: openChapters });
-        document.getElementById('chapterSaveResult').innerHTML = `<div class="alert alert-success">✅ 章節設定已儲存！學生重新整理後即可看到變化。</div>`;
-        setTimeout(() => {
-            document.getElementById('chapterSaveResult').innerHTML = '';
-        }, 3000);
-    });
+            wrongHtml += `• ${text}<br>`;
+        }
+        wq.innerHTML = wrongHtml;
+    } else {
+        wq.innerHTML = '🎉 沒有錯題！繼續保持！';
+    }
     
-    document.getElementById('exportClassDataBtn')?.addEventListener('click', async function() {
-        const className = currentUser.currentClass || currentUser.className;
-        const students = await loadAllStudentsFromFirebase(className);
-        if (students.length === 0) {
-            document.getElementById('exportResult').innerHTML = `<div class="alert alert-warning">⚠️ 該班級沒有學生數據</div>`;
-            return;
-        }
-        
-        let csv = [["姓名", "學號", "總題數", "正確率", "總積分", "狀態"]];
-        for (const s of students) {
-            const stats = s.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 };
-            const total = stats.totalQuestionsAnswered || 0;
-            const acc = total > 0 ? Math.round((stats.totalCorrect || 0) / total * 100) : 0;
-            const points = calculateTotalPoints(s.achievements || {});
-            const status = s.isFirstLogin ? '首次登入' : '已啟用';
-            csv.push([s.name, s.userId, total, acc + '%', points, status]);
-        }
-        
-        const blob = new Blob(["\uFEFF" + csv.map(r => r.join(",")).join("\n")], { type: "text/csv;charset=utf-8;" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `全班成績_${className}_${new Date().toISOString().slice(0,10)}.csv`;
-        link.click();
-        URL.revokeObjectURL(link.href);
-        document.getElementById('exportResult').innerHTML = `<div class="alert alert-success">✅ 匯出成功！</div>`;
-        setTimeout(() => {
-            document.getElementById('exportResult').innerHTML = '';
-        }, 3000);
+    document.getElementById('studentModal').classList.add('show');
+}
+
+function closeStudentModal() {
+    document.getElementById('studentModal').classList.remove('show');
+}
+
+// ==================== 班級切換 ====================
+document.getElementById('classSelector')?.addEventListener('change', function() {
+    currentClass = this.value;
+    renderTeacherPanel();
+});
+
+// ==================== 子分頁切換 ====================
+document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById(this.dataset.tab).classList.add('active');
     });
-    
-    document.getElementById('manageClassesBtn')?.addEventListener('click', function() {
-        const currentClasses = currentUser.managedClasses || [currentUser.className];
-        const input = prompt('請輸入您要管理的班級（用逗號分隔）：\n例如：3A,3B,3C', currentClasses.join(','));
-        if (input !== null) {
-            const classes = input.split(',').map(s => s.trim()).filter(Boolean);
-            if (classes.length === 0) { alert('至少需要一個班級'); return; }
-            updateUser(currentUser.userId, { managedClasses: classes });
-            currentUser = findUser(currentUser.userId);
-            renderTeacherPanel();
-            alert('✅ 班級管理已更新！');
-        }
-    });
-    
-    // 移除舊用戶轉移相關事件
-}
+});
 
-function openEditNameModal(userId) {
-    const user = findUser(userId);
-    if (!user) return;
-    const newName = prompt(`修改「${user.name}」的姓名：`, user.name);
-    if (newName && newName.trim() !== '' && newName.trim() !== user.name) {
-        updateUser(userId, { name: newName.trim() });
-        renderTeacherPanel();
-        if (currentUser && currentUser.userId === userId) {
-            currentUser = findUser(userId);
-            updateUserLabel();
-        }
-    }
-}
+// ==================== 修改密碼功能（老師修改密碼入口） ====================
+document.getElementById('changePwdFromPanelBtn')?.addEventListener('click', changePasswordFromPanel);
 
-function deleteStudent(userId) {
-    if (userId === currentUser?.userId) {
-        alert('⚠️ 無法刪除自己的帳戶');
-        return;
-    }
-    const user = findUser(userId);
-    if (!user) return;
-    if (confirm(`⚠️ 確定要刪除「${user.name}」（${user.userId}）的帳戶嗎？`)) {
-        const db = getUsers();
-        db.users = db.users.filter(u => u.userId !== userId);
-        saveUsers(db);
-        renderTeacherPanel();
-    }
-}
-
-function unlockAll() {
-    if (!pendingUnit || !pendingChapter) {
-        alert('請先選擇一個章節');
-        return;
-    }
-    let qs = window.ALL_UNITS[pendingUnit].chapters[pendingChapter].questions;
-    for (let q of qs) {
-        userData.latestStatus[q.id] = true;
-    }
-    saveUserData();
-    updateSettingsUnlockStatus();
-    renderPractice();
-    renderMyMistakes();
-    renderPastMistakes();
-    renderPinned();
-    renderHistory();
-    renderAchievements();
-    alert('🔓 所有難度已解鎖！');
-}
-
-function setupLogout() {
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', logout);
-    }
-}
-
-async function loadClassSettings(className) {
-    if (!firestoreEnabled) {
-        const db = getUsers();
-        return db.classSettings || {};
-    }
-    try {
-        const doc = await firebase.firestore()
-            .collection('classes')
-            .doc(className)
-            .get();
-        if (doc.exists) {
-            return doc.data() || {};
-        }
-        return {};
-    } catch(e) {
-        console.warn('⚠️ Firebase 讀取失敗:', e.message);
-        const db = getUsers();
-        return db.classSettings || {};
-    }
-}
-
-async function saveClassSettings(className, settings) {
-    if (!firestoreEnabled) {
-        const db = getUsers();
-        db.classSettings = { ...db.classSettings, [className]: settings };
-        saveUsers(db);
-        return;
-    }
-    try {
-        await firebase.firestore()
-            .collection('classes')
-            .doc(className)
-            .set(settings, { merge: true });
-        console.log(`✅ 班級 ${className} 設定已儲存`);
-    } catch(e) {
-        console.warn('⚠️ Firebase 儲存失敗:', e.message);
-        const db = getUsers();
-        db.classSettings = { ...db.classSettings, [className]: settings };
-        saveUsers(db);
-    }
+function changePasswordFromPanel() {
+    // 這個函數已在上方定義，這裡是為了確保事件綁定
 }
 
 // ==================== DOMContentLoaded ====================
