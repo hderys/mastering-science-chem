@@ -1,836 +1,2838 @@
-// ============================================================
-// 【錯誤標示區】如果 Firebase 初始化失敗，請檢查：
-// 1. Firebase 專案是否已啟用 Authentication 和 Firestore
-// 2. 下方 firebaseConfig 的 apiKey 等資訊是否正確
-// 3. 網路是否正常（能否連線到 Google 服務）
-// ============================================================
-const firebaseConfig = {
-    apiKey: "AIzaSyBWUr-qFjDuAbRn2ueCOA24Bx5vHhGwCzs",
-    authDomain: "mastering-science.firebaseapp.com",
-    projectId: "mastering-science",
-    storageBucket: "mastering-science.firebasestorage.app",
-    messagingSenderId: "969510026630",
-    appId: "1:969510026630:web:5c0ff3ffc7b3bdc04c8007"
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-// ============================================================
-// 【錯誤標示區】如果忘記密碼失敗，請檢查：
-// 1. MASTER_RESET_PASSWORD 是否等於 Demo1234（大小寫要完全一致）
-// 2. Firestore 中該用戶的 isTeacher 是否為 true
-// ============================================================
-const MASTER_RESET_PASSWORD = 'Demo1234';
-
-let currentUser = null;
-let pendingAdminAction = null;
-
-// ===== 顯示狀態函數 =====
-function setStatus(text, color) {
-    const el = document.getElementById('firebaseStatus');
-    if (el) { el.textContent = text; el.style.color = color || '#2e0f5a'; }
-}
-function showResult(text, color) {
-    const el = document.getElementById('result');
-    if (el) { el.textContent = text; el.style.color = color || '#2e0f5a'; }
-}
-function showForgotResult(text, color) {
-    const el = document.getElementById('forgotResult');
-    if (el) { el.textContent = text; el.style.color = color || '#2e0f5a'; }
-}
-function showAdminVerifyResult(text, color) {
-    const el = document.getElementById('adminVerifyResult');
-    if (el) { el.textContent = text; el.style.color = color || '#2e0f5a'; }
-}
-function showChangePwdPanelResult(text, color) {
-    const el = document.getElementById('changePwdPanelResult');
-    if (el) { el.textContent = text; el.style.color = color || '#2e0f5a'; }
-}
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-function openModal(modalId) {
-    document.getElementById(modalId).style.display = 'flex';
-}
-
-// ============================================================
-// 【錯誤標示區】如果 Auth 錯誤訊息顯示不完整，請檢查：
-// 1. e.code 是否在 map 中有對應
-// 2. 是否出現了新的錯誤碼（可在 Console 查看 e.code）
-// ============================================================
-function getAuthErrorMessage(e) {
-    const map = {
-        'auth/user-not-found': '❌ 帳戶不存在！請確認學號是否正確',
-        'auth/wrong-password': '❌ 密碼錯誤！請確認密碼',
-        'auth/invalid-credential': '❌ 帳戶異常，請聯絡老師',
-        'auth/too-many-requests': '❌ 登入嘗試過多，請稍後再試',
-        'auth/network-request-failed': '❌ 網路連線失敗，請檢查網路',
-        'auth/user-disabled': '❌ 帳戶已被停用，請聯絡老師',
-        'auth/email-already-in-use': '⚠️ 此學號已被使用'
-    };
-    return map[e.code] || '❌ ' + e.message;
-}
-
-// ===== localStorage 輔助函數 =====
-function findUserInLocal(userId) {
-    const raw = localStorage.getItem('ms_chem_users');
-    if (raw) {
-        try {
-            const db = JSON.parse(raw);
-            return db.users.find(u => u.userId === userId);
-        } catch(e) {}
+// ==================== 成就系統 ====================
+function showUnlockCard(title, message, date, points) {
+    if (points > 0) {
+        const flash = document.createElement('div');
+        flash.className = 'unlock-flash';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 800);
     }
-    return null;
-}
-function saveUserToLocal(user) {
-    const raw = localStorage.getItem('ms_chem_users');
-    let db = raw ? JSON.parse(raw) : { users: [] };
-    const idx = db.users.findIndex(u => u.userId === user.userId);
-    if (idx >= 0) { db.users[idx] = user; } else { db.users.push(user); }
-    localStorage.setItem('ms_chem_users', JSON.stringify(db));
+    
+    let container = document.getElementById('unlockCardsContainer');
+    let card = document.createElement('div');
+    card.className = 'unlock-card';
+    let pointsText = '';
+    if (points > 0) pointsText = `<div style="font-size:0.8rem; margin-top:4px;">🏆 +${points} 積分</div>`;
+    else if (points < 0) pointsText = `<div style="font-size:0.8rem; margin-top:4px;">⚠️ ${points} 積分</div>`;
+    else if (points === 0) pointsText = `<div style="font-size:0.8rem; margin-top:4px;">✨ 再次達標！繼續保持 ✨</div>`;
+    
+    card.innerHTML = `<div style="font-size:1.5rem;">${points > 0 ? '🎉' : '🌟'}</div>
+                      <div style="font-weight:bold; margin:4px 0;">${title}</div>
+                      <div style="font-size:0.85rem;">${message}</div>
+                      ${pointsText}
+                      <div style="font-size:0.65rem; margin-top:6px;">${date}</div>`;
+    container.appendChild(card);
+    setTimeout(() => { if (card.parentNode) card.remove(); }, 4200);
 }
 
-// ============================================================
-// 【錯誤標示區】如果 loadUser 回傳 null，請檢查：
-// 1. Firestore 中是否有該 userId 的文件
-// 2. Security Rules 是否允許讀取（allow read if request.auth != null）
-// 3. 該文件是否缺少 userId 欄位
-// ============================================================
-async function loadUser(userId) {
-    try {
-        const doc = await db.collection('users').doc(userId).get();
-        if (doc.exists) {
-            const data = doc.data();
-            data.userId = userId;
-            saveUserToLocal(data);
-            return data;
+function showUnlockCardsSequentially(cards) {
+    for (let i = 0; i < cards.length; i++) {
+        setTimeout(() => {
+            showUnlockCard(cards[i].title, cards[i].message, cards[i].date, cards[i].points);
+        }, i * 500);
+    }
+}
+
+function addPenaltyAchievement(name, icon, points, desc) {
+    let today = new Date().toISOString().slice(0, 10);
+    if (!userData.achievements[name]) {
+        userData.achievements[name] = { unlocked: true, date: today, points: points, isPenalty: true };
+        saveUserData();
+        showUnlockCard("⚠️ 警示", `${icon} ${name} - ${desc}`, today, points);
+    }
+}
+
+function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPerfect, isDSE, isSpeed, currentTotalQuestions, newUnlocks, consecutiveCorrectCount, isBlankPaper, previousAccuracy) {
+    let today = new Date().toISOString().slice(0, 10);
+    let key = `${unit}_${chapter}`;
+    if (!userData.achievements[key]) userData.achievements[key] = {};
+    
+    let s1 = getChapterDifficultyMastery(unit, chapter, 1);
+    let s3 = getChapterDifficultyMastery(unit, chapter, 2);
+    let s5 = getChapterDifficultyMastery(unit, chapter, 3);
+
+    if (isBlankPaper) {
+        addPenaltyAchievement('blankPaper', '📄', -10, '提交空白答案卷');
+    }
+
+    if (previousAccuracy !== null && previousAccuracy - accuracy > 20) {
+        addPenaltyAchievement('downwardTrend', '📉', -10, '連續兩次正確率下降超過20%');
+    }
+
+    if (s1 >= 80) {
+        if (!userData.achievements[key].star1) {
+            userData.achievements[key].star1 = { unlocked: true, date: today, lastAccuracy: s1 };
+            newUnlocks.push({ title: "🎉 成就解鎖！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成`, date: today, points: ACHIEVEMENT_POINTS.star1 });
+        } else if (userData.achievements[key].star1.lastAccuracy && userData.achievements[key].star1.lastAccuracy < 80 && s1 >= 80) {
+            userData.achievements[key].star1.lastAccuracy = s1;
+            newUnlocks.push({ title: "🎉 成就恢復！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成 (再次達標)`, date: today, points: 0 });
+        } else {
+            userData.achievements[key].star1.lastAccuracy = s1;
         }
-    } catch(e) {
-        console.warn('⚠️ Firestore 讀取失敗:', e.message);
     }
-    const local = findUserInLocal(userId);
-    if (local) return local;
-    return null;
-}
 
-// ============================================================
-// 【錯誤標示區】如果 saveUser 失敗，請檢查：
-// 1. Firestore Security Rules 是否允許寫入（allow write if ...）
-// 2. user.userId 是否為 undefined 或 null
-// 3. 網路是否正常
-// ============================================================
-async function saveUser(user) {
-    try {
-        await db.collection('users').doc(user.userId).set(user, { merge: true });
-        console.log('✅ Firestore 寫入成功');
-    } catch(e) {
-        console.warn('⚠️ Firestore 寫入失敗:', e.message);
+    if (s1 >= 80 && s3 >= 80) {
+        if (!userData.achievements[key].star3) {
+            userData.achievements[key].star3 = { unlocked: true, date: today, lastAccuracy: s3 };
+            newUnlocks.push({ title: "🎉 成就解鎖！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖`, date: today, points: ACHIEVEMENT_POINTS.star3 });
+        } else if (userData.achievements[key].star3.lastAccuracy && userData.achievements[key].star3.lastAccuracy < 80 && s3 >= 80) {
+            userData.achievements[key].star3.lastAccuracy = s3;
+            newUnlocks.push({ title: "🎉 成就恢復！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖 (再次達標)`, date: today, points: 0 });
+        } else {
+            userData.achievements[key].star3.lastAccuracy = s3;
+        }
     }
-    saveUserToLocal(user);
-}
 
-// ============================================================
-// 【錯誤標示區】如果 handleLogin 卡住，請檢查：
-// 1. Auth 登入是否成功（email 格式是否為 userId@mastering-science.com）
-// 2. loadUser 是否回傳正確資料
-// 3. enterMainApp 是否被呼叫
-// 4. 如果是首次登入（isFirstLogin === true），是否觸發強制修改密碼
-// ============================================================
-async function handleLogin(userId, password) {
-    showResult('⏳ 登入中...', '#f59e0b');
-    try {
-        const email = userId + '@mastering-science.com';
-        await auth.signInWithEmailAndPassword(email, password);
-        showResult('✅ Auth 登入成功！讀取資料中...', '#10b981');
-        
-        const user = await loadUser(userId);
-        if (user) {
-            currentUser = user;
-            
-            // ============================================================
-            // 【錯誤標示區】如果首次登入強制修改密碼沒有觸發，請檢查：
-            // 1. currentUser.isFirstLogin 是否為 true
-            // 2. openChangePasswordModal(true) 是否被呼叫
-            // 3. 修改密碼完成後，isFirstLogin 是否被設為 false
-            // ============================================================
-            
-            // === 檢查是否為首次登入 ===
-            if (user.isFirstLogin === true) {
-                showResult('🔐 首次登入，請設定您的密碼', '#f59e0b');
-                // 延遲一下讓畫面更新，再彈出修改密碼視窗
-                setTimeout(function() {
-                    openChangePasswordModal(true);
-                }, 500);
-                return; // 不繼續進入主畫面
+    if (s1 >= 80 && s3 >= 80 && s5 >= 80) {
+        if (!userData.achievements[key].star5) {
+            userData.achievements[key].star5 = { unlocked: true, date: today, lastAccuracy: s5 };
+            newUnlocks.push({ title: "🎉 成就解鎖！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖`, date: today, points: ACHIEVEMENT_POINTS.star5 });
+        } else if (userData.achievements[key].star5.lastAccuracy && userData.achievements[key].star5.lastAccuracy < 80 && s5 >= 80) {
+            userData.achievements[key].star5.lastAccuracy = s5;
+            newUnlocks.push({ title: "🎉 成就恢復！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖 (再次達標)`, date: today, points: 0 });
+        } else {
+            userData.achievements[key].star5.lastAccuracy = s5;
+        }
+    }
+
+    if (isTrialMode && accuracy >= 80) {
+        if (!userData.achievements[key].trial) {
+            userData.achievements[key].trial = { unlocked: true, date: today, lastAccuracy: accuracy };
+            newUnlocks.push({ title: "🎉 成就解鎖！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成`, date: today, points: ACHIEVEMENT_POINTS.trial });
+        } else if (userData.achievements[key].trial.lastAccuracy && userData.achievements[key].trial.lastAccuracy < 80 && accuracy >= 80) {
+            userData.achievements[key].trial.lastAccuracy = accuracy;
+            newUnlocks.push({ title: "🎉 成就恢復！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成 (再次達標)`, date: today, points: 0 });
+        } else {
+            userData.achievements[key].trial.lastAccuracy = accuracy;
+        }
+    }
+
+    let totalQ = userData.stats.totalQuestionsAnswered;
+    let clearedMistakes = userData.allAttempts.filter(a => a.isCorrect === true && userData.latestStatus[a.qid] === true).length;
+
+    if (!userData.achievements.firstPractice && userData.practiceHistory.length === 1) {
+        userData.achievements.firstPractice = { unlocked: true, date: today, progress: 1, target: 1 };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🎯 初試啼聲 - 完成第一次練習", date: today, points: ACHIEVEMENT_POINTS.firstPractice });
+    }
+    if (totalQ >= 100 && !userData.achievements.tenQuestions) {
+        userData.achievements.tenQuestions = { unlocked: true, date: today, progress: totalQ, target: 100 };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📝 十題達人 - 累積完成100題", date: today, points: ACHIEVEMENT_POINTS.tenQuestions });
+    }
+    if (totalQ >= 500 && !userData.achievements.fiveHundred) {
+        userData.achievements.fiveHundred = { unlocked: true, date: today, progress: totalQ, target: 500 };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚔️ 百題斬 - 累積完成500題", date: today, points: ACHIEVEMENT_POINTS.fiveHundred });
+    }
+    if (totalQ >= 1000 && !userData.achievements.thousand) {
+        userData.achievements.thousand = { unlocked: true, date: today, progress: totalQ, target: 1000 };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "👑 千題之王 - 累積完成1000題", date: today, points: ACHIEVEMENT_POINTS.thousand });
+    }
+    if (isPerfect && !userData.achievements.perfectLesson) {
+        userData.achievements.perfectLesson = { unlocked: true, date: today };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🌟 完美一課 - 單次練習10題以上全對", date: today, points: ACHIEVEMENT_POINTS.perfectLesson });
+    }
+    if (isDSE && !userData.achievements.dseComplete) {
+        userData.achievements.dseComplete = { unlocked: true, date: today };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📝 DSE模擬完成 - 完成36題模式", date: today, points: ACHIEVEMENT_POINTS.dseComplete });
+    }
+    if (isSpeed && !userData.achievements.speedStar) {
+        userData.achievements.speedStar = { unlocked: true, date: today };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚡ 速度之星 - 提前50%時間完成練習且正確率≥70%", date: today, points: ACHIEVEMENT_POINTS.speedStar });
+    }
+
+    if (consecutiveCorrectCount >= 20 && !userData.achievements.consecutive20) {
+        userData.achievements.consecutive20 = { unlocked: true, date: today };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🔥 連續答對王 - 連續答對20題", date: today, points: ACHIEVEMENT_POINTS.consecutive20 });
+    }
+
+    let allChaptersDone = true;
+    for (let u in window.ALL_UNITS) {
+        for (let c in window.ALL_UNITS[u].chapters) {
+            if (getChapterMastery(u, c) < 80) allChaptersDone = false;
+        }
+    }
+    if (allChaptersDone && !userData.achievements.allChaptersMaster) {
+        userData.achievements.allChaptersMaster = { unlocked: true, date: today };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🏆 全科目制霸 - 所有章節完成度達80%", date: today, points: ACHIEVEMENT_POINTS.allChaptersMaster });
+    }
+
+    let recentPractices = userData.practiceHistory.slice(0, 5);
+    let allPerfect = recentPractices.length >= 5 && recentPractices.every(p => p.accuracy === 100);
+    if (allPerfect && !userData.achievements.fiveStarStreak) {
+        userData.achievements.fiveStarStreak = { unlocked: true, date: today };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⭐ 五星連珠 - 連續5次練習正確率100%", date: today, points: ACHIEVEMENT_POINTS.fiveStarStreak });
+    }
+
+    if (clearedMistakes >= 50 && !userData.achievements.mistakeEraser) {
+        userData.achievements.mistakeEraser = { unlocked: true, date: today };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🗑️ 錯題剋星 - 從錯題本清除50道錯題", date: today, points: ACHIEVEMENT_POINTS.mistakeEraser });
+    }
+
+    if (userData.favorites.length >= 50 && !userData.achievements.collector) {
+        userData.achievements.collector = { unlocked: true, date: today };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📚 收藏家 - 收藏50道題目", date: today, points: ACHIEVEMENT_POINTS.collector });
+    }
+
+    let lastDate = userData.stats.lastPracticeDate;
+    if (lastDate) {
+        let last = new Date(lastDate);
+        let todayDate = new Date(today);
+        let diffDays = Math.floor((todayDate - last) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1 || diffDays === 0) {
+            if (!userData.stats.dailyPracticeDates.includes(today)) {
+                userData.stats.dailyPracticeDates.push(today);
             }
-            
-            const role = user.isTeacher ? '🧑‍🏫 老師' : '👨‍🎓 學生';
-            showResult(`✅ 登入成功！\n👤 ${user.name} (${role})\n📚 班級：${user.className}`, '#10b981');
-            enterMainApp(user);
-        } else {
-            showResult('❌ 找不到用戶資料', '#dc2626');
-            await auth.signOut();
+        } else if (diffDays > 1) {
+            userData.stats.dailyPracticeDates = [today];
         }
-    } catch(e) {
-        console.error('登入錯誤:', e);
-        showResult(getAuthErrorMessage(e), '#dc2626');
-    }
-}
-
-// ============================================================
-// 【錯誤標示區】如果 enterMainApp 卡住，請檢查：
-// 1. 所有 panel 的 id 是否正確（practicePanel, myMistakesPanel 等）
-// 2. teacherTab 是否被正確顯示或隱藏
-// 3. switchTab('practice') 是否正常運作
-// ============================================================
-function enterMainApp(user) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainScreen').style.display = 'block';
-    
-    const role = user.isTeacher ? '🧑‍🏫 老師' : '👨‍🎓 學生';
-    document.getElementById('userLabel').textContent = `👋 ${user.name} (${user.className}) ${role}`;
-    
-    const teacherTab = document.getElementById('teacherTab');
-    if (user.isTeacher) {
-        teacherTab.style.display = 'inline-block';
     } else {
-        teacherTab.style.display = 'none';
+        userData.stats.dailyPracticeDates = [today];
     }
-    
-    switchTab('practice');
-    if (user.isTeacher) renderTeacherStudentList();
+    userData.stats.lastPracticeDate = today;
+
+    if (userData.stats.dailyPracticeDates.length >= 7 && !userData.achievements.weekChallenge) {
+        userData.achievements.weekChallenge = { unlocked: true, date: today };
+        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📅 一週挑戰 - 連續7天完成至少一次練習", date: today, points: ACHIEVEMENT_POINTS.weekChallenge });
+    }
+
+    saveUserData();
 }
 
-// ============================================================
-// 【錯誤標示區】如果 switchTab 卡住，請檢查：
-// 1. 所有 panel 是否有 class="panel" 和 style="display:none;"
-// 2. tabId + 'Panel' 是否對應到正確的 id（例如 changePwd → changePwdPanel）
-// 3. 是否有其他 CSS 覆蓋了 display 設定（例如 .panel.active）
-// 4. 所有分頁按鈕的 data-tab 屬性是否與 panel id 對應
-// ============================================================
-function switchTab(tabId) {
-    document.querySelectorAll('.panel').forEach(function(p) {
-        p.classList.remove('active');
-        p.style.display = 'none';
+function addPracticeHistory(unit, chapter, difficultyName, questionCount, correctCount, accuracy, mode, timeSpentPercent, consecutiveCorrectCount, isBlankPaper, timeSpentSeconds) {
+    let now = new Date(), date = now.toISOString().slice(0, 10), time = now.toTimeString().slice(0, 5);
+    let unitObj = window.ALL_UNITS[unit];
+    let unitName = unitObj ? unitObj.name : unit;
+    let chapterName = '單元測驗';
+    if (chapter && unitObj && unitObj.chapters[chapter]) {
+        chapterName = unitObj.chapters[chapter].name;
+    } else if (chapter) {
+        chapterName = chapter;
+    }
+    userData.practiceHistory.unshift({ 
+        id: Date.now(), date, time, unitId: unit, unitName, chapterId: chapter, chapterName, 
+        difficulty: difficultyName, questionCount, correctCount, accuracy, mode,
+        timeSpent: timeSpentSeconds || 0
     });
+    if (userData.practiceHistory.length > 100) userData.practiceHistory = userData.practiceHistory.slice(0, 100);
 
-    var target = document.getElementById(tabId + 'Panel');
-    if (target) {
-        target.classList.add('active');
-        target.style.display = 'block';
-    } else {
-        console.warn('⚠️ 找不到面板:', tabId + 'Panel');
-    }
+    let totalQuestions = (userData.stats?.totalQuestionsAnswered || 0) + questionCount;
+    if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
+    userData.stats.totalQuestionsAnswered = totalQuestions;
+    userData.stats.totalCorrect = (userData.stats.totalCorrect || 0) + correctCount;
 
-    document.querySelectorAll('.tab').forEach(function(t) {
-        t.classList.remove('active');
-    });
-    var tabBtn = document.querySelector('.tab[data-tab="' + tabId + '"]');
-    if (tabBtn) {
-        tabBtn.classList.add('active');
-    }
-}
-
-function logout() {
-    if (confirm('確定要登出嗎？')) {
-        auth.signOut();
-        currentUser = null;
-        document.getElementById('loginScreen').style.display = 'block';
-        document.getElementById('mainScreen').style.display = 'none';
-        document.getElementById('password').value = '';
-        showResult('已登出', '#999');
-    }
-}
-
-// ============================================================
-// 【錯誤標示區】如果 openChangePasswordModal 卡住，請檢查：
-// 1. changePasswordModal 是否存在於 HTML 中
-// 2. 是否正確傳入 isFirstLogin 參數
-// ============================================================
-function openChangePasswordModal(isFirstLogin) {
-    // 使用既有的修改密碼面板，但改成強制彈窗模式
-    // 為了簡化，我們直接切換到修改密碼分頁，並顯示提示
-    if (isFirstLogin) {
-        // 強制切換到修改密碼分頁
-        switchTab('changePwd');
-        // 顯示提示訊息
-        var resultEl = document.getElementById('changePwdPanelResult');
-        if (resultEl) {
-            resultEl.textContent = '🔐 首次登入，請設定您的密碼（至少 4 個字元）';
-            resultEl.style.color = '#f59e0b';
-            resultEl.style.fontWeight = 'bold';
-        }
-        // 標記為首次登入模式，讓修改密碼按鈕知道完成後要進入主畫面
-        window._isFirstLogin = true;
-    } else {
-        switchTab('changePwd');
-        window._isFirstLogin = false;
-    }
-}
-
-// ============================================================
-// 【錯誤標示區】如果 changePasswordFromPanel 卡住，請檢查：
-// 1. 三個密碼輸入框是否都填寫了內容
-// 2. 新密碼是否至少 4 個字元
-// 3. 目前密碼是否與 currentUser.password 一致（Firestore 中的密碼）
-// 4. Auth 更新密碼是否成功（需要先登入 Auth 才能更新）
-// 5. 更新後是否正確寫入 Firestore
-// 6. 如果是首次登入，完成後是否將 isFirstLogin 設為 false 並進入主畫面
-// ============================================================
-async function changePasswordFromPanel() {
-    var currentPwd = document.getElementById('changePwdCurrent').value.trim();
-    var newPwd = document.getElementById('changePwdNew').value.trim();
-    var confirmPwd = document.getElementById('changePwdConfirm').value.trim();
-    var resultEl = document.getElementById('changePwdPanelResult');
-
-    if (!currentPwd || !newPwd || !confirmPwd) {
-        resultEl.textContent = '⚠️ 請填寫所有欄位';
-        resultEl.style.color = '#f59e0b';
-        return;
-    }
-
-    if (newPwd.length < 4) {
-        resultEl.textContent = '⚠️ 新密碼至少 4 個字元';
-        resultEl.style.color = '#f59e0b';
-        return;
-    }
-
-    if (newPwd !== confirmPwd) {
-        resultEl.textContent = '❌ 兩次輸入的密碼不一致';
-        resultEl.style.color = '#dc2626';
-        return;
-    }
-
-    if (currentPwd !== currentUser.password) {
-        resultEl.textContent = '❌ 目前密碼錯誤（請確認 Firestore 中的密碼）';
-        resultEl.style.color = '#dc2626';
-        console.warn('🔍 目前輸入:', currentPwd, '| Firestore 記錄:', currentUser.password);
-        return;
-    }
-
-    resultEl.textContent = '⏳ 更新中...';
-    resultEl.style.color = '#f59e0b';
-
-    try {
-        var email = currentUser.userId + '@mastering-science.com';
-        await auth.signInWithEmailAndPassword(email, currentPwd);
-        await auth.currentUser.updatePassword(newPwd);
-        
-        currentUser.password = newPwd;
-        
-        // ============================================================
-        // 【錯誤標示區】如果是首次登入，修改完成後必須：
-        // 1. 將 isFirstLogin 設為 false
-        // 2. 更新 Firestore
-        // 3. 進入主畫面
-        // ============================================================
-        if (window._isFirstLogin === true) {
-            currentUser.isFirstLogin = false;
-            window._isFirstLogin = false;
-            resultEl.textContent = '✅ 密碼設定成功！即將進入主畫面...';
-            resultEl.style.color = '#10b981';
-            await saveUser(currentUser);
-            setTimeout(function() {
-                enterMainApp(currentUser);
-            }, 1000);
-            return;
-        }
-        
-        await saveUser(currentUser);
-        
-        resultEl.textContent = '✅ 密碼已成功修改！（Auth 和 Firestore 已同步）';
-        resultEl.style.color = '#10b981';
-        
-        document.getElementById('changePwdCurrent').value = '';
-        document.getElementById('changePwdNew').value = '';
-        document.getElementById('changePwdConfirm').value = '';
-        
-        setTimeout(function() {
-            resultEl.textContent = '';
-        }, 3000);
-    } catch(e) {
-        console.error('修改密碼錯誤:', e);
-        if (e.code === 'auth/wrong-password') {
-            resultEl.textContent = '❌ Auth 驗證失敗：目前密碼與 Auth 記錄不一致';
-        } else if (e.code === 'auth/invalid-credential') {
-            resultEl.textContent = '❌ Auth 憑證失效：請重新登入後再試';
-        } else {
-            resultEl.textContent = '❌ ' + getAuthErrorMessage(e);
-        }
-        resultEl.style.color = '#dc2626';
-    }
-}
-
-// ============================================================
-// 【錯誤標示區】如果 handleForgotPassword 卡住，請檢查：
-// 1. 輸入的學號是否存在於 Firestore
-// 2. 老師的 isTeacher 是否為 true
-// 3. 輸入的驗證密碼是否等於 MASTER_RESET_PASSWORD（Demo1234）
-// 4. Auth 更新密碼是否成功（需要先用舊密碼登入 Auth）
-// ============================================================
-async function handleForgotPassword() {
-    var userId = document.getElementById('forgotUserId').value.trim();
-    var inputPwd = document.getElementById('forgotPassword').value.trim();
+    let previousAccuracy = userData.stats.lastAccuracy;
+    userData.stats.lastAccuracy = accuracy;
     
-    if (!userId || !inputPwd) {
-        showForgotResult('⚠️ 請輸入學號和驗證密碼', '#f59e0b');
-        return;
+    let isSpeed = timeSpentPercent <= 50 && accuracy >= 70;
+    
+    saveUserData();
+
+    let newUnlocks = [];
+    checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, accuracy === 100 && questionCount >= 10, selectedCount === 36, isSpeed, totalQuestions, newUnlocks, consecutiveCorrectCount, isBlankPaper, previousAccuracy);
+    if (newUnlocks.length > 0) {
+        showUnlockCardsSequentially(newUnlocks);
+    }
+}
+
+function calculateTotalPoints(achievements) {
+    let total = 0;
+    for (let key in achievements) {
+        if (achievements[key]?.unlocked) {
+            total += ACHIEVEMENT_POINTS[key] || 0;
+        }
+    }
+    return total;
+}
+
+function calculateClassRank(userId, userPoints) {
+    let classmates = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        let key = localStorage.key(i);
+        if (key && key.startsWith('ms_chem_') && key.includes(currentUser.class)) {
+            let data = JSON.parse(localStorage.getItem(key));
+            let points = calculateTotalPoints(data.achievements || {});
+            let uid = key.replace('ms_chem_', '');
+            classmates.push({ id: uid, points: points });
+        }
+    }
+    classmates.sort((a, b) => b.points - a.points);
+    let rank = classmates.findIndex(c => c.id === userId) + 1;
+    return { rank: rank, total: classmates.length };
+}
+
+// ==================== 挑題邏輯 ====================
+function selectQuestionsByDifficultyAndCount(questions, count, preference, isTrial, isUnitTest = false) {
+    let filteredQuestions = excludeTranslate ? questions.filter(q => q.difficulty !== "🌐 Translate") : [...questions];
+    
+    if (isTrial) {
+        let sorted = [...filteredQuestions];
+        sorted.sort((a, b) => {
+            if (a.difficulty_level !== b.difficulty_level) return b.difficulty_level - a.difficulty_level;
+            let aWrong = userData.latestStatus[a.id] === false, bWrong = userData.latestStatus[b.id] === false;
+            if (aWrong !== bWrong) return aWrong ? -1 : 1;
+            return 0;
+        });
+        return sorted.slice(0, Math.min(count, 50));
     }
 
-    showForgotResult('⏳ 驗證中...', '#f59e0b');
-
-    try {
-        var user = await loadUser(userId);
-        if (!user) {
-            showForgotResult('❌ 學號不存在', '#dc2626');
-            return;
+    if (isUnitTest) {
+        let wrongQuestions = filteredQuestions.filter(q => hasEverWrong(q.id));
+        wrongQuestions = shuffleArray(wrongQuestions);
+        
+        if (wrongQuestions.length >= count) {
+            return wrongQuestions.slice(0, count);
         }
+        
+        let remainingQuestions = filteredQuestions.filter(q => !hasEverWrong(q.id));
+        let advancedQuestions = remainingQuestions.filter(q => q.difficulty_level === 2);
+        let challengeQuestions = remainingQuestions.filter(q => q.difficulty_level === 3);
+        
+        advancedQuestions = shuffleArray(advancedQuestions);
+        challengeQuestions = shuffleArray(challengeQuestions);
+        
+        let needed = count - wrongQuestions.length;
+        let advCount = Math.round(needed * 0.2);
+        let chalCount = needed - advCount;
+        
+        let selectedAdv = advancedQuestions.slice(0, advCount);
+        let selectedChal = challengeQuestions.slice(0, chalCount);
+        
+        let result = [...wrongQuestions, ...selectedAdv, ...selectedChal];
+        
+        if (result.length < count) {
+            let allRemaining = remainingQuestions.filter(q => 
+                !selectedAdv.includes(q) && !selectedChal.includes(q)
+            );
+            let extra = shuffleArray(allRemaining).slice(0, count - result.length);
+            result = [...result, ...extra];
+        }
+        
+        return shuffleArray(result);
+    }
 
-        if (user.isTeacher) {
-            if (inputPwd === MASTER_RESET_PASSWORD) {
-                var newPwd = generatePassword();
-                user.password = newPwd;
-                user.isFirstLogin = true;
-                await saveUser(user);
+    let allowedLevels = [];
+    if (preference === 0) {
+        allowedLevels = [0, 1];
+    } else if (preference === 1) {
+        allowedLevels = [2];
+    } else if (preference === 2) {
+        allowedLevels = [2, 3];
+    }
 
-                try {
-                    var email = userId + '@mastering-science.com';
-                    await auth.signInWithEmailAndPassword(email, MASTER_RESET_PASSWORD);
-                    await auth.currentUser.updatePassword(newPwd);
-                    await auth.signOut();
-                } catch(e) {
-                    console.warn('⚠️ Auth 更新失敗:', e.message);
-                }
+    let wrongQuestions = [];
+    let notAttemptedQuestions = [];
+    let otherQuestions = [];
 
-                showForgotResult('✅ 驗證成功！\n新密碼：' + newPwd + '\n請用此密碼登入並修改密碼', '#10b981');
-                document.getElementById('forgotPassword').value = '';
+    for (let q of filteredQuestions) {
+        const level = q.difficulty_level;
+        const isAllowed = allowedLevels.includes(level);
+        
+        if (userData.latestStatus[q.id] === false) {
+            wrongQuestions.push(q);
+            continue;
+        }
+        
+        if (isNotAttempted(q.id) && isAllowed) {
+            notAttemptedQuestions.push(q);
+            continue;
+        }
+        
+        if (isAllowed) {
+            otherQuestions.push(q);
+        }
+    }
+
+    let candidates = [...wrongQuestions];
+    
+    if (candidates.length < count) {
+        let shuffledNotAttempted = shuffleArray([...notAttemptedQuestions]);
+        candidates = [...candidates, ...shuffledNotAttempted];
+    }
+    
+    if (candidates.length < count) {
+        let remaining = count - candidates.length;
+        let otherShuffled = shuffleArray([...otherQuestions]);
+        
+        let selected = [];
+        if (preference === 0) {
+            let basicTranslate = otherShuffled.filter(q => q.difficulty_level === 0 || q.difficulty_level === 1);
+            let advanced = otherShuffled.filter(q => q.difficulty_level === 2);
+            let half = Math.ceil(remaining / 2);
+            selected = [
+                ...shuffleArray(basicTranslate).slice(0, half),
+                ...shuffleArray(advanced).slice(0, remaining - half)
+            ];
+        } else if (preference === 1) {
+            let advanced = otherShuffled.filter(q => q.difficulty_level === 2);
+            let challenge = otherShuffled.filter(q => q.difficulty_level === 3);
+            let half = Math.ceil(remaining / 2);
+            selected = [
+                ...shuffleArray(advanced).slice(0, half),
+                ...shuffleArray(challenge).slice(0, remaining - half)
+            ];
+        } else if (preference === 2) {
+            let advanced = otherShuffled.filter(q => q.difficulty_level === 2);
+            let challenge = otherShuffled.filter(q => q.difficulty_level === 3);
+            let advCount = Math.ceil(remaining * 0.2);
+            selected = [
+                ...shuffleArray(advanced).slice(0, advCount),
+                ...shuffleArray(challenge).slice(0, remaining - advCount)
+            ];
+        }
+        candidates = [...candidates, ...selected];
+    }
+    
+    candidates = [...new Map(candidates.map(q => [q.id, q])).values()];
+    candidates = shuffleArray(candidates);
+    
+    return candidates.slice(0, Math.min(count, candidates.length));
+}
+
+// ==================== UI 渲染函數 ====================
+function toggleUnit(unitId) {
+    let c = document.getElementById(`chapters-${unitId}`), t = document.getElementById(`toggle-${unitId}`);
+    if (c.classList.contains('open')) { c.classList.remove('open'); t.textContent = '▶'; }
+    else { c.classList.add('open'); t.textContent = '▼'; }
+}
+
+function toggleAchievementUnit(unitId) {
+    let c = document.getElementById(`achievement-chapters-${unitId}`), t = document.getElementById(`achievement-toggle-${unitId}`);
+    if (c.classList.contains('open')) { c.classList.remove('open'); t.textContent = '▶'; }
+    else { c.classList.add('open'); t.textContent = '▼'; }
+}
+
+function toggleMistakeChapter(chapterKey, type) {
+    let c = document.getElementById(`${type}-${chapterKey}`), t = document.getElementById(`${type}-toggle-${chapterKey}`);
+    if (c.classList.contains('open')) { c.classList.remove('open'); t.textContent = '▶'; }
+    else { c.classList.add('open'); t.textContent = '▼'; }
+}
+
+function toggleCollapsible(id) {
+    let el = document.getElementById(id);
+    if (el) {
+        if (el.classList.contains('collapsed')) el.classList.remove('collapsed');
+        else el.classList.add('collapsed');
+    }
+}
+
+function isMobile() {
+    return window.innerWidth <= 640;
+}
+
+function renderPractice() {
+    const container = document.getElementById('practicePanel');
+    if (!container) return;
+    if (!window.ALL_UNITS) { container.innerHTML = '<div class="card">題庫未載入</div>'; return; }
+    let html = '';
+    for (let unit in window.ALL_UNITS) {
+        let unitObj = window.ALL_UNITS[unit], chapters = unitObj.chapters;
+        if (Object.keys(chapters).length === 0) continue;
+        let mastery = getUnitMastery(unit);
+        let unitNameForDisplay = isMobile() ? unitObj.name.replace(/（[^）]*）/, '') : unitObj.name;
+        
+        html += `<div class="unit-group"><div class="unit-header" onclick="toggleUnit('${unit}')">
+            <div class="unit-header-left">
+                <span class="unit-toggle" id="toggle-${unit}">▶</span>
+                <span>${unitNameForDisplay}</span>
+            </div>
+            <div class="mastery-wrapper">
+                <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${mastery}%;"></div></div>
+                <span class="mastery-text">完成度 ${mastery}%</span>
+                <button class="btn btn-small unit-test-btn" data-unit="${unit}" style="background:var(--deep-purple-light); padding:0.15rem 0.5rem; font-size:0.7rem;">📝 單元測驗</button>
+            </div>
+        </div><div class="chapters-container" id="chapters-${unit}">`;
+        for (let ch in chapters) {
+            let chMastery = getChapterMastery(unit, ch), chTotal = getChapterTotalQuestions(unit, ch);
+            let chNameDisplay = chapters[ch].name;
+            if (isMobile()) {
+                html += `<div class="chapter-item">
+                    <span class="chapter-name">${chNameDisplay} (${chTotal} 題)</span>
+                    <div class="chapter-row">
+                        <div class="progress-wrapper">
+                            <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${chMastery}%;"></div></div>
+                            <span class="mastery-text">${chMastery}%</span>
+                        </div>
+                        <div class="chapter-actions">
+                            <button class="btn btn-small practice-chapter" data-unit="${unit}" data-chapter="${ch}">✏️練習</button>
+                            <button class="btn btn-danger btn-small clear-chapter" data-unit="${unit}" data-chapter="${ch}">🗑️重置</button>
+                        </div>
+                    </div>
+                </div>`;
             } else {
-                showForgotResult('❌ 驗證密碼錯誤（老師請用 Demo1234）', '#dc2626');
+                html += `<div class="chapter-item">
+                    <span class="chapter-name">${chNameDisplay} (${chTotal} 題)</span>
+                    <div class="mastery-wrapper">
+                        <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${chMastery}%;"></div></div>
+                        <span class="mastery-text">完成度 ${chMastery}%</span>
+                    </div>
+                    <div class="chapter-actions">
+                        <button class="btn btn-small practice-chapter" data-unit="${unit}" data-chapter="${ch}">✏️ 練習</button>
+                        <button class="btn btn-danger btn-small clear-chapter" data-unit="${unit}" data-chapter="${ch}">🗑️ 重置</button>
+                    </div>
+                </div>`;
             }
-        } else {
-            showForgotResult('❌ 請聯絡老師重設密碼', '#dc2626');
         }
-    } catch(e) {
-        console.error('忘記密碼錯誤:', e);
-        showForgotResult('❌ ' + e.message, '#dc2626');
+        html += `</div></div>`;
+    }
+    container.innerHTML = html;
+    
+    const unit2Container = document.getElementById('chapters-2');
+    if (unit2Container) {
+        unit2Container.classList.add('open');
+        const toggle2 = document.getElementById('toggle-2');
+        if (toggle2) toggle2.textContent = '▼';
+    }
+    
+    document.querySelectorAll('.practice-chapter').forEach(btn => btn.addEventListener('click', (e) => {
+        e.stopPropagation(); 
+        pendingUnit = btn.dataset.unit; 
+        pendingChapter = btn.dataset.chapter; 
+        isSingleQuestionMode = false;
+        updateSettingsUnlockStatus(); 
+        document.getElementById('settingsModal').style.display = 'flex';
+    }));
+    
+    document.querySelectorAll('.unit-test-btn').forEach(btn => btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const unit = btn.dataset.unit;
+        startUnitTest(unit);
+    }));
+    
+    document.querySelectorAll('.clear-chapter').forEach(btn => btn.addEventListener('click', (e) => {
+        e.stopPropagation(); let unit = btn.dataset.unit, chapter = btn.dataset.chapter;
+        if (confirm(`確定清空「${window.ALL_UNITS[unit].chapters[chapter].name}」的所有練習紀錄？`)) {
+            let qs = window.ALL_UNITS[unit].chapters[chapter].questions;
+            for (let q of qs) delete userData.latestStatus[q.id];
+            userData.allAttempts = userData.allAttempts.filter(att => !qs.some(q => q.id === att.qid));
+            saveUserData(); renderPractice(); renderMyMistakes(); renderPastMistakes(); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
+        }
+    }));
+}
+
+// ==================== 單元測驗功能 ====================
+function startUnitTest(unit) {
+    let allQuestions = [];
+    for (let ch in window.ALL_UNITS[unit].chapters) {
+        allQuestions = allQuestions.concat(window.ALL_UNITS[unit].chapters[ch].questions);
+    }
+    if (allQuestions.length === 0) {
+        alert('此單元暫無題目');
+        return;
+    }
+    
+    let count = Math.min(36, allQuestions.length);
+    let selectedQuestions = selectQuestionsByDifficultyAndCount(allQuestions, count, 1, false, true);
+    
+    if (selectedQuestions.length < count) {
+        let remaining = allQuestions.filter(q => !selectedQuestions.includes(q));
+        let shuffled = shuffleArray(remaining);
+        selectedQuestions = [...selectedQuestions, ...shuffled.slice(0, count - selectedQuestions.length)];
+    }
+    selectedQuestions = shuffleArray(selectedQuestions);
+    
+    currentUnit = unit;
+    currentChapter = null;
+    currentQuestions = selectedQuestions;
+    currentOptionsMapping = currentQuestions.map(q => {
+        if (q.sf === 0) {
+            let letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) { let optText = q.options[i].substring(3); map[letters[i]] = optText; }
+            return { letterToText: map, correctLetter: q.correct };
+        } else {
+            let texts = q.options.map(opt => opt.replace(/^[A-D]\.\s*/, '')), shuffled = shuffleArray([...texts]), letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) map[letters[i]] = shuffled[i];
+            let correctText = q.options.find(opt => opt.startsWith(q.correct)).replace(/^[A-D]\.\s*/, ''), correctLetter = null;
+            for (let [l, t] of Object.entries(map)) if (t === correctText) { correctLetter = l; break; }
+            return { letterToText: map, correctLetter: correctLetter };
+        }
+    });
+    currentAnswers = new Array(selectedQuestions.length).fill(null);
+    currentQIndex = 0;
+    isTrialMode = false;
+    isSingleQuestionMode = false;
+    selectedCount = 36;
+    
+    let timePerQuestion = 90;
+    timeRemaining = selectedQuestions.length * timePerQuestion;
+    updateTimerDisplay();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (timeRemaining <= 0) submitAll();
+        else { timeRemaining--; updateTimerDisplay(); }
+    }, 1000);
+    
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+    }
+    const submitBtn = document.getElementById('submitAllBtn');
+    if (submitBtn) submitBtn.style.animation = '';
+    
+    document.getElementById('settingsModal').style.display = 'none';
+    document.getElementById('explainModal').style.display = 'none';
+    document.getElementById('resultModal').style.display = 'none';
+    
+    startTime = Date.now();
+    
+    if (isMobile()) {
+        showQuizModal();
+    } else {
+        showDesktopQuizModal();
     }
 }
 
-function generatePassword() {
-    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    var pwd = '';
-    for (var i = 0; i < 8; i++) {
-        pwd += chars[Math.floor(Math.random() * chars.length)];
+// ==================== 單題練習功能 ====================
+function startSingleQuestion(qid, source) {
+    let foundQ = null;
+    let foundUnit = null;
+    let foundChapter = null;
+    for (let u in window.ALL_UNITS) {
+        for (let c in window.ALL_UNITS[u].chapters) {
+            let q = window.ALL_UNITS[u].chapters[c].questions.find(qq => qq.id === qid);
+            if (q) {
+                foundQ = q;
+                foundUnit = u;
+                foundChapter = c;
+                break;
+            }
+        }
+        if (foundQ) break;
     }
-    return pwd;
+    if (!foundQ) {
+        alert('找不到該題目');
+        return;
+    }
+    
+    currentUnit = foundUnit;
+    currentChapter = foundChapter;
+    currentQuestions = [foundQ];
+    currentOptionsMapping = currentQuestions.map(q => {
+        if (q.sf === 0) {
+            let letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) { let optText = q.options[i].substring(3); map[letters[i]] = optText; }
+            return { letterToText: map, correctLetter: q.correct };
+        } else {
+            let texts = q.options.map(opt => opt.replace(/^[A-D]\.\s*/, '')), shuffled = shuffleArray([...texts]), letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) map[letters[i]] = shuffled[i];
+            let correctText = q.options.find(opt => opt.startsWith(q.correct)).replace(/^[A-D]\.\s*/, ''), correctLetter = null;
+            for (let [l, t] of Object.entries(map)) if (t === correctText) { correctLetter = l; break; }
+            return { letterToText: map, correctLetter: correctLetter };
+        }
+    });
+    currentAnswers = new Array(1).fill(null);
+    currentQIndex = 0;
+    isSingleQuestionMode = true;
+    singleQuestionSource = source;
+    isTrialMode = false;
+    selectedDifficulty = 1;
+    
+    timeRemaining = 90;
+    updateTimerDisplay();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (timeRemaining <= 0) submitAll();
+        else { timeRemaining--; updateTimerDisplay(); }
+    }, 1000);
+    
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+    }
+    const submitBtn = document.getElementById('submitAllBtn');
+    if (submitBtn) submitBtn.style.animation = '';
+    
+    document.getElementById('settingsModal').style.display = 'none';
+    startTime = Date.now();
+    showQuizModal();
 }
 
-// ============================================================
-// 【錯誤標示區】如果 renderTeacherStudentList 卡住，請檢查：
-// 1. currentUser 是否為 null（未登入）
-// 2. currentUser.isTeacher 是否為 true
-// 3. Firestore 中是否有 className == currentUser.className 的用戶
-// 4. Security Rules 是否允許讀取全班資料（allow read if request.auth != null）
-// 5. 學生資料的 isTeacher 是否為 false
-// ============================================================
-async function renderTeacherStudentList() {
-    var container = document.getElementById('teacherStudentList');
+function updateSettingsUnlockStatus() {
+    if (!pendingUnit || !pendingChapter) return;
+    
+    let questions = window.ALL_UNITS[pendingUnit].chapters[pendingChapter].questions;
+    
+    let availableQuestions = excludeTranslate ? questions.filter(q => q.difficulty !== "🌐 Translate") : [...questions];
+    let basicQuestions = availableQuestions.filter(q => q.difficulty_level === 1);
+    let basicCorrect = basicQuestions.filter(q => userData.latestStatus[q.id] === true).length;
+    let basicTotal = basicQuestions.length;
+    let basicPercent = basicTotal === 0 ? 0 : Math.round(basicCorrect / basicTotal * 100);
+    
+    let advancedQuestions = availableQuestions.filter(q => q.difficulty_level === 2);
+    let advancedCorrect = advancedQuestions.filter(q => userData.latestStatus[q.id] === true).length;
+    let advancedTotal = advancedQuestions.length;
+    let advancedPercent = advancedTotal === 0 ? 0 : Math.round(advancedCorrect / advancedTotal * 100);
+    
+    let challengeQuestions = availableQuestions.filter(q => q.difficulty_level === 3);
+    let challengeCorrect = challengeQuestions.filter(q => userData.latestStatus[q.id] === true).length;
+    let challengeTotal = challengeQuestions.length;
+    let challengePercent = challengeTotal === 0 ? 0 : Math.round(challengeCorrect / challengeTotal * 100);
+    
+    let star3Unlocked = basicPercent >= 80;
+    let star5Unlocked = star3Unlocked && advancedPercent >= 80;
+    let trialUnlocked = star5Unlocked && challengePercent >= 80;
+    
+    let targetPercent = 0;
+    let targetCorrect = 0;
+    let targetTotal = 0;
+    let targetName = '';
+    let currentStage = 'locked';
+    
+    if (!star3Unlocked) {
+        currentStage = 'locked';
+        targetPercent = basicPercent;
+        targetCorrect = basicCorrect;
+        targetTotal = basicTotal;
+        targetName = '三星 & 36題';
+    } else if (!star5Unlocked) {
+        currentStage = 'star3';
+        targetPercent = advancedPercent;
+        targetCorrect = advancedCorrect;
+        targetTotal = advancedTotal;
+        targetName = '五星';
+    } else if (!trialUnlocked) {
+        currentStage = 'star5';
+        targetPercent = challengePercent;
+        targetCorrect = challengeCorrect;
+        targetTotal = challengeTotal;
+        targetName = '試煉模式';
+    } else {
+        currentStage = 'complete';
+    }
+    
+    let needed = 0;
+    if (currentStage === 'locked') {
+        needed = Math.ceil(0.8 * basicTotal) - basicCorrect;
+        if (needed < 0) needed = 0;
+    } else if (currentStage === 'star3') {
+        needed = Math.ceil(0.8 * advancedTotal) - advancedCorrect;
+        if (needed < 0) needed = 0;
+    } else if (currentStage === 'star5') {
+        needed = Math.ceil(0.8 * challengeTotal) - challengeCorrect;
+        if (needed < 0) needed = 0;
+    }
+    
+    let dM = document.getElementById('diff-medium');
+    let dH = document.getElementById('diff-hard');
+    let tM = document.getElementById('trial-mode');
+    let diffHint = document.getElementById('diffHint');
+    
+    if (dM) {
+        if (star3Unlocked) {
+            dM.classList.remove('locked');
+            dM.disabled = false;
+            dM.innerHTML = '<span class="stars">★★★</span><span class="label">3 星</span>';
+        } else {
+            dM.classList.add('locked');
+            dM.disabled = true;
+            if (selectedDifficulty === 1) {
+                selectedDifficulty = 0;
+                document.getElementById('diff-easy').classList.add('active');
+                document.getElementById('diff-medium').classList.remove('active');
+                document.getElementById('diff-hard').classList.remove('active');
+            }
+        }
+    }
+    
+    if (dH) {
+        if (star5Unlocked) {
+            dH.classList.remove('locked');
+            dH.disabled = false;
+            dH.innerHTML = '<span class="stars">★★★★★</span><span class="label">5 星</span>';
+        } else {
+            dH.classList.add('locked');
+            dH.disabled = true;
+            if (selectedDifficulty === 2) {
+                selectedDifficulty = 0;
+                document.getElementById('diff-easy').classList.add('active');
+                document.getElementById('diff-medium').classList.remove('active');
+                document.getElementById('diff-hard').classList.remove('active');
+            }
+        }
+    }
+    
+    if (tM) {
+        if (trialUnlocked) {
+            tM.classList.remove('locked');
+            tM.disabled = false;
+            tM.innerHTML = '🔥 5** 試煉模式';
+        } else {
+            tM.classList.add('locked');
+            tM.disabled = true;
+        }
+    }
+    
+    let count10 = document.getElementById('count-10');
+    let count20 = document.getElementById('count-20');
+    let count36 = document.getElementById('count-36');
+    let customInput = document.getElementById('customCount');
+    let countHint = document.getElementById('countHint');
+    
+    if (count10) {
+        count10.disabled = false;
+        count10.classList.remove('locked');
+    }
+    if (count20) {
+        count20.disabled = false;
+        count20.classList.remove('locked');
+    }
+    
+    let maxCustom = 0;
+    if (selectedDifficulty === 0) {
+        if (excludeTranslate) {
+            maxCustom = basicTotal;
+        } else {
+            maxCustom = questions.filter(q => q.difficulty_level === 0 || q.difficulty_level === 1).length;
+        }
+    } else if (selectedDifficulty === 1) {
+        maxCustom = availableQuestions.length;
+    } else if (selectedDifficulty === 2) {
+        maxCustom = advancedTotal + challengeTotal;
+    } else if (isTrialMode) {
+        maxCustom = Math.min(availableQuestions.length, 50);
+    }
+    maxCustom = Math.min(maxCustom, 50);
+    if (maxCustom < 1) maxCustom = 1;
+    
+    if (count36 && customInput) {
+        if (star3Unlocked) {
+            count36.disabled = false;
+            count36.classList.remove('locked');
+            count36.innerHTML = '36 題';
+            customInput.disabled = false;
+            customInput.style.opacity = '1';
+            customInput.max = maxCustom;
+            
+            let currentVal = parseInt(customInput.value);
+            if (isNaN(currentVal)) currentVal = 10;
+            if (currentVal > maxCustom) {
+                customInput.value = maxCustom;
+                customCount = maxCustom;
+                selectedCount = maxCustom;
+            } else if (currentVal < 1) {
+                customInput.value = 1;
+                customCount = 1;
+                selectedCount = 1;
+            } else {
+                customCount = currentVal;
+                selectedCount = currentVal;
+            }
+            
+            if (countHint) countHint.innerHTML = `✅ 36題及自訂題數已解鎖！(上限 ${maxCustom} 題)`;
+        } else {
+            count36.disabled = true;
+            count36.classList.add('locked');
+            count36.innerHTML = '36 題 🔒';
+            customInput.disabled = true;
+            customInput.style.opacity = '0.5';
+            if (countHint) countHint.innerHTML = `🔒 36題及自訂題數需Basic正確率達80%解鎖 (目前 ${basicPercent}%)`;
+        }
+    }
+    
+    if (diffHint) {
+        if (currentStage === 'locked') {
+            diffHint.innerHTML = `🔒 解鎖三星需要 Basic 題正確率 ≥ 80% (目前 ${basicPercent}%)`;
+        } else if (currentStage === 'star3') {
+            diffHint.innerHTML = `🔒 解鎖五星需要 Advanced 題正確率 ≥ 80% (目前 ${advancedPercent}%)`;
+        } else if (currentStage === 'star5') {
+            diffHint.innerHTML = `🔒 解鎖試煉模式需要 Challenge 題正確率 ≥ 80% (目前 ${challengePercent}%)`;
+        } else {
+            diffHint.innerHTML = `✅ 所有難度已解鎖！`;
+        }
+    }
+    
+    let progressContainer = document.getElementById('star3-progress-container');
+    if (!progressContainer && diffHint && diffHint.parentNode) {
+        progressContainer = document.createElement('div');
+        progressContainer.id = 'star3-progress-container';
+        progressContainer.className = 'star3-progress-container';
+        diffHint.parentNode.appendChild(progressContainer);
+    }
+    
+    if (progressContainer) {
+        if (currentStage === 'complete') {
+            progressContainer.innerHTML = `
+                <div class="star3-progress-bar">
+                    <div class="star3-progress-fill unlocked" style="width: 100%;"></div>
+                </div>
+                <div class="star3-progress-text unlocked">🏆 恭喜！全部難度已解鎖！所有難度皆可自由選擇</div>
+            `;
+        } else {
+            let fillClass = (targetPercent >= 80) ? 'unlocked' : '';
+            let statusText = (targetPercent >= 80) ? '✅ 已達標！' : `尚需 ${needed} 題`;
+            progressContainer.innerHTML = `
+                <div class="star3-progress-bar">
+                    <div class="star3-progress-fill ${fillClass}" style="width: ${targetPercent}%;"></div>
+                </div>
+                <div class="star3-progress-text ${fillClass}">📈 解鎖${targetName}進度：${targetPercent}% (${targetCorrect}/${targetTotal}) ${statusText}</div>
+            `;
+        }
+    }
+}
+
+function renderMyMistakes() {
+    let wrongByChapter = {};
+    for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) for (let q of window.ALL_UNITS[u].chapters[c].questions) if (userData.latestStatus[q.id] === false) { if (!wrongByChapter[c]) wrongByChapter[c] = []; wrongByChapter[c].push({ ...q, chapterName: window.ALL_UNITS[u].chapters[c].name }); }
+    let container = document.getElementById('myMistakesPanel');
+    if (Object.keys(wrongByChapter).length === 0) { container.innerHTML = '<div class="card">✨ 目前沒有錯題</div>'; return; }
+    let html = '<div class="card"><h3>我的錯題</h3>';
+    for (let ch in wrongByChapter) {
+        html += `<div class="mistake-chapter-group"><div class="mistake-chapter-header" onclick="toggleMistakeChapter('${ch}','my')"><span>📖 ${wrongByChapter[ch][0].chapterName}</span><span class="unit-toggle" id="my-toggle-${ch}">▶</span></div><div class="mistake-questions" id="my-${ch}">`;
+        for (let q of wrongByChapter[ch]) {
+            let isFav = userData.favorites.includes(q.id);
+            html += `<div class="mistake-question-item"><span>${q.text}</span><div>
+                <button class="btn-icon star" data-qid="${q.id}" style="color:${isFav ? '#fbbf24' : '#ccc'}">★</button>
+                <button class="btn-icon redo-q" data-qid="${q.id}" data-source="myMistakes">🔄</button>
+            </div></div>`;
+        }
+        html += `</div></div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+    attachMistakeEvents();
+}
+
+function renderPastMistakes() {
+    let wrongQids = new Set();
+    for (let att of userData.allAttempts) if (!att.isCorrect) wrongQids.add(att.qid);
+    let pastByChapter = {};
+    for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) for (let q of window.ALL_UNITS[u].chapters[c].questions) if (wrongQids.has(q.id)) { if (!pastByChapter[c]) pastByChapter[c] = []; pastByChapter[c].push({ ...q, chapterName: window.ALL_UNITS[u].chapters[c].name }); }
+    let container = document.getElementById('pastMistakesPanel');
+    if (Object.keys(pastByChapter).length === 0) { container.innerHTML = '<div class="card">📭 尚無錯題歷程</div>'; return; }
+    let html = '<div class="card"><h3>錯題歷程</h3>';
+    for (let ch in pastByChapter) {
+        html += `<div class="mistake-chapter-group"><div class="mistake-chapter-header" onclick="toggleMistakeChapter('${ch}','past')"><span>📖 ${pastByChapter[ch][0].chapterName}</span><span class="unit-toggle" id="past-toggle-${ch}">▶</span></div><div class="mistake-questions" id="past-${ch}">`;
+        for (let q of pastByChapter[ch]) {
+            let isFav = userData.favorites.includes(q.id);
+            html += `<div class="mistake-question-item"><span>${q.text}</span><div>
+                <button class="btn-icon star" data-qid="${q.id}" style="color:${isFav ? '#fbbf24' : '#ccc'}">★</button>
+                <button class="btn-icon redo-q" data-qid="${q.id}" data-source="pastMistakes">🔄</button>
+                <button class="btn-icon remove-q" data-qid="${q.id}" style="color:#dc2626;" title="移除該題">🗑️</button>
+            </div></div>`;
+        }
+        html += `</div></div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+    attachMistakeEvents();
+    attachRemoveEvents();
+}
+
+function renderPinned() {
+    let container = document.getElementById('pinnedPanel');
+    if (userData.favorites.length === 0) { container.innerHTML = '<div class="card">⭐ 尚無收藏題目</div>'; return; }
+    let html = '<div class="card"><h3>收藏題目</h3>';
+    for (let qid of userData.favorites) {
+        let found = null, chapterName = '';
+        for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) { let q = window.ALL_UNITS[u].chapters[c].questions.find(qq => qq.id === qid); if (q) { found = q; chapterName = window.ALL_UNITS[u].chapters[c].name; break; } }
+        if (found) html += `<div class="mistake-question-item"><span><strong>${chapterName}</strong> ${found.text}</span><div>
+            <button class="btn-icon redo-q" data-qid="${qid}" data-source="pinned">🔄</button>
+            <button class="btn-icon remove-q" data-qid="${qid}" style="color:#dc2626;" title="移除該題">🗑️</button>
+        </div></div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+    document.querySelectorAll('.redo-q').forEach(btn => btn.addEventListener('click', (e) => {
+        const qid = btn.dataset.qid;
+        const source = btn.dataset.source || 'myMistakes';
+        startSingleQuestion(qid, source);
+    }));
+    attachRemoveEvents();
+}
+
+function attachMistakeEvents() {
+    document.querySelectorAll('.star').forEach(star => star.addEventListener('click', (e) => { let qid = star.dataset.qid; if (userData.favorites.includes(qid)) userData.favorites = userData.favorites.filter(id => id !== qid); else userData.favorites.push(qid); saveUserData(); renderMyMistakes(); renderPastMistakes(); renderPinned(); }));
+    document.querySelectorAll('.redo-q').forEach(btn => btn.addEventListener('click', (e) => {
+        const qid = btn.dataset.qid;
+        const source = btn.dataset.source || 'myMistakes';
+        startSingleQuestion(qid, source);
+    }));
+}
+
+function attachRemoveEvents() {
+    document.querySelectorAll('.remove-q').forEach(btn => btn.addEventListener('click', (e) => {
+        const qid = btn.dataset.qid;
+        if (confirm('確定移除該題？')) {
+            if (userData.favorites.includes(qid)) {
+                userData.favorites = userData.favorites.filter(id => id !== qid);
+            }
+            userData.allAttempts = userData.allAttempts.filter(att => att.qid !== qid);
+            delete userData.latestStatus[qid];
+            saveUserData();
+            renderPastMistakes();
+            renderPinned();
+            renderMyMistakes();
+        }
+    }));
+}
+
+// ==================== renderHistory ====================
+function renderHistory() {
+    let container = document.getElementById('historyPanel');
+    if (!userData.practiceHistory || userData.practiceHistory.length === 0) { container.innerHTML = '<div class="card">📋 暫無做題紀錄</div>'; return; }
+    let html = `<div class="card"><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;"><h3>📋 做題紀錄</h3><button id="exportHistoryBtn" class="btn export-btn">📥 匯出 CSV</button></div><div style="overflow-x:auto;"><table class="history-table"><thead><tr><th>日期</th><th>時間</th><th>單元</th><th>章節</th><th>題數</th><th>正確率</th><th>模式</th><th>花費時間</th></tr></thead><tbody>`;
+    for (let h of userData.practiceHistory) {
+        let timeStr = h.timeSpent ? formatTime(h.timeSpent) : '-';
+        html += `<tr><td>${format(new Date(h.date), 'yyyy-MM-dd')}</td><td>${h.time}</td><td>${h.unitName}</td><td>${h.chapterName}</td><td>${h.questionCount}</td><td>${h.accuracy}%</td><td>${h.mode === 'trial' ? '試煉' : '一般'}</td><td>${timeStr}</td></tr>`;
+    }
+    html += `</tbody></table></div></div>`;
+    container.innerHTML = html;
+    document.getElementById('exportHistoryBtn')?.addEventListener('click', () => {
+        let csv = [["日期", "時間", "單元", "章節", "題數", "正確數", "正確率", "模式", "花費時間"]];
+        for (let h of userData.practiceHistory) {
+            let timeStr = h.timeSpent ? formatTime(h.timeSpent) : '-';
+            csv.push([h.date, h.time, h.unitName, h.chapterName, h.questionCount, h.correctCount, `${h.accuracy}%`, h.mode === 'trial' ? '試煉' : '一般', timeStr]);
+        }
+        let blob = new Blob(["\uFEFF" + csv.map(r => r.join(",")).join("\n")], { type: "text/csv;charset=utf-8;" });
+        let link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `mastering_science_history_${currentUser.name}.csv`; link.click(); URL.revokeObjectURL(link.href);
+    });
+}
+
+function renderAchievements() {
+    let container = document.getElementById('achievementsPanel');
+    
+    let chapterList = [];
+    for (let u in window.ALL_UNITS) {
+        for (let ch in window.ALL_UNITS[u].chapters) {
+            chapterList.push({
+                unit: u,
+                unitName: window.ALL_UNITS[u].name,
+                chapter: ch,
+                chapterNum: parseInt(ch),
+                chapterName: window.ALL_UNITS[u].chapters[ch].name
+            });
+        }
+    }
+    chapterList.sort((a, b) => a.chapterNum - b.chapterNum);
+    
+    let unlockedChapters = [];
+    let lockedChapters = [];
+    
+    for (let item of chapterList) {
+        let key = `${item.unit}_${item.chapter}`;
+        let ach = userData.achievements[key] || {};
+        let types = [
+            { id: 'star1', name: '一星完成', icon: '✅', unlocked: ach.star1?.unlocked || false, date: ach.star1?.date || null, needHint: '需一星80%', points: ACHIEVEMENT_POINTS.star1, order: 1 },
+            { id: 'star3', name: '三星解鎖', icon: '🔥', unlocked: ach.star3?.unlocked || false, date: ach.star3?.date || null, needHint: '需三星80%', points: ACHIEVEMENT_POINTS.star3, order: 2 },
+            { id: 'star5', name: '五星解鎖', icon: '💎', unlocked: ach.star5?.unlocked || false, date: ach.star5?.date || null, needHint: '需五星80%', points: ACHIEVEMENT_POINTS.star5, order: 3 },
+            { id: 'trial', name: '試煉完成', icon: '⚔️', unlocked: ach.trial?.unlocked || false, date: ach.trial?.date || null, needHint: '需試煉模式80%', points: ACHIEVEMENT_POINTS.trial, order: 4 }
+        ];
+        for (let t of types) {
+            let entry = {
+                unitName: item.unitName,
+                chapterName: item.chapterName,
+                chapterNum: item.chapterNum,
+                name: t.name,
+                icon: t.icon,
+                unlocked: t.unlocked,
+                date: t.date,
+                needHint: t.needHint,
+                points: t.points,
+                order: t.order
+            };
+            if (t.unlocked) {
+                unlockedChapters.push(entry);
+            } else {
+                lockedChapters.push(entry);
+            }
+        }
+    }
+    
+    unlockedChapters.sort((a, b) => {
+        if (a.chapterNum !== b.chapterNum) return a.chapterNum - b.chapterNum;
+        return a.order - b.order;
+    });
+    lockedChapters.sort((a, b) => {
+        if (a.chapterNum !== b.chapterNum) return a.chapterNum - b.chapterNum;
+        return a.order - b.order;
+    });
+    
+    let totalQ = userData.stats?.totalQuestionsAnswered || 0;
+    let specials = [
+        { id: 'firstPractice', name: '初試啼聲', icon: '🎯', unlocked: userData.achievements.firstPractice?.unlocked || false, date: userData.achievements.firstPractice?.date || null, desc: '完成第一次練習', progress: userData.achievements.firstPractice?.progress || totalQ, target: 1, showProgress: true, points: ACHIEVEMENT_POINTS.firstPractice, isPenalty: false },
+        { id: 'tenQuestions', name: '十題達人', icon: '📝', unlocked: userData.achievements.tenQuestions?.unlocked || false, date: userData.achievements.tenQuestions?.date || null, desc: '累積完成100題', progress: totalQ, target: 100, showProgress: true, points: ACHIEVEMENT_POINTS.tenQuestions, isPenalty: false },
+        { id: 'fiveHundred', name: '百題斬', icon: '⚔️', unlocked: userData.achievements.fiveHundred?.unlocked || false, date: userData.achievements.fiveHundred?.date || null, desc: '累積完成500題', progress: totalQ, target: 500, showProgress: true, points: ACHIEVEMENT_POINTS.fiveHundred, isPenalty: false },
+        { id: 'thousand', name: '千題之王', icon: '👑', unlocked: userData.achievements.thousand?.unlocked || false, date: userData.achievements.thousand?.date || null, desc: '累積完成1000題', progress: totalQ, target: 1000, showProgress: true, points: ACHIEVEMENT_POINTS.thousand, isPenalty: false },
+        { id: 'perfectLesson', name: '完美一課', icon: '🌟', unlocked: userData.achievements.perfectLesson?.unlocked || false, date: userData.achievements.perfectLesson?.date || null, desc: '單次練習10題以上全對', points: ACHIEVEMENT_POINTS.perfectLesson, isPenalty: false },
+        { id: 'dseComplete', name: 'DSE模擬完成', icon: '📝', unlocked: userData.achievements.dseComplete?.unlocked || false, date: userData.achievements.dseComplete?.date || null, desc: '完成一次36題模式', points: ACHIEVEMENT_POINTS.dseComplete, isPenalty: false },
+        { id: 'speedStar', name: '速度之星', icon: '⚡', unlocked: userData.achievements.speedStar?.unlocked || false, date: userData.achievements.speedStar?.date || null, desc: '提前50%時間完成練習且正確率≥70%', points: ACHIEVEMENT_POINTS.speedStar, isPenalty: false },
+        { id: 'consecutive20', name: '連續答對王', icon: '🔥', unlocked: userData.achievements.consecutive20?.unlocked || false, date: userData.achievements.consecutive20?.date || null, desc: '連續答對20題', points: ACHIEVEMENT_POINTS.consecutive20, isPenalty: false },
+        { id: 'allChaptersMaster', name: '全科目制霸', icon: '🏆', unlocked: userData.achievements.allChaptersMaster?.unlocked || false, date: userData.achievements.allChaptersMaster?.date || null, desc: '所有章節完成度達80%', points: ACHIEVEMENT_POINTS.allChaptersMaster, isPenalty: false },
+        { id: 'fiveStarStreak', name: '五星連珠', icon: '⭐', unlocked: userData.achievements.fiveStarStreak?.unlocked || false, date: userData.achievements.fiveStarStreak?.date || null, desc: '連續5次練習正確率100%', points: ACHIEVEMENT_POINTS.fiveStarStreak, isPenalty: false },
+        { id: 'mistakeEraser', name: '錯題剋星', icon: '🗑️', unlocked: userData.achievements.mistakeEraser?.unlocked || false, date: userData.achievements.mistakeEraser?.date || null, desc: '從錯題本清除50道錯題', points: ACHIEVEMENT_POINTS.mistakeEraser, isPenalty: false },
+        { id: 'collector', name: '收藏家', icon: '📚', unlocked: userData.achievements.collector?.unlocked || false, date: userData.achievements.collector?.date || null, desc: '收藏50道題目', points: ACHIEVEMENT_POINTS.collector, isPenalty: false },
+        { id: 'weekChallenge', name: '一週挑戰', icon: '📅', unlocked: userData.achievements.weekChallenge?.unlocked || false, date: userData.achievements.weekChallenge?.date || null, desc: '連續7天完成至少一次練習', points: ACHIEVEMENT_POINTS.weekChallenge, isPenalty: false },
+        { id: 'blankPaper', name: '交白卷', icon: '📄', unlocked: userData.achievements.blankPaper?.unlocked || false, date: userData.achievements.blankPaper?.date || null, desc: '提交空白答案卷', points: ACHIEVEMENT_POINTS.blankPaper, isPenalty: true },
+        { id: 'downwardTrend', name: '下滑趨勢', icon: '📉', unlocked: userData.achievements.downwardTrend?.unlocked || false, date: userData.achievements.downwardTrend?.date || null, desc: '連續兩次正確率下降超過20%', points: ACHIEVEMENT_POINTS.downwardTrend, isPenalty: true }
+    ];
+    
+    let unlockedSpecials = specials.filter(s => s.unlocked && !s.isPenalty);
+    let unlockedPenalties = specials.filter(s => s.unlocked && s.isPenalty);
+    let lockedSpecials = specials.filter(s => !s.unlocked && !s.isPenalty);
+    unlockedSpecials.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    unlockedPenalties.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    lockedSpecials.sort((a, b) => (b.points || 0) - (a.points || 0));
+    
+    let totalUnlocked = unlockedSpecials.length + unlockedPenalties.length + unlockedChapters.length;
+    let totalPossible = specials.length + (chapterList.length * 4);
+    let percent = totalPossible > 0 ? Math.round(totalUnlocked / totalPossible * 100) : 0;
+    let totalPoints = calculateTotalPoints(userData.achievements);
+    let rankInfo = calculateClassRank(currentUser.id, totalPoints);
+    
+    let html = `<div class="card">
+        <div class="points-rank-bar">
+            <div class="points-box">
+                <div class="points-number">${totalPoints}</div>
+                <div class="points-label">總積分</div>
+            </div>
+            <div class="rank-box">
+                <div class="rank-number">#${rankInfo.rank} / ${rankInfo.total}</div>
+                <div class="rank-label">班級排名</div>
+            </div>
+        </div>
+        <div class="achievement-progress">
+            <div style="display:flex; justify-content:space-between;">
+                <span>🏆 總解鎖進度</span>
+                <span>${totalUnlocked} / ${totalPossible} (${percent}%)</span>
+            </div>
+            <div class="achievement-bar">
+                <div class="achievement-fill" style="width:${percent}%;"></div>
+            </div>
+        </div>`;
+    
+    if (unlockedSpecials.length > 0 || unlockedPenalties.length > 0 || lockedSpecials.length > 0) {
+        html += `<h3 style="margin-top:0.5rem;">🎯 特殊成就</h3>`;
+        
+        for (let ach of unlockedSpecials) {
+            let pointsDisplay = ach.points > 0 ? `🏆 +${ach.points}` : '';
+            html += `<div class="achievement-item unlocked"><div class="achievement-row"><div><span class="achievement-badge">${ach.icon}</span> <strong>${ach.name}</strong></div><div class="achievement-date">${ach.date} ${pointsDisplay}</div></div><div class="achievement-desc">${ach.desc}</div>`;
+            if (ach.showProgress) {
+                let percentProgress = Math.min(100, Math.round(ach.progress / ach.target * 100));
+                html += `<div class="progress-small"><div class="progress-small-fill" style="width:${percentProgress}%;"></div></div><div class="achievement-desc">${ach.progress}/${ach.target}</div>`;
+            }
+            html += `</div>`;
+        }
+        
+        for (let ach of unlockedPenalties) {
+            html += `<div class="achievement-item unlocked" style="background:#f8d7da; border-left-color:#dc2626;"><div class="achievement-row"><div><span class="achievement-badge">${ach.icon}</span> <strong>${ach.name}</strong></div><div class="achievement-date">${ach.date} ⚠️ ${ach.points}</div></div><div class="achievement-desc">${ach.desc}</div></div>`;
+        }
+        
+        for (let ach of lockedSpecials) {
+            let pointsDisplay = ach.points > 0 ? `🏆 +${ach.points}` : '';
+            html += `<div class="achievement-item locked"><div class="achievement-row"><div><span class="achievement-badge">🔒</span> <strong>${ach.name}</strong></div><div class="achievement-date">${pointsDisplay}</div></div><div class="achievement-desc">🔒 未解鎖</div>`;
+            if (ach.showProgress) {
+                let percentProgress = Math.min(100, Math.round(ach.progress / ach.target * 100));
+                html += `<div class="progress-small"><div class="progress-small-fill" style="width:${percentProgress}%;"></div></div><div class="achievement-desc">${ach.progress}/${ach.target}</div>`;
+            }
+            html += `</div>`;
+        }
+    }
+    
+    if (unlockedChapters.length > 0) {
+        html += `<h3 style="margin-top:0.8rem;">📖 已獲得章節成就</h3>`;
+        let currentUnit = '';
+        for (let ach of unlockedChapters) {
+            if (ach.unitName !== currentUnit) {
+                currentUnit = ach.unitName;
+                html += `<div style="margin-top:0.5rem; font-weight:bold;">${currentUnit}</div>`;
+            }
+            let pointsDisplay = ach.points > 0 ? `🏆 +${ach.points}` : '';
+            html += `<div class="achievement-item unlocked"><div class="achievement-row"><div><span class="achievement-badge">${ach.icon}</span> ${ach.chapterName} - ${ach.name}</div><div class="achievement-date">${ach.date} ${pointsDisplay}</div></div></div>`;
+        }
+    }
+    
+    if (lockedChapters.length > 0) {
+        let lockedId = "lockedChaptersPanel";
+        html += `<h3 class="collapsible" onclick="toggleCollapsible('${lockedId}')">🔒 未獲得章節成就 (${lockedChapters.length}) ▼</h3>
+                 <div id="${lockedId}" class="collapsible-content collapsed">`;
+        let currentUnit = '';
+        for (let ach of lockedChapters) {
+            if (ach.unitName !== currentUnit) {
+                currentUnit = ach.unitName;
+                html += `<div style="margin-top:0.5rem; font-weight:bold;">${currentUnit}</div>`;
+            }
+            let pointsDisplay = ach.points > 0 ? `🏆 +${ach.points}` : '';
+            html += `<div class="achievement-item locked"><div class="achievement-row"><div><span class="achievement-badge">🔒</span> ${ach.chapterName} - ${ach.name}</div><div class="achievement-date">${pointsDisplay}</div></div><div class="achievement-desc">🔒 ${ach.needHint}</div></div>`;
+        }
+        html += `</div>`;
+    }
+    
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+function startPracticeWithSettings() {
+    let unit = pendingUnit, chapter = pendingChapter;
+    let allQuestions = [...window.ALL_UNITS[unit].chapters[chapter].questions], total = allQuestions.length;
+    let count = customCount > 0 ? customCount : selectedCount;
+    if (count > total) count = total;
+    if (count < 1) count = 1;
+    let selectedQuestions = selectQuestionsByDifficultyAndCount(allQuestions, count, selectedDifficulty, isTrialMode, false);
+    selectedQuestions = shuffleArray(selectedQuestions);
+    currentUnit = unit;
+    currentChapter = chapter;
+    currentQuestions = selectedQuestions;
+    currentOptionsMapping = currentQuestions.map(q => {
+        if (q.sf === 0) {
+            let letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) { let optText = q.options[i].substring(3); map[letters[i]] = optText; }
+            return { letterToText: map, correctLetter: q.correct };
+        } else {
+            let texts = q.options.map(opt => opt.replace(/^[A-D]\.\s*/, '')), shuffled = shuffleArray([...texts]), letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) map[letters[i]] = shuffled[i];
+            let correctText = q.options.find(opt => opt.startsWith(q.correct)).replace(/^[A-D]\.\s*/, ''), correctLetter = null;
+            for (let [l, t] of Object.entries(map)) if (t === correctText) { correctLetter = l; break; }
+            return { letterToText: map, correctLetter: correctLetter };
+        }
+    });
+    currentAnswers = new Array(selectedQuestions.length).fill(null);
+    currentQIndex = 0;
+    isSingleQuestionMode = false;
+    let timePerQuestion = selectedDifficulty == 0 ? 108 : (selectedDifficulty == 2 ? 75 : 90);
+    timeRemaining = selectedQuestions.length * timePerQuestion;
+    updateTimerDisplay();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (timeRemaining <= 0) submitAll();
+        else { timeRemaining--; updateTimerDisplay(); }
+    }, 1000);
+    
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+    }
+    const submitBtn = document.getElementById('submitAllBtn');
+    if (submitBtn) submitBtn.style.animation = '';
+    
+    document.getElementById('settingsModal').style.display = 'none';
+    
+    startTime = Date.now();
+    
+    if (isMobile()) {
+        showQuizModal();
+    } else {
+        showDesktopQuizModal();
+    }
+}
+
+// ==================== showExplainModal ====================
+function showExplainModal(question, userLetter, correctLetter, userText, correctText, isCorrect) {
+    const isFav = userData.favorites.includes(question.id);
+    const favIcon = isFav ? '⭐' : '☆';
+    const favText = isFav ? '取消收藏' : '收藏';
+    
+    const qIndex = currentQuestions.findIndex(q => q.id === question.id);
+    let optionsHtml = '';
+    
+    if (qIndex !== -1 && currentOptionsMapping[qIndex]) {
+        const map = currentOptionsMapping[qIndex];
+        const letters = ['A', 'B', 'C', 'D'];
+        for (let l of letters) {
+            const isUser = (l === userLetter);
+            const isCor = (l === correctLetter);
+            let cls = 'explain-option-normal';
+            if (isCor) cls = 'explain-option-correct';
+            else if (isUser && !isCor) cls = 'explain-option-wrong';
+            optionsHtml += `<div class="${cls}">${l}. ${map.letterToText[l]}</div>`;
+        }
+    } else {
+        for (let opt of question.options) {
+            let l = opt[0], t = opt.substring(3), isUser = (l === userLetter), isCor = (l === correctLetter);
+            let cls = 'explain-option-normal';
+            if (isCor) cls = 'explain-option-correct';
+            else if (isUser && !isCor) cls = 'explain-option-wrong';
+            optionsHtml += `<div class="${cls}">${l}. ${t}</div>`;
+        }
+    }
+    
+    let ansClass = isCorrect ? 'answer-correct' : 'answer-wrong';
+    let ansHtml = `<div class="answer-comparison"><span>你的答案: <span class="${ansClass}">${userLetter}</span></span><span>正解: <span class="${ansClass}">${correctLetter}</span></span></div>`;
+    
+    let imageHtml = '';
+    if (question.imageUrl) {
+        imageHtml = `<div style="text-align:center; margin: 0.5rem 0;">
+            <img src="${question.imageUrl}" style="max-height:150px; max-width:100%; border-radius:8px; cursor:pointer;" onclick="document.getElementById('zoomImage').src='${question.imageUrl}'; document.getElementById('imageZoomModal').style.display='flex';">
+            <div style="font-size:0.65rem; color:#999; margin-top:4px;">🖱️ 點擊圖片放大</div>
+        </div>`;
+    }
+    
+    let headerHtml = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+        <strong style="font-size:1.1rem;">📖 題目與題解</strong>
+        <button onclick="toggleFavorite('${question.id}')" class="btn" style="background:var(--deep-purple-light); padding:0.2rem 0.8rem; font-size:0.85rem;">${favIcon} ${favText}</button>
+    </div>`;
+    
+    let html = `${headerHtml}
+                <div style="margin-bottom:0.8rem;"><strong>題目:</strong> ${question.text}</div>
+                ${imageHtml}
+                ${optionsHtml}
+                <div style="margin:0.8rem 0; padding:0.4rem; background:#f0f0f0; border-radius:12px;"><strong>📖 題解:</strong> ${question.explanation || '無'}</div>
+                ${ansHtml}`;
+    document.getElementById('explainContent').innerHTML = html;
+    document.getElementById('explainModal').style.display = 'flex';
+}
+
+// ==================== toggleFavorite ====================
+function toggleFavorite(qid) {
+    if (userData.favorites.includes(qid)) {
+        userData.favorites = userData.favorites.filter(id => id !== qid);
+    } else {
+        userData.favorites.push(qid);
+    }
+    saveUserData();
+    renderPinned();
+    renderMyMistakes();
+    renderPastMistakes();
+}
+
+// ==================== 元素周期表功能 ====================
+function showPeriodicTable() {
+    const imgUrl = 'https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/periodic_table.png';
+    document.getElementById('zoomImage').src = imgUrl;
+    document.getElementById('imageZoomModal').style.display = 'flex';
+}
+
+function closeImageZoom() {
+    document.getElementById('imageZoomModal').style.display = 'none';
+}
+
+// ==================== 顯示 DSE 等級預測彈窗 ====================
+function showDSEResult(accuracy, correctCount, totalCount) {
+    let level = '';
+    let levelClass = '';
+    let emoji = '';
+    
+    if (accuracy >= 95) {
+        level = '5**';
+        levelClass = 'level-5star';
+        emoji = '🌟';
+    } else if (accuracy >= 90) {
+        level = '5*';
+        levelClass = 'level-5star';
+        emoji = '🌟';
+    } else if (accuracy >= 85) {
+        level = '5';
+        levelClass = 'level-5';
+        emoji = '🌟';
+    } else if (accuracy >= 78) {
+        level = '4';
+        levelClass = 'level-4';
+        emoji = '📘';
+    } else if (accuracy >= 57) {
+        level = '3';
+        levelClass = 'level-3';
+        emoji = '📗';
+    } else {
+        level = '尚未達標';
+        levelClass = 'level-fail';
+        emoji = '📖';
+    }
+    
+    const isPass = accuracy >= 57;
+    const passText = isPass ? '🎉 繼續加油！' : '💪 請多多複習，下次一定可以！';
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'dseResultOverlay';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center;
+        z-index: 9999; animation: fadeIn 0.3s ease;
+    `;
+    
+    const card = document.createElement('div');
+    card.style.cssText = `
+        background: linear-gradient(145deg, #1a1a2e, #2d2d44);
+        border-radius: 32px; padding: 2.5rem 3rem; max-width: 480px; width: 90%;
+        text-align: center; color: white; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        animation: slideUp 0.4s ease; border: 2px solid rgba(255,215,0,0.3);
+    `;
+    
+    let levelColor = '#ffd700';
+    if (level === '4') levelColor = '#4a9eff';
+    else if (level === '3') levelColor = '#34d399';
+    else if (level === '尚未達標') levelColor = '#94a3b8';
+    
+    card.innerHTML = `
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
+        <div style="font-size: 1.2rem; font-weight: 600; color: #a78bfa; margin-bottom: 0.3rem;">單元測驗完成！</div>
+        <div style="font-size: 1rem; color: #94a3b8; margin-bottom: 1.5rem;">
+            正確率：<span style="color: white; font-weight: 700;">${accuracy}%</span>
+            （${correctCount} / ${totalCount} 題）
+        </div>
+        <div style="margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">📊 DSE 預計等級</div>
+        <div style="font-size: 4rem; font-weight: 900; color: ${levelColor}; text-shadow: 0 0 30px ${levelColor}40; line-height: 1.2;">
+            ${emoji} ${level}
+        </div>
+        <div style="margin: 1.5rem 0 2rem 0; font-size: 1rem; color: #cbd5e1;">
+            ${passText}
+        </div>
+        <button onclick="closeDSEResult()" style="
+            background: linear-gradient(135deg, #7c3aed, #4a1d8c);
+            color: white; border: none; padding: 0.8rem 2.5rem;
+            border-radius: 60px; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: transform 0.2s;
+        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            查看詳細成績
+        </button>
+    `;
+    
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeDSEResult();
+        }
+    });
+    
+    window._dseResultCallback = function() {
+        closeDSEResult();
+    };
+}
+
+function closeDSEResult() {
+    const overlay = document.getElementById('dseResultOverlay');
+    if (overlay) {
+        overlay.remove();
+    }
+    if (window._dseResultCallback) {
+        window._dseResultCallback();
+    }
+}
+
+// ==================== showQuizModal（手機版） ====================
+function showQuizModal() { 
+    renderQuizNav(); 
+    renderCurrentQuestion(); 
+    document.getElementById('quizModal').style.display = 'flex';
+    
+    const isMobileDevice = window.innerWidth <= 640;
+    const footerClass = isMobileDevice ? 'quiz-footer-mobile' : 'quiz-footer-desktop';
+    const footer = document.querySelector(`.${footerClass}`);
+    const footerElement = footer || document.querySelector('.quiz-footer');
+    
+    let periodicBtn = document.getElementById('periodicTableBtn');
+    const shouldShowPeriodicTable = (currentChapter && parseInt(currentChapter) >= 6) || currentChapter === null;
+    
+    if (shouldShowPeriodicTable) {
+        if (!periodicBtn) {
+            periodicBtn = document.createElement('button');
+            periodicBtn.id = 'periodicTableBtn';
+            periodicBtn.className = 'btn btn-outline';
+            periodicBtn.textContent = '📊 元素周期表';
+            periodicBtn.addEventListener('click', showPeriodicTable);
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn && footerElement) {
+                footerElement.insertBefore(periodicBtn, nextBtn.nextSibling);
+            }
+        }
+        periodicBtn.style.display = 'inline-block';
+    } else {
+        if (periodicBtn) {
+            periodicBtn.style.display = 'none';
+        }
+    }
+}
+
+function renderQuizNav() {
+    let nav = document.getElementById('questionNav'), html = '';
+    for (let i = 0; i < currentQuestions.length; i++) {
+        let cls = '';
+        if (i === currentQIndex) cls = 'current';
+        else if (currentAnswers[i] !== null) cls = 'answered';
+        else cls = 'unanswered';
+        html += `<button class="q-nav-btn ${cls}" data-idx="${i}">${i + 1}</button>`;
+    }
+    nav.innerHTML = html;
+    document.getElementById('quizCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
+    document.querySelectorAll('.q-nav-btn').forEach(btn => btn.addEventListener('click', (e) => { currentQIndex = parseInt(btn.dataset.idx); renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); }));
+    checkAllQuestionsAnswered();
+}
+
+// ==================== renderCurrentQuestion（手機版） ====================
+function renderCurrentQuestion() {
+    let q = currentQuestions[currentQIndex];
+    let map = currentOptionsMapping[currentQIndex];
+    let hasImage = q.imageUrl !== null;
+    
+    const isMobileDevice = window.innerWidth <= 640;
+    const layoutClass = isMobileDevice ? 'quiz-layout-mobile' : 'quiz-layout-desktop';
+    const imageClass = isMobileDevice ? 'image-area-mobile' : 'image-area-desktop';
+    const optionsClass = isMobileDevice ? 'options-area-mobile' : 'options-area-desktop';
+    const footerClass = isMobileDevice ? 'quiz-footer-mobile' : 'quiz-footer-desktop';
+    
+    const modalContent = document.querySelector('#quizModal .modal-content');
+    if (modalContent) {
+        modalContent.classList.remove('difficulty-translate', 'difficulty-basic', 'difficulty-advanced', 'difficulty-challenge');
+        if (q.difficulty === '🌐 Translate') {
+            modalContent.classList.add('difficulty-translate');
+        } else if (q.difficulty === '✅ Basic') {
+            modalContent.classList.add('difficulty-basic');
+        } else if (q.difficulty === '📈 Advanced') {
+            modalContent.classList.add('difficulty-advanced');
+        } else if (q.difficulty === '🔥 Challenge') {
+            modalContent.classList.add('difficulty-challenge');
+        }
+    }
+    
+    document.getElementById('modalQuestionText').innerHTML = q.text;
+    document.getElementById('quizCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
+    document.getElementById('quizDifficulty').innerHTML = q.difficulty;
+    
+    let imgArea = document.getElementById('modalImageArea');
+    let quizLayout = document.querySelector(`.${layoutClass}`);
+    
+    if (!quizLayout) {
+        const quizBodyEl = document.querySelector('.quiz-body');
+        const originalOptions = document.getElementById('modalOptions');
+        const originalImgArea = imgArea;
+        
+        const layoutDiv = document.createElement('div');
+        layoutDiv.className = layoutClass;
+        
+        const optionsDiv = document.createElement('div');
+        optionsDiv.className = optionsClass;
+        optionsDiv.id = 'options-area-container';
+        
+        const imageDiv = document.createElement('div');
+        imageDiv.className = imageClass;
+        imageDiv.id = 'image-area-container';
+        
+        if (originalOptions && originalOptions.parentNode) {
+            originalOptions.parentNode.insertBefore(layoutDiv, originalOptions);
+            if (isMobileDevice) {
+                layoutDiv.appendChild(imageDiv);
+                layoutDiv.appendChild(optionsDiv);
+            } else {
+                layoutDiv.appendChild(optionsDiv);
+                layoutDiv.appendChild(imageDiv);
+            }
+            optionsDiv.appendChild(originalOptions);
+        }
+        if (originalImgArea) {
+            imageDiv.appendChild(originalImgArea);
+        }
+        quizLayout = layoutDiv;
+    }
+    
+    const imageAreaContainer = document.getElementById('image-area-container');
+    const optionsArea = document.getElementById('options-area-container');
+    
+    if (imageAreaContainer) {
+        imageAreaContainer.className = imageClass;
+        imageAreaContainer.id = 'image-area-container';
+    }
+    if (optionsArea) {
+        optionsArea.className = optionsClass;
+        optionsArea.id = 'options-area-container';
+    }
+    if (quizLayout) {
+        quizLayout.className = layoutClass;
+    }
+    
+    if (hasImage) {
+        if (imageAreaContainer) imageAreaContainer.style.display = 'block';
+        if (quizLayout) quizLayout.classList.remove('no-image');
+        
+        let imgHtml = '';
+        if (q.imageUrl) {
+            imgHtml = `<img src="${q.imageUrl}" class="quiz-image" id="quizImageThumb" style="max-width:100%; max-height:180px; object-fit:contain; cursor:pointer; border-radius:8px;">`;
+        }
+        document.getElementById('modalImageArea').innerHTML = imgHtml;
+        document.getElementById('quizImageThumb')?.addEventListener('click', () => {
+            document.getElementById('zoomImage').src = q.imageUrl;
+            document.getElementById('imageZoomModal').style.display = 'flex';
+        });
+        
+        if (optionsArea) {
+            optionsArea.classList.add('vertical');
+            optionsArea.classList.remove('grid');
+        }
+    } else {
+        if (imageAreaContainer) imageAreaContainer.style.display = 'none';
+        if (quizLayout) quizLayout.classList.add('no-image');
+        document.getElementById('modalImageArea').innerHTML = '';
+        
+        if (optionsArea) {
+            optionsArea.classList.add('grid');
+            optionsArea.classList.remove('vertical');
+        }
+    }
+    
+    let optsDiv = document.getElementById('modalOptions');
+    optsDiv.innerHTML = '';
+    optsDiv.className = 'options-grid';
+    
+    for (let l of ['A', 'B', 'C', 'D']) {
+        let btn = document.createElement('button');
+        btn.className = 'option-btn';
+        if (currentAnswers[currentQIndex] === l) btn.classList.add('selected');
+        btn.textContent = `${l}. ${map.letterToText[l]}`;
+        btn.addEventListener('click', () => {
+            currentAnswers[currentQIndex] = l;
+            renderCurrentQuestion();
+            renderQuizNav();
+            checkAllQuestionsAnswered();
+        });
+        optsDiv.appendChild(btn);
+    }
+    
+    const footerElement = document.querySelector('.quiz-footer');
+    if (footerElement) {
+        footerElement.className = footerClass;
+    }
+    
+    updateNavButtons();
+    checkAllQuestionsAnswered();
+}
+
+function updateNavButtons() { let prev = document.getElementById('prevBtn'), next = document.getElementById('nextBtn'); prev.disabled = (currentQIndex === 0); next.disabled = (currentQIndex === currentQuestions.length - 1); }
+
+function updateTimerDisplay() { let m = Math.floor(timeRemaining / 60), s = timeRemaining % 60; document.getElementById('timerDisplay').innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; }
+
+function checkAllQuestionsAnswered() {
+    if (currentQuestions.length === 0) return;
+    
+    const allAnswered = currentAnswers.every(a => a !== null && a !== undefined);
+    const submitBtn = document.getElementById('submitAllBtn');
+    if (!submitBtn) return;
+    
+    if (allAnswered && currentAnswers.length > 0) {
+        if (!blinkInterval) {
+            blinkInterval = setInterval(() => {
+                submitBtn.style.animation = 'blink 0.3s step-end infinite';
+            }, 100);
+        }
+    } else {
+        if (blinkInterval) {
+            clearInterval(blinkInterval);
+            blinkInterval = null;
+            submitBtn.style.animation = '';
+        }
+    }
+}
+
+// ==================== submitAll ====================
+function submitAll() {
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+        const submitBtn = document.getElementById('submitAllBtn');
+        if (submitBtn) submitBtn.style.animation = '';
+    }
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    
+    const timeSpentSeconds = Math.round((Date.now() - startTime) / 1000);
+    
+    let results = [], batch = [], correctCount = 0;
+    let consecutiveCorrect = userData.stats.consecutiveCorrect || 0;
+    let answeredCount = currentAnswers.filter(a => a !== null).length;
+    let isBlankPaper = (answeredCount === 0);
+    const isUnitTestMode = (currentChapter === null && currentQuestions.length > 1);
+
+    for (let i = 0; i < currentQuestions.length; i++) {
+        let q = currentQuestions[i], map = currentOptionsMapping[i], userLetter = currentAnswers[i];
+        let isCorrect = (userLetter === map.correctLetter);
+        if (isCorrect) {
+            correctCount++;
+            consecutiveCorrect++;
+        } else {
+            consecutiveCorrect = 0;
+        }
+        let userText = userLetter ? map.letterToText[userLetter] : '(未作答)', correctText = map.letterToText[map.correctLetter];
+        results.push({ question: q, userLetter: userLetter || '?', correctLetter: map.correctLetter, userText, correctText, isCorrect, qid: q.id });
+        batch.push({ qid: q.id, isCorrect: isCorrect });
+    }
+    userData.stats.consecutiveCorrect = consecutiveCorrect;
+    if (consecutiveCorrect > (userData.stats.maxConsecutive || 0)) userData.stats.maxConsecutive = consecutiveCorrect;
+    recordBatch(batch);
+    let accuracy = Math.round(correctCount / currentQuestions.length * 100);
+    let diffName = selectedDifficulty == 0 ? "★ 1星" : (selectedDifficulty == 1 ? "★★★ 3星" : "★★★★★ 5星");
+    let mode = isTrialMode ? 'trial' : 'normal';
+    let expectedTime = currentQuestions.length * (selectedDifficulty == 0 ? 108 : (selectedDifficulty == 2 ? 75 : 90));
+    let timeSpent = Math.round((expectedTime - timeRemaining) / expectedTime * 100);
+    
+    if (isSingleQuestionMode && currentQuestions.length === 1) {
+        const qid = currentQuestions[0].id;
+        const isCorrectSingle = results[0].isCorrect;
+        
+        if (singleQuestionSource === 'myMistakes' && isCorrectSingle) {
+            userData.latestStatus[qid] = true;
+            saveUserData();
+            alert('🎉 答對了！該題已從「我的錯題」中移除！');
+        } else if (singleQuestionSource === 'myMistakes' && !isCorrectSingle) {
+            alert('❌ 答錯了！該題仍保留在「我的錯題」中，加油！');
+        } else if (singleQuestionSource === 'pastMistakes' || singleQuestionSource === 'pinned') {
+            if (isCorrectSingle) {
+                alert('✅ 答對了！該題仍保留在列表中（歷程/收藏不會自動移除）');
+            } else {
+                alert('❌ 答錯了！再試一次吧！');
+            }
+        }
+        recordBatch(batch);
+        addPracticeHistory(currentUnit, currentChapter, '單題練習', 1, isCorrectSingle ? 1 : 0, isCorrectSingle ? 100 : 0, 'single', 0, consecutiveCorrect, isBlankPaper, timeSpentSeconds);
+        renderMyMistakes();
+        renderPastMistakes();
+        renderPinned();
+        renderHistory();
+        renderAchievements();
+        document.getElementById('quizModal').style.display = 'none';
+        return;
+    }
+    
+    addPracticeHistory(currentUnit, currentChapter, diffName, currentQuestions.length, correctCount, accuracy, mode, timeSpent, consecutiveCorrect, isBlankPaper, timeSpentSeconds);
+    lastResults = results;
+    
+    if (isUnitTestMode && currentQuestions.length >= 10) {
+        window._dseResultCallback = function() {
+            displayResults(results);
+        };
+        showDSEResult(accuracy, correctCount, currentQuestions.length);
+        document.getElementById('quizModal').style.display = 'none';
+        renderPractice();
+        renderMyMistakes();
+        renderPastMistakes();
+        renderPinned();
+        renderHistory();
+        renderAchievements();
+        updateSettingsUnlockStatus();
+        return;
+    }
+    
+    displayResults(results);
+    document.getElementById('quizModal').style.display = 'none';
+    renderPractice();
+    renderMyMistakes();
+    renderPastMistakes();
+    renderPinned();
+    renderHistory();
+    renderAchievements();
+    updateSettingsUnlockStatus();
+}
+
+function displayResults(results) {
+    let totalOriginal = results.length;
+    let correctOriginal = results.filter(r => r.isCorrect).length;
+    let percentOriginal = Math.round(correctOriginal / totalOriginal * 100);
+    let color = percentOriginal < 40 ? '#dc2626' : (percentOriginal < 70 ? '#f59e0b' : '#10b981');
+
+    let filteredResults = showOnlyWrong ? results.filter(r => !r.isCorrect) : results;
+    
+    if (filteredResults.length === 0) {
+        let html = `<div class="result-summary-bar">
+            <div class="result-progress">
+                <span>✅ ${percentOriginal}% (${correctOriginal}/${totalOriginal})</span>
+                <div class="big-progress-bar">
+                    <div class="big-progress-fill" style="width:${percentOriginal}%; background:${color};"></div>
+                </div>
+            </div>
+            <div class="result-buttons">
+                <button id="toggleWrongBtn" class="btn btn-small">❌ 只顯示錯題</button>
+                <button id="toggleAnswersBtn" class="btn btn-small">📋 顯示答案</button>
+            </div>
+        </div>
+        <div style="padding:20px; text-align:center;">🎉 沒有錯題！繼續保持！</div>`;
+        document.getElementById('resultContent').innerHTML = html;
+        document.getElementById('resultModal').style.display = 'flex';
+        
+        document.getElementById('toggleWrongBtn')?.addEventListener('click', () => {
+            showOnlyWrong = !showOnlyWrong;
+            displayResults(lastResults);
+        });
+        document.getElementById('toggleAnswersBtn')?.addEventListener('click', () => {
+            showAnswers = !showAnswers;
+            displayResults(lastResults);
+        });
+        return;
+    }
+
+    let html = `<div class="result-summary-bar">
+        <div class="result-progress">
+            <span>✅ ${percentOriginal}% (${correctOriginal}/${totalOriginal})</span>
+            <div class="big-progress-bar">
+                <div class="big-progress-fill" style="width:${percentOriginal}%; background:${color};"></div>
+            </div>
+        </div>
+        <div class="result-buttons">
+            <button id="toggleWrongBtn" class="btn btn-small">❌ 只顯示錯題</button>
+            <button id="toggleAnswersBtn" class="btn btn-small">📋 顯示答案</button>
+        </div>
+    </div>`;
+
+    html += `<div class="results-card-list">`;
+
+    for (let i = 0; i < results.length; i++) {
+        if (showOnlyWrong && results[i].isCorrect) continue;
+
+        let r = results[i];
+        let cardClass = r.isCorrect ? 'correct' : 'wrong';
+        let icon = r.isCorrect ? '✅' : '❌';
+
+        html += `<div class="result-card ${cardClass}">`;
+        html += `<div class="result-card-header">`;
+        html += `<span class="result-card-question">${i + 1}. ${r.question.text}</span>`;
+        html += `<span class="result-card-icon">${icon}</span>`;
+        html += `</div>`;
+
+        if (showAnswers) {
+            html += `<div class="result-card-details">`;
+            html += `<span>📝 你的答案：${r.userLetter || '?'}</span>`;
+            html += `<span>✓ 正解：${r.correctLetter}</span>`;
+            html += `</div>`;
+        }
+
+        html += `<div class="result-card-actions">`;
+        html += `<button class="btn-explain" data-idx="${i}">📖 查看題解</button>`;
+        html += `</div>`;
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+
+    document.getElementById('resultContent').innerHTML = html;
+    document.getElementById('resultModal').style.display = 'flex';
+
+    document.getElementById('toggleWrongBtn')?.addEventListener('click', () => {
+        showOnlyWrong = !showOnlyWrong;
+        displayResults(lastResults);
+    });
+    document.getElementById('toggleAnswersBtn')?.addEventListener('click', () => {
+        showAnswers = !showAnswers;
+        displayResults(lastResults);
+    });
+    document.querySelectorAll('.btn-explain').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            let idx = parseInt(btn.dataset.idx);
+            let r = lastResults[idx];
+            document.getElementById('resultModal').style.display = 'none';
+            showExplainModal(r.question, r.userLetter, r.correctLetter, r.userText, r.correctText, r.isCorrect);
+        });
+    });
+}
+
+// ==================== 桌面版獨立函數 ====================
+
+function showDesktopQuizModal() {
+    renderDesktopQuizNav();
+    renderDesktopCurrentQuestion();
+    document.getElementById('desktopQuizModal').style.display = 'flex';
+}
+
+function renderDesktopQuizNav() {
+    let nav = document.getElementById('desktopNav');
+    if (!nav) return;
+    let html = '';
+    const total = currentQuestions.length;
+    
+    let dotClass = '';
+    if (total <= 30) dotClass = '';
+    else if (total <= 45) dotClass = 'small';
+    else dotClass = 'tiny';
+    
+    for (let i = 0; i < total; i++) {
+        let cls = dotClass;
+        if (i === currentQIndex) cls += ' current';
+        else if (currentAnswers[i] !== null) cls += ' answered';
+        else cls += ' unanswered';
+        html += `<button class="nav-dot ${cls}" data-idx="${i}">${i + 1}</button>`;
+    }
+    nav.innerHTML = html;
+    
+    document.getElementById('desktopCounter').innerHTML = `${currentQIndex + 1} / ${total}`;
+    
+    document.querySelectorAll('#desktopNav .nav-dot').forEach(btn => btn.addEventListener('click', (e) => {
+        currentQIndex = parseInt(btn.dataset.idx);
+        renderDesktopQuizNav();
+        renderDesktopCurrentQuestion();
+        updateDesktopNavButtons();
+    }));
+    
+    updateDesktopSidebarDifficulty();
+    checkDesktopAllQuestionsAnswered();
+}
+
+function updateDesktopSidebarDifficulty() {
+    if (currentQuestions.length === 0) return;
+    const q = currentQuestions[currentQIndex];
+    const sidebar = document.getElementById('desktopSidebar');
+    if (!sidebar) return;
+    
+    sidebar.classList.remove('difficulty-translate', 'difficulty-basic', 'difficulty-advanced', 'difficulty-challenge');
+    
+    if (q.difficulty === '🌐 Translate') {
+        sidebar.classList.add('difficulty-translate');
+    } else if (q.difficulty === '✅ Basic') {
+        sidebar.classList.add('difficulty-basic');
+    } else if (q.difficulty === '📈 Advanced') {
+        sidebar.classList.add('difficulty-advanced');
+    } else if (q.difficulty === '🔥 Challenge') {
+        sidebar.classList.add('difficulty-challenge');
+    }
+}
+
+function renderDesktopCurrentQuestion() {
+    if (currentQuestions.length === 0) return;
+    
+    const q = currentQuestions[currentQIndex];
+    const map = currentOptionsMapping[currentQIndex];
+    const hasImage = q.imageUrl !== null;
+    
+    document.getElementById('desktopQuestionText').innerHTML = q.text;
+    document.getElementById('desktopCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
+    document.getElementById('desktopDifficulty').innerHTML = q.difficulty;
+    
+    updateDesktopTimerDisplay();
+    updateDesktopSidebarDifficulty();
+    
+    const imageArea = document.getElementById('desktopImageArea');
+    const mainPanel = document.querySelector('.main-panel');
+    
+    if (hasImage && q.imageUrl) {
+        imageArea.innerHTML = `<img src="${q.imageUrl}" class="quiz-image" id="desktopImageThumb" style="max-height:110px; max-width:100%; object-fit:contain; cursor:pointer; border-radius:8px; border:1px solid #e9e4f5; padding:4px;">`;
+        imageArea.style.display = 'block';
+        if (mainPanel) mainPanel.classList.remove('no-image');
+        
+        document.getElementById('desktopImageThumb')?.addEventListener('click', () => {
+            document.getElementById('zoomImage').src = q.imageUrl;
+            document.getElementById('imageZoomModal').style.display = 'flex';
+        });
+    } else {
+        imageArea.innerHTML = '';
+        imageArea.style.display = 'none';
+        if (mainPanel) mainPanel.classList.add('no-image');
+    }
+    
+    const optsDiv = document.getElementById('desktopOptions');
+    optsDiv.innerHTML = '';
+    optsDiv.className = 'options-grid';
+    
+    for (let l of ['A', 'B', 'C', 'D']) {
+        let btn = document.createElement('button');
+        btn.className = 'option-btn';
+        if (currentAnswers[currentQIndex] === l) btn.classList.add('selected');
+        btn.textContent = `${l}. ${map.letterToText[l]}`;
+        btn.addEventListener('click', () => {
+            currentAnswers[currentQIndex] = l;
+            renderDesktopCurrentQuestion();
+            renderDesktopQuizNav();
+            checkDesktopAllQuestionsAnswered();
+        });
+        optsDiv.appendChild(btn);
+    }
+    
+    updateDesktopNavButtons();
+    checkDesktopAllQuestionsAnswered();
+    updateDesktopPeriodicButton();
+}
+
+function updateDesktopNavButtons() {
+    let prev = document.getElementById('desktopPrevBtn'), next = document.getElementById('desktopNextBtn');
+    if (prev) prev.disabled = (currentQIndex === 0);
+    if (next) next.disabled = (currentQIndex === currentQuestions.length - 1);
+}
+
+function updateDesktopTimerDisplay() {
+    let m = Math.floor(timeRemaining / 60), s = timeRemaining % 60;
+    const timerEl = document.getElementById('desktopTimer');
+    if (timerEl) timerEl.innerText = `⏱️ ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+function checkDesktopAllQuestionsAnswered() {
+    if (currentQuestions.length === 0) return;
+    
+    const allAnswered = currentAnswers.every(a => a !== null && a !== undefined);
+    const submitBtn = document.getElementById('desktopSubmitBtn');
+    if (!submitBtn) return;
+    
+    if (allAnswered && currentAnswers.length > 0) {
+        if (!blinkInterval) {
+            blinkInterval = setInterval(() => {
+                submitBtn.style.animation = 'blink 0.3s step-end infinite';
+            }, 100);
+        }
+    } else {
+        if (blinkInterval) {
+            clearInterval(blinkInterval);
+            blinkInterval = null;
+            submitBtn.style.animation = '';
+        }
+    }
+}
+
+function updateDesktopPeriodicButton() {
+    const periodicBtn = document.getElementById('desktopPeriodicBtn');
+    if (!periodicBtn) return;
+    
+    const shouldShow = (currentChapter && parseInt(currentChapter) >= 6) || currentChapter === null;
+    
+    if (shouldShow) {
+        periodicBtn.style.display = 'inline-block';
+        periodicBtn.classList.remove('hidden');
+    } else {
+        periodicBtn.style.display = 'none';
+        periodicBtn.classList.add('hidden');
+    }
+}
+
+function submitDesktopAll() {
+    if (blinkInterval) {
+        clearInterval(blinkInterval);
+        blinkInterval = null;
+        const submitBtn = document.getElementById('desktopSubmitBtn');
+        if (submitBtn) submitBtn.style.animation = '';
+    }
+    if (timerInterval) clearInterval(timerInterval);
+    const timeSpentSeconds = Math.round((Date.now() - startTime) / 1000);
+    
+    let results = [], batch = [], correctCount = 0;
+    let consecutiveCorrect = userData.stats.consecutiveCorrect || 0;
+    let answeredCount = currentAnswers.filter(a => a !== null).length;
+    let isBlankPaper = (answeredCount === 0);
+    const isUnitTestMode = (currentChapter === null && currentQuestions.length > 1);
+
+    for (let i = 0; i < currentQuestions.length; i++) {
+        let q = currentQuestions[i], map = currentOptionsMapping[i], userLetter = currentAnswers[i];
+        let isCorrect = (userLetter === map.correctLetter);
+        if (isCorrect) {
+            correctCount++;
+            consecutiveCorrect++;
+        } else {
+            consecutiveCorrect = 0;
+        }
+        let userText = userLetter ? map.letterToText[userLetter] : '(未作答)', correctText = map.letterToText[map.correctLetter];
+        results.push({ question: q, userLetter: userLetter || '?', correctLetter: map.correctLetter, userText, correctText, isCorrect, qid: q.id });
+        batch.push({ qid: q.id, isCorrect: isCorrect });
+    }
+    userData.stats.consecutiveCorrect = consecutiveCorrect;
+    if (consecutiveCorrect > (userData.stats.maxConsecutive || 0)) userData.stats.maxConsecutive = consecutiveCorrect;
+    recordBatch(batch);
+    let accuracy = Math.round(correctCount / currentQuestions.length * 100);
+    let diffName = selectedDifficulty == 0 ? "★ 1星" : (selectedDifficulty == 1 ? "★★★ 3星" : "★★★★★ 5星");
+    let mode = isTrialMode ? 'trial' : 'normal';
+    let expectedTime = currentQuestions.length * (selectedDifficulty == 0 ? 108 : (selectedDifficulty == 2 ? 75 : 90));
+    let timeSpent = Math.round((expectedTime - timeRemaining) / expectedTime * 100);
+    
+    if (isSingleQuestionMode && currentQuestions.length === 1) {
+        const qid = currentQuestions[0].id;
+        const isCorrectSingle = results[0].isCorrect;
+        
+        if (singleQuestionSource === 'myMistakes' && isCorrectSingle) {
+            userData.latestStatus[qid] = true;
+            saveUserData();
+            alert('🎉 答對了！該題已從「我的錯題」中移除！');
+        } else if (singleQuestionSource === 'myMistakes' && !isCorrectSingle) {
+            alert('❌ 答錯了！該題仍保留在「我的錯題」中，加油！');
+        } else if (singleQuestionSource === 'pastMistakes' || singleQuestionSource === 'pinned') {
+            if (isCorrectSingle) {
+                alert('✅ 答對了！該題仍保留在列表中（歷程/收藏不會自動移除）');
+            } else {
+                alert('❌ 答錯了！再試一次吧！');
+            }
+        }
+        recordBatch(batch);
+        addPracticeHistory(currentUnit, currentChapter, '單題練習', 1, isCorrectSingle ? 1 : 0, isCorrectSingle ? 100 : 0, 'single', 0, consecutiveCorrect, isBlankPaper, timeSpentSeconds);
+        renderMyMistakes();
+        renderPastMistakes();
+        renderPinned();
+        renderHistory();
+        renderAchievements();
+        document.getElementById('desktopQuizModal').style.display = 'none';
+        return;
+    }
+    
+    addPracticeHistory(currentUnit, currentChapter, diffName, currentQuestions.length, correctCount, accuracy, mode, timeSpent, consecutiveCorrect, isBlankPaper, timeSpentSeconds);
+    lastResults = results;
+    
+    if (isUnitTestMode && currentQuestions.length >= 10) {
+        window._dseResultCallback = function() {
+            displayResults(results);
+        };
+        showDSEResult(accuracy, correctCount, currentQuestions.length);
+        document.getElementById('desktopQuizModal').style.display = 'none';
+        renderPractice();
+        renderMyMistakes();
+        renderPastMistakes();
+        renderPinned();
+        renderHistory();
+        renderAchievements();
+        updateSettingsUnlockStatus();
+        return;
+    }
+    
+    displayResults(results);
+    document.getElementById('desktopQuizModal').style.display = 'none';
+    renderPractice();
+    renderMyMistakes();
+    renderPastMistakes();
+    renderPinned();
+    renderHistory();
+    renderAchievements();
+    updateSettingsUnlockStatus();
+}
+
+// ==================== initTabs ====================
+function initTabs() {
+    let tabs = document.querySelectorAll('.tab'), panels = { 
+        practice: document.getElementById('practicePanel'), 
+        myMistakes: document.getElementById('myMistakesPanel'), 
+        pastMistakes: document.getElementById('pastMistakesPanel'), 
+        pinned: document.getElementById('pinnedPanel'), 
+        history: document.getElementById('historyPanel'), 
+        achievements: document.getElementById('achievementsPanel'),
+        teacher: document.getElementById('teacherPanel')
+    };
+    tabs.forEach(tab => tab.addEventListener('click', () => {
+        let target = tab.dataset.tab;
+        Object.keys(panels).forEach(p => {
+            if (panels[p]) panels[p].style.display = 'none';
+        });
+        if (panels[target]) panels[target].style.display = 'block';
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        if (target === 'myMistakes') renderMyMistakes();
+        if (target === 'pastMistakes') renderPastMistakes();
+        if (target === 'pinned') renderPinned();
+        if (target === 'history') renderHistory();
+        if (target === 'achievements') renderAchievements();
+        if (target === 'teacher') renderTeacherPanel();
+    }));
+}
+
+// ==================== renderTeacherPanel（老師後台） ====================
+async function renderTeacherPanel() {
+    const container = document.getElementById('teacherPanel');
     if (!container) return;
     if (!currentUser || !currentUser.isTeacher) {
-        container.innerHTML = '⚠️ 只有老師可以查看';
+        container.innerHTML = '<div class="card">⚠️ 只有老師可以查看此頁面</div>';
         return;
     }
-
-    try {
-        var snapshot = await db.collection('users')
-            .where('className', '==', currentUser.className)
-            .where('isTeacher', '==', false)
-            .get();
+    
+    if (!currentUser.managedClasses) {
+        currentUser.managedClasses = [currentUser.className];
+        updateUser(currentUser.userId, { managedClasses: currentUser.managedClasses });
+    }
+    
+    const managedClasses = currentUser.managedClasses || [currentUser.className];
+    const currentClass = currentUser.currentClass || currentUser.className;
+    const students = await loadAllStudentsFromFirebase(currentClass);
+    const classSettings = await loadClassSettings(currentClass) || {};
+    const openChapters = classSettings.openChapters || [];
+    
+    let html = `
+        <div class="card">
+            <div class="card-title">👤 教師設定</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:end;">
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">教師姓名</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="text" id="teacherNameInput" value="${currentUser.name}" style="flex:1; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
+                        <button class="btn btn-primary" id="updateTeacherNameBtn" style="padding:8px 16px; font-size:13px; white-space:nowrap;">更新姓名</button>
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">目前班級</label>
+                    <select id="teacherClassSelector" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none; background:white;">
+                        ${managedClasses.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top:8px; font-size:12px; color:#888;">
+                💡 管理班級：${managedClasses.join('、')} 
+                <button class="btn btn-small" id="manageClassesBtn" style="font-size:11px; padding:2px 10px; margin-left:6px;">管理班級</button>
+            </div>
+        </div>
         
-        var students = [];
-        snapshot.forEach(function(doc) {
-            students.push(doc.data());
-        });
+        <div class="card">
+            <div class="card-title">📝 建立學生帳戶</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">學號（可自訂）</label>
+                    <input type="text" id="teacherNewId" placeholder="留空自動產生" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">姓名</label>
+                    <input type="text" id="teacherNewName" placeholder="陳小明" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">班級</label>
+                    <input type="text" id="teacherNewClass" placeholder="3A" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;" value="${currentClass}">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">電話號碼</label>
+                    <input type="text" id="teacherNewPhone" placeholder="91234567" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none;">
+                </div>
+            </div>
+            <button class="btn btn-primary" id="teacherCreateStudentBtn" style="padding:8px 16px; font-size:13px;">✅ 建立帳戶</button>
+            <div id="teacherCreateResult" class="mt-8"></div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">👨‍🎓 已建立的學生（${currentClass}）</div>
+            <div id="teacherStudentList">
+    `;
+    
+    if (students.length === 0) {
+        html += `<div style="text-align:center; color:#999; padding:16px 0; font-size:13px;">還沒有學生帳戶</div>`;
+    } else {
+        html += `<div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:#f5f0ff;">
+                        <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">姓名</th>
+                        <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">學號</th>
+                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">總題數</th>
+                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">正確率</th>
+                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">狀態</th>
+                        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        for (const s of students) {
+            const stats = s.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 };
+            const total = stats.totalQuestionsAnswered || 0;
+            const acc = total > 0 ? Math.round((stats.totalCorrect || 0) / total * 100) : 0;
+            const status = s.isFirstLogin ? '⏳ 首次登入' : '✅ 已啟用';
+            const statusColor = s.isFirstLogin ? '#f59e0b' : '#10b981';
+            html += `
+                <tr style="border-bottom:1px solid #f0edf8;">
+                    <td style="padding:8px 10px; font-weight:500;">
+                        ${s.name}
+                        <button class="btn-icon" onclick="openEditNameModal('${s.userId}')" style="font-size:12px;" title="修改姓名">✏️</button>
+                    </td>
+                    <td style="padding:8px 10px; color:#666;">${s.userId}</td>
+                    <td style="padding:8px 10px; text-align:center;">${total}</td>
+                    <td style="padding:8px 10px; text-align:center; font-weight:600; color:${acc >= 70 ? '#10b981' : (acc >= 40 ? '#f59e0b' : '#dc2626')};">${acc}%</td>
+                    <td style="padding:8px 10px; text-align:center;">
+                        <span style="background:${statusColor}; color:white; padding:2px 12px; border-radius:12px; font-size:11px;">${status}</span>
+                    </td>
+                    <td style="padding:8px 10px; text-align:center;">
+                        <button class="btn btn-small" onclick="showStudentPassword('${s.userId}')" style="background:#f59e0b; padding:2px 8px; font-size:10px; color:white; border:none; border-radius:12px;">🔑 密碼</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteStudent('${s.userId}')" style="font-size:10px; padding:2px 8px;">刪除</button>
+                    </td>
+                </tr>
+            `;
+        }
+        html += `</tbody></table></div>`;
+    }
+    html += `</div></div>`;
+    
+    // 章節管理
+    html += `
+        <div class="card">
+            <div class="card-title">📖 章節開放管理</div>
+            <div style="font-size:13px; color:#666; margin-bottom:10px;">
+                勾選 = 學生可以看見該章節
+            </div>
+            <div id="chapterManagement">
+    `;
+    
+    // 動態從題庫讀取章節
+    const allChaptersFromDB = [];
+    for (let u in window.ALL_UNITS) {
+        for (let ch in window.ALL_UNITS[u].chapters) {
+            const chNum = parseInt(ch);
+            allChaptersFromDB.push({
+                id: chNum,
+                name: window.ALL_UNITS[u].chapters[ch].name
+            });
+        }
+    }
+    allChaptersFromDB.sort((a, b) => a.id - b.id);
+    
+    for (const ch of allChaptersFromDB) {
+        const isOpen = openChapters.includes(ch.id);
+        html += `
+            <div style="display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid #f0edf8;">
+                <input type="checkbox" id="ch_${ch.id}" ${isOpen ? 'checked' : ''} data-chapter="${ch.id}">
+                <label for="ch_${ch.id}" style="font-size:13px;">${ch.name}</label>
+                <span style="font-size:11px; color:${isOpen ? '#10b981' : '#999'}; margin-left:auto;">${isOpen ? '🔓 已開放' : '🔒 已隱藏'}</span>
+            </div>
+        `;
+    }
+    
+    html += `
+            </div>
+            <button class="btn btn-success" id="saveChaptersBtn" style="margin-top:10px; padding:8px 16px; font-size:13px;">💾 儲存章節設定</button>
+            <div id="chapterSaveResult" class="mt-8"></div>
+        </div>
+    `;
+    
+    // 錯題統計
+    html += `
+        <div class="card">
+            <div class="card-title">❌ 錯題統計</div>
+            <div id="wrongStatsContainer">
+    `;
+    
+    const wrongCount = {};
+    for (const s of students) {
+        const attempts = s.allAttempts || [];
+        for (const att of attempts) {
+            if (!att.isCorrect) {
+                wrongCount[att.qid] = (wrongCount[att.qid] || 0) + 1;
+            }
+        }
+    }
+    
+    const sortedWrong = Object.entries(wrongCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    
+    if (sortedWrong.length === 0) {
+        html += `<div style="text-align:center; color:#999; padding:12px 0; font-size:13px;">🎉 全班沒有錯題！繼續保持！</div>`;
+    } else {
+        let qTexts = {};
+        for (let u in window.ALL_UNITS) {
+            for (let c in window.ALL_UNITS[u].chapters) {
+                for (let q of window.ALL_UNITS[u].chapters[c].questions) {
+                    qTexts[q.id] = q.text;
+                }
+            }
+        }
+        for (const [qid, count] of sortedWrong) {
+            const text = qTexts[qid] || qid;
+            const shortText = text.length > 60 ? text.substring(0, 60) + '...' : text;
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f0edf8;">
+                    <span style="font-size:13px;">${shortText}</span>
+                    <span style="font-size:13px; font-weight:600; color:#dc2626;">${count} 人錯</span>
+                </div>
+            `;
+        }
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    // 成就/積分排名
+    html += `
+        <div class="card">
+            <div class="card-title">🏆 成就/積分排名</div>
+            <div id="rankContainer">
+    `;
+    
+    const ranked = [...students].sort((a, b) => {
+        const aPoints = calculateTotalPoints(a.achievements || {});
+        const bPoints = calculateTotalPoints(b.achievements || {});
+        return bPoints - aPoints;
+    }).slice(0, 10);
+    
+    if (ranked.length === 0) {
+        html += `<div style="text-align:center; color:#999; padding:12px 0; font-size:13px;">暫無數據</div>`;
+    } else {
+        const medals = ['🥇', '🥈', '🥉'];
+        for (let i = 0; i < ranked.length; i++) {
+            const s = ranked[i];
+            const points = calculateTotalPoints(s.achievements || {});
+            const medal = i < 3 ? medals[i] : `${i+1}.`;
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #f0edf8;">
+                    <span style="font-size:14px;">${medal} ${s.name}</span>
+                    <span style="font-size:14px; font-weight:600; color:#4a1d8c;">${points} 分</span>
+                </div>
+            `;
+        }
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    // 匯出全班成績
+    html += `
+        <div class="card">
+            <div class="card-title">📥 匯出數據</div>
+            <button class="btn btn-primary" id="exportClassDataBtn" style="padding:8px 16px; font-size:13px;">📥 匯出全班成績 CSV</button>
+            <div id="exportResult" class="mt-8"></div>
+        </div>
+    `;
+    
+    // 舊用戶轉移功能已移除，不再顯示
+    
+    html += `
+        <div class="card" style="background:#f0fdf4; border:1px solid #10b981;">
+            <div class="card-title">💡 老師後台功能</div>
+            <div style="font-size:13px; color:#065f46;">
+                ✅ 修改教師姓名<br>
+                ✅ 切換管理班級<br>
+                ✅ 建立學生帳戶（可自訂學號）<br>
+                ✅ 查看學生進度（即時）<br>
+                ✅ 修改學生姓名<br>
+                ✅ 刪除學生帳戶<br>
+                ✅ 查看學生初始密碼（可複製）<br>
+                ✅ 章節開放/隱藏<br>
+                ✅ 錯題統計<br>
+                ✅ 成就/積分排名<br>
+                ✅ 匯出全班成績 CSV
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    bindTeacherEvents();
+}
 
-        if (students.length === 0) {
-            container.innerHTML = '<div style="color:#999; padding:12px 0;">📭 尚未建立學生帳戶</div>';
+// ==================== 顯示學生密碼（可複製） ====================
+function showStudentPassword(userId) {
+    const user = findUser(userId);
+    if (!user) {
+        alert('❌ 找不到該學生');
+        return;
+    }
+    const password = user.initialPassword || '（已修改密碼）';
+    
+    // 用獨立彈窗顯示，含複製按鈕
+    const modalHtml = `
+        <div id="passwordModal" style="
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
+            z-index: 10000;
+        ">
+            <div style="
+                background: white; border-radius: 24px; padding: 32px; 
+                max-width: 420px; width: 90%; text-align: center;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            ">
+                <div style="font-size: 36px; margin-bottom: 8px;">🔑</div>
+                <h2 style="color: #2e0f5a; margin-bottom: 4px;">學生初始密碼</h2>
+                <div style="color: #888; font-size: 14px; margin-bottom: 16px;">${user.name}（${user.userId}）</div>
+                <div style="
+                    font-family: monospace; font-size: 24px; 
+                    background: #f0f0f0; padding: 12px 20px; border-radius: 8px;
+                    display: inline-block; margin-bottom: 16px;
+                    letter-spacing: 2px;
+                ">${password}</div>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="navigator.clipboard?.writeText('${password}').then(() => alert('✅ 密碼已複製！')).catch(() => alert('⚠️ 請手動複製'))" style="
+                        background: #4a1d8c; color: white; border: none; 
+                        padding: 8px 24px; border-radius: 40px; font-size: 14px; cursor: pointer;
+                    ">📋 複製密碼</button>
+                    <button onclick="document.getElementById('passwordModal').remove()" style="
+                        background: white; color: #666; border: 1px solid #ddd; 
+                        padding: 8px 24px; border-radius: 40px; font-size: 14px; cursor: pointer;
+                    ">關閉</button>
+                </div>
+                <div style="font-size: 12px; color: #f59e0b; margin-top: 12px;">⚠️ 如果學生已修改過密碼，這個密碼可能已經無效</div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function bindTeacherEvents() {
+    document.getElementById('updateTeacherNameBtn')?.addEventListener('click', function() {
+        const newName = document.getElementById('teacherNameInput').value.trim();
+        if (!newName) { alert('請輸入姓名'); return; }
+        if (newName === currentUser.name) { alert('姓名未變更'); return; }
+        updateUser(currentUser.userId, { name: newName });
+        currentUser = findUser(currentUser.userId);
+        updateUserLabel();
+        renderTeacherPanel();
+        alert('✅ 姓名已更新！');
+    });
+    
+    document.getElementById('teacherClassSelector')?.addEventListener('change', function() {
+        const newClass = this.value;
+        if (newClass !== currentUser.className) {
+            updateUser(currentUser.userId, { className: newClass, currentClass: newClass });
+            currentUser = findUser(currentUser.userId);
+            renderTeacherPanel();
+            renderPractice();
+        }
+    });
+    
+    // 建立學生（包含獨立彈窗顯示密碼）
+    document.getElementById('teacherCreateStudentBtn')?.addEventListener('click', function() {
+        const customId = document.getElementById('teacherNewId').value.trim() || null;
+        const name = document.getElementById('teacherNewName').value.trim();
+        const className = document.getElementById('teacherNewClass').value.trim() || currentUser.className;
+        const phone = document.getElementById('teacherNewPhone').value.trim();
+        const resultEl = document.getElementById('teacherCreateResult');
+        
+        if (!name || !phone) {
+            resultEl.innerHTML = `<div class="alert alert-danger">⚠️ 請填寫姓名和電話號碼</div>`;
             return;
         }
-
-        var html = '<table class="teacher-table"><thead><tr>' +
-            '<th>姓名</th><th>學號</th><th>狀態</th><th>操作</th>' +
-            '</tr></thead><tbody>';
-
-        for (var i = 0; i < students.length; i++) {
-            var s = students[i];
-            var status = s.isFirstLogin ? '⏳ 首次登入' : '✅ 已啟用';
-            var statusClass = s.isFirstLogin ? 'first' : 'active';
-            html += '<tr>' +
-                '<td>' + s.name + '</td>' +
-                '<td>' + s.userId + '</td>' +
-                '<td><span class="status-badge ' + statusClass + '">' + status + '</span></td>' +
-                '<td><div class="student-actions">' +
-                '<button class="btn-pwd" onclick="showStudentPassword(\'' + s.userId + '\')">🔑 密碼</button>' +
-                '<button class="btn-reset" onclick="resetStudentPassword(\'' + s.userId + '\')">🔄 重設</button>' +
-                '<button class="btn-delete" onclick="deleteStudentAccount(\'' + s.userId + '\')">🗑️ 刪除</button>' +
-                '</div></td></tr>';
+        
+        const newUser = createUser(name, className, phone, customId);
+        
+        // 清空輸入框
+        document.getElementById('teacherNewId').value = '';
+        document.getElementById('teacherNewName').value = '';
+        document.getElementById('teacherNewPhone').value = '';
+        
+        // 用獨立彈窗顯示結果（不會消失，可複製）
+        const modalHtml = `
+            <div id="createSuccessModal" style="
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
+                z-index: 10000;
+            ">
+                <div style="
+                    background: white; border-radius: 24px; padding: 32px; 
+                    max-width: 420px; width: 90%; text-align: center;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                ">
+                    <div style="font-size: 48px; margin-bottom: 8px;">✅</div>
+                    <h2 style="color: #065f46; margin-bottom: 12px;">帳戶已建立！</h2>
+                    <div style="text-align: left; line-height: 2; font-size: 15px;">
+                        <div>👤 姓名：<strong>${newUser.name}</strong></div>
+                        <div>🆔 學號：<strong style="font-size: 20px; color: #4a1d8c;">${newUser.userId}</strong></div>
+                        <div>
+                            🔑 密碼：
+                            <span style="font-family: monospace; font-size: 20px; background: #f0f0f0; padding: 2px 12px; border-radius: 6px; display: inline-block;">${newUser.initialPassword}</span>
+                            <button onclick="navigator.clipboard?.writeText('${newUser.initialPassword}').then(() => alert('✅ 密碼已複製！')).catch(() => alert('⚠️ 請手動複製'))" style="
+                                background: #4a1d8c; color: white; border: none; 
+                                padding: 2px 14px; border-radius: 20px; cursor: pointer; font-size: 13px;
+                            ">📋 複製</button>
+                        </div>
+                    </div>
+                    <div style="font-size: 13px; color: #f59e0b; margin: 8px 0;">⚠️ 學生第一次登入時會要求修改密碼</div>
+                    <button onclick="document.getElementById('createSuccessModal').remove()" style="
+                        background: #4a1d8c; color: white; border: none; 
+                        padding: 10px 40px; border-radius: 40px; font-size: 16px; cursor: pointer; font-weight: 600;
+                    ">我知道了</button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // 重新整理老師後台（但保留彈窗）
+        renderTeacherPanel();
+    });
+    
+    document.getElementById('saveChaptersBtn')?.addEventListener('click', async function() {
+        const checkboxes = document.querySelectorAll('#chapterManagement input[type="checkbox"]');
+        const openChapters = [];
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                openChapters.push(parseInt(cb.dataset.chapter));
+            }
+        });
+        const className = currentUser.currentClass || currentUser.className;
+        await saveClassSettings(className, { openChapters: openChapters });
+        document.getElementById('chapterSaveResult').innerHTML = `<div class="alert alert-success">✅ 章節設定已儲存！學生重新整理後即可看到變化。</div>`;
+        setTimeout(() => {
+            document.getElementById('chapterSaveResult').innerHTML = '';
+        }, 3000);
+    });
+    
+    document.getElementById('exportClassDataBtn')?.addEventListener('click', async function() {
+        const className = currentUser.currentClass || currentUser.className;
+        const students = await loadAllStudentsFromFirebase(className);
+        if (students.length === 0) {
+            document.getElementById('exportResult').innerHTML = `<div class="alert alert-warning">⚠️ 該班級沒有學生數據</div>`;
+            return;
         }
+        
+        let csv = [["姓名", "學號", "總題數", "正確率", "總積分", "狀態"]];
+        for (const s of students) {
+            const stats = s.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 };
+            const total = stats.totalQuestionsAnswered || 0;
+            const acc = total > 0 ? Math.round((stats.totalCorrect || 0) / total * 100) : 0;
+            const points = calculateTotalPoints(s.achievements || {});
+            const status = s.isFirstLogin ? '首次登入' : '已啟用';
+            csv.push([s.name, s.userId, total, acc + '%', points, status]);
+        }
+        
+        const blob = new Blob(["\uFEFF" + csv.map(r => r.join(",")).join("\n")], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `全班成績_${className}_${new Date().toISOString().slice(0,10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        document.getElementById('exportResult').innerHTML = `<div class="alert alert-success">✅ 匯出成功！</div>`;
+        setTimeout(() => {
+            document.getElementById('exportResult').innerHTML = '';
+        }, 3000);
+    });
+    
+    document.getElementById('manageClassesBtn')?.addEventListener('click', function() {
+        const currentClasses = currentUser.managedClasses || [currentUser.className];
+        const input = prompt('請輸入您要管理的班級（用逗號分隔）：\n例如：3A,3B,3C', currentClasses.join(','));
+        if (input !== null) {
+            const classes = input.split(',').map(s => s.trim()).filter(Boolean);
+            if (classes.length === 0) { alert('至少需要一個班級'); return; }
+            updateUser(currentUser.userId, { managedClasses: classes });
+            currentUser = findUser(currentUser.userId);
+            renderTeacherPanel();
+            alert('✅ 班級管理已更新！');
+        }
+    });
+    
+    // 移除舊用戶轉移相關事件
+}
 
-        html += '</tbody></table>';
-        container.innerHTML = html;
-
-    } catch(e) {
-        console.error('讀取學生列表失敗:', e);
-        if (e.message.includes('permission')) {
-            container.innerHTML = '⚠️ 權限不足：請檢查 Firestore Security Rules 是否允許讀取';
-        } else {
-            container.innerHTML = '⚠️ 讀取失敗：' + e.message;
+function openEditNameModal(userId) {
+    const user = findUser(userId);
+    if (!user) return;
+    const newName = prompt(`修改「${user.name}」的姓名：`, user.name);
+    if (newName && newName.trim() !== '' && newName.trim() !== user.name) {
+        updateUser(userId, { name: newName.trim() });
+        renderTeacherPanel();
+        if (currentUser && currentUser.userId === userId) {
+            currentUser = findUser(userId);
+            updateUserLabel();
         }
     }
 }
 
-// ===== 老師後台操作（高風險，需要管理密碼驗證） =====
-function showStudentPassword(userId) {
-    pendingAdminAction = { type: 'showPwd', userId: userId };
-    openModal('adminVerifyModal');
-    document.getElementById('adminPasswordInput').value = '';
-    showAdminVerifyResult('', '');
-}
-
-function resetStudentPassword(userId) {
-    pendingAdminAction = { type: 'resetPwd', userId: userId };
-    openModal('adminVerifyModal');
-    document.getElementById('adminPasswordInput').value = '';
-    showAdminVerifyResult('', '');
-}
-
-function deleteStudentAccount(userId) {
+function deleteStudent(userId) {
     if (userId === currentUser?.userId) {
         alert('⚠️ 無法刪除自己的帳戶');
         return;
     }
-    if (!confirm('確定要刪除學生 ' + userId + ' 的帳戶嗎？')) return;
-    pendingAdminAction = { type: 'delete', userId: userId };
-    openModal('adminVerifyModal');
-    document.getElementById('adminPasswordInput').value = '';
-    showAdminVerifyResult('', '');
+    const user = findUser(userId);
+    if (!user) return;
+    if (confirm(`⚠️ 確定要刪除「${user.name}」（${user.userId}）的帳戶嗎？`)) {
+        const db = getUsers();
+        db.users = db.users.filter(u => u.userId !== userId);
+        saveUsers(db);
+        renderTeacherPanel();
+    }
 }
 
-// ============================================================
-// 【錯誤標示區】如果 handleAdminVerify 卡住，請檢查：
-// 1. 輸入的管理密碼是否等於 currentUser.adminPassword
-// 2. currentUser.adminPassword 是否已在 Firestore 中設定
-// 3. 待處理動作 (pendingAdminAction) 是否被正確設定
-// ============================================================
-async function handleAdminVerify() {
-    var inputPwd = document.getElementById('adminPasswordInput').value.trim();
-    
-    if (!inputPwd) {
-        showAdminVerifyResult('⚠️ 請輸入管理密碼', '#f59e0b');
+function unlockAll() {
+    if (!pendingUnit || !pendingChapter) {
+        alert('請先選擇一個章節');
         return;
     }
-
-    if (!pendingAdminAction) {
-        showAdminVerifyResult('⚠️ 無待處理操作', '#f59e0b');
-        return;
+    let qs = window.ALL_UNITS[pendingUnit].chapters[pendingChapter].questions;
+    for (let q of qs) {
+        userData.latestStatus[q.id] = true;
     }
+    saveUserData();
+    updateSettingsUnlockStatus();
+    renderPractice();
+    renderMyMistakes();
+    renderPastMistakes();
+    renderPinned();
+    renderHistory();
+    renderAchievements();
+    alert('🔓 所有難度已解鎖！');
+}
 
-    if (inputPwd !== currentUser.adminPassword) {
-        showAdminVerifyResult('❌ 管理密碼錯誤', '#dc2626');
-        console.warn('⚠️ 管理密碼驗證失敗:', currentUser.userId, new Date());
-        return;
+function setupLogout() {
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
     }
+}
 
-    showAdminVerifyResult('✅ 驗證成功！執行中...', '#10b981');
-
+async function loadClassSettings(className) {
+    if (!firestoreEnabled) {
+        const db = getUsers();
+        return db.classSettings || {};
+    }
     try {
-        var action = pendingAdminAction;
-        pendingAdminAction = null;
-        closeModal('adminVerifyModal');
+        const doc = await firebase.firestore()
+            .collection('classes')
+            .doc(className)
+            .get();
+        if (doc.exists) {
+            return doc.data() || {};
+        }
+        return {};
+    } catch(e) {
+        console.warn('⚠️ Firebase 讀取失敗:', e.message);
+        const db = getUsers();
+        return db.classSettings || {};
+    }
+}
 
-        if (action.type === 'showPwd') {
-            var user = await loadUser(action.userId);
-            if (user) {
-                var pwd = user.password || user.initialPassword || '（無法取得密碼）';
-                alert('🔑 學生 ' + user.name + '（' + user.userId + '）的密碼：\n' + pwd);
-            } else {
-                alert('❌ 找不到該學生');
-            }
-        } else if (action.type === 'resetPwd') {
-            var newPwd = generatePassword();
-            var user = await loadUser(action.userId);
-            if (user) {
-                user.password = newPwd;
-                user.isFirstLogin = true;
-                await saveUser(user);
-                
-                try {
-                    var email = user.userId + '@mastering-science.com';
-                    await auth.signInWithEmailAndPassword(email, user.password);
-                    await auth.currentUser.updatePassword(newPwd);
-                    await auth.signOut();
-                } catch(e) {
-                    console.warn('⚠️ Auth 更新失敗:', e.message);
+async function saveClassSettings(className, settings) {
+    if (!firestoreEnabled) {
+        const db = getUsers();
+        db.classSettings = { ...db.classSettings, [className]: settings };
+        saveUsers(db);
+        return;
+    }
+    try {
+        await firebase.firestore()
+            .collection('classes')
+            .doc(className)
+            .set(settings, { merge: true });
+        console.log(`✅ 班級 ${className} 設定已儲存`);
+    } catch(e) {
+        console.warn('⚠️ Firebase 儲存失敗:', e.message);
+        const db = getUsers();
+        db.classSettings = { ...db.classSettings, [className]: settings };
+        saveUsers(db);
+    }
+}
+
+// ==================== DOMContentLoaded ====================
+document.addEventListener('DOMContentLoaded', function() {
+    const hasAutoLogin = checkAutoLogin();
+    checkFirebase();
+    if (!hasAutoLogin) {
+        const saved = localStorage.getItem('ms_chem_login');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.userId) {
+                    document.getElementById('loginUserId').value = data.userId;
                 }
-                
-                alert('✅ 密碼已重設！\n學生：' + user.name + '\n新密碼：' + newPwd);
-                renderTeacherStudentList();
-            } else {
-                alert('❌ 找不到該學生');
-            }
-        } else if (action.type === 'delete') {
-            await db.collection('users').doc(action.userId).delete();
-            var raw = localStorage.getItem('ms_chem_users');
-            if (raw) {
-                var db = JSON.parse(raw);
-                db.users = db.users.filter(function(u) { return u.userId !== action.userId; });
-                localStorage.setItem('ms_chem_users', JSON.stringify(db));
-            }
-            alert('✅ 已刪除學生 ' + action.userId);
-            renderTeacherStudentList();
-        } else if (action.type === 'create') {
-            await handleCreateStudent(action.data);
-        }
-    } catch(e) {
-        console.error('管理操作失敗:', e);
-        alert('❌ 操作失敗：' + e.message);
-    }
-}
-
-// ============================================================
-// 【錯誤標示區】如果 createStudentAccount 卡住，請檢查：
-// 1. 姓名和電話是否已填寫
-// 2. 管理密碼驗證是否通過
-// 3. 新用戶的 userId 是否重複（Firestore 中已存在）
-// 4. Auth 帳戶建立是否成功（可能 Email 已被使用）
-// ============================================================
-function createStudentAccount() {
-    var customId = document.getElementById('teacherNewId').value.trim() || null;
-    var name = document.getElementById('teacherNewName').value.trim();
-    var className = document.getElementById('teacherNewClass').value.trim() || currentUser.className;
-    var phone = document.getElementById('teacherNewPhone').value.trim();
-    var resultEl = document.getElementById('teacherCreateResult');
-
-    if (!name || !phone) {
-        resultEl.innerHTML = '<span style="color:#dc2626;">⚠️ 請填寫姓名和電話號碼</span>';
-        return;
-    }
-
-    pendingAdminAction = {
-        type: 'create',
-        data: { customId: customId, name: name, className: className, phone: phone }
-    };
-    openModal('adminVerifyModal');
-    document.getElementById('adminPasswordInput').value = '';
-    showAdminVerifyResult('', '');
-}
-
-async function handleCreateStudent(data) {
-    var userId = data.customId || generateUserId(data.className);
-    var initialPassword = generatePassword();
-    var newUser = {
-        userId: userId,
-        name: data.name,
-        className: data.className,
-        phone: data.phone,
-        initialPassword: initialPassword,
-        password: initialPassword,
-        isFirstLogin: true,
-        isTeacher: false,
-        createdAt: new Date().toISOString()
-    };
-
-    await saveUser(newUser);
-
-    try {
-        var email = userId + '@mastering-science.com';
-        await auth.createUserWithEmailAndPassword(email, initialPassword);
-    } catch(e) {
-        if (e.code !== 'auth/email-already-in-use') {
-            console.warn('⚠️ Auth 建立失敗:', e.message);
+            } catch(e) {}
         }
     }
-
-    var resultEl = document.getElementById('teacherCreateResult');
-    resultEl.innerHTML = '<span style="color:#10b981;">✅ 帳戶已建立！<br>學號：' + userId + '，密碼：' + initialPassword + '</span>';
     
-    document.getElementById('teacherNewId').value = '';
-    document.getElementById('teacherNewName').value = '';
-    document.getElementById('teacherNewPhone').value = '';
+    // 難度選擇
+    document.getElementById('diff-easy').addEventListener('click', () => { selectedDifficulty = 0; document.getElementById('diff-easy').classList.add('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
+    document.getElementById('diff-medium').addEventListener('click', () => { if (document.getElementById('diff-medium').disabled) return; selectedDifficulty = 1; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.add('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
+    document.getElementById('diff-hard').addEventListener('click', () => { if (document.getElementById('diff-hard').disabled) return; selectedDifficulty = 2; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.add('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
     
-    renderTeacherStudentList();
-}
-
-function generateUserId(className) {
-    var raw = localStorage.getItem('ms_chem_users');
-    var db = raw ? JSON.parse(raw) : { users: [] };
-    var classUsers = db.users.filter(function(u) { return u.className === className; });
-    var num = classUsers.length + 1;
-    return String(num).padStart(6, '0');
-}
-
-// ===== 監聽 Auth 狀態 =====
-auth.onAuthStateChanged(function(user) {
-    if (user) {
-        setStatus('✅ Auth 已連線: ' + user.email, '#10b981');
-        console.log('✅ Auth 用戶:', user.email);
-    } else {
-        setStatus('⏳ 等待登入...', '#999');
-    }
-});
-
-setStatus('✅ Firebase 已初始化', '#10b981');
-
-// ===== 事件綁定 =====
-document.getElementById('loginBtn').addEventListener('click', function() {
-    var userId = document.getElementById('userId').value.trim();
-    var password = document.getElementById('password').value.trim();
-    if (userId && password) {
-        handleLogin(userId, password);
-    } else {
-        showResult('⚠️ 請輸入學號和密碼', '#f59e0b');
-    }
-});
-
-document.getElementById('password').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') document.getElementById('loginBtn').click();
-});
-document.getElementById('userId').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') document.getElementById('loginBtn').click();
-});
-
-document.getElementById('testBtn').addEventListener('click', function() {
-    var userId = document.getElementById('userId').value.trim();
-    var password = document.getElementById('password').value.trim();
-    if (!userId || !password) {
-        alert('請先輸入學號和密碼');
-        return;
-    }
-    var email = userId + '@mastering-science.com';
-    auth.signInWithEmailAndPassword(email, password)
-        .then(function() {
-            alert('✅ Auth API 測試成功！\n請看 Console 日誌');
-            console.log('✅ Auth 用戶:', auth.currentUser);
-        })
-        .catch(function(e) {
-            alert('❌ Auth API 測試失敗：\n' + getAuthErrorMessage(e));
-            console.error(e);
+    // 題數選擇
+    document.getElementById('count-10').addEventListener('click', () => {
+        selectedCount = 10;
+        customCount = 10;
+        document.getElementById('count-10').classList.add('active');
+        document.getElementById('count-20').classList.remove('active');
+        if (document.getElementById('count-36')) document.getElementById('count-36').classList.remove('active');
+        const customInput = document.getElementById('customCount');
+        if (customInput) customInput.value = 10;
+    });
+    document.getElementById('count-20').addEventListener('click', () => {
+        if (document.getElementById('count-20').disabled) return;
+        selectedCount = 20;
+        customCount = 20;
+        document.getElementById('count-10').classList.remove('active');
+        document.getElementById('count-20').classList.add('active');
+        if (document.getElementById('count-36')) document.getElementById('count-36').classList.remove('active');
+        const customInput = document.getElementById('customCount');
+        if (customInput) customInput.value = 20;
+    });
+    document.getElementById('count-36').addEventListener('click', () => {
+        if (document.getElementById('count-36').disabled) return;
+        selectedCount = 36;
+        customCount = 36;
+        document.getElementById('count-10').classList.remove('active');
+        document.getElementById('count-20').classList.remove('active');
+        document.getElementById('count-36').classList.add('active');
+        const customInput = document.getElementById('customCount');
+        if (customInput) customInput.value = 36;
+    });
+    
+    // 試煉模式
+    document.getElementById('trial-mode').addEventListener('click', () => {
+        if (document.getElementById('trial-mode').disabled) return;
+        isTrialMode = true;
+        selectedDifficulty = 2;
+        selectedCount = 50;
+        customCount = 50;
+        document.getElementById('diff-easy').classList.remove('active');
+        document.getElementById('diff-medium').classList.remove('active');
+        document.getElementById('diff-hard').classList.add('active');
+        document.getElementById('count-10').classList.remove('active');
+        document.getElementById('count-20').classList.remove('active');
+        if (document.getElementById('count-36')) document.getElementById('count-36').classList.remove('active');
+        const customInput = document.getElementById('customCount');
+        if (customInput) customInput.value = 50;
+        updateSettingsUnlockStatus();
+    });
+    
+    // 一鍵解鎖
+    document.getElementById('devUnlockBtn').addEventListener('click', unlockAll);
+    
+    // 排除翻譯題
+    const excludeTranslateCheckbox = document.getElementById('excludeTranslate');
+    if (excludeTranslateCheckbox) {
+        excludeTranslateCheckbox.addEventListener('change', (e) => {
+            excludeTranslate = e.target.checked;
+            updateSettingsUnlockStatus();
         });
-});
-
-document.getElementById('forgotPasswordBtn').addEventListener('click', function() {
-    openModal('forgotModal');
-    document.getElementById('forgotUserId').value = '';
-    document.getElementById('forgotPassword').value = '';
-    showForgotResult('', '');
-});
-
-document.getElementById('forgotCancelBtn').addEventListener('click', function() {
-    closeModal('forgotModal');
-});
-
-document.getElementById('forgotSubmitBtn').addEventListener('click', handleForgotPassword);
-
-document.getElementById('forgotPassword').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') handleForgotPassword();
-});
-
-document.getElementById('changePwdFromPanelBtn').addEventListener('click', changePasswordFromPanel);
-
-document.getElementById('changePwdNew').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') changePasswordFromPanel();
-});
-document.getElementById('changePwdConfirm').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') changePasswordFromPanel();
-});
-
-document.getElementById('adminVerifySubmitBtn').addEventListener('click', handleAdminVerify);
-
-document.getElementById('adminVerifyCancelBtn').addEventListener('click', function() {
-    pendingAdminAction = null;
-    closeModal('adminVerifyModal');
-});
-
-document.getElementById('adminPasswordInput').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') document.getElementById('adminVerifySubmitBtn').click();
-});
-
-// ===== 分頁切換（已修復 display 問題） =====
-document.querySelectorAll('.tab').forEach(function(tab) {
-    tab.addEventListener('click', function() {
-        var tabId = this.dataset.tab;
-        if (tabId === 'logout') {
-            logout();
-        } else if (tabId === 'changePwd') {
-            switchTab(tabId);
-            document.getElementById('changePwdPanelResult').textContent = '';
-            document.getElementById('changePwdCurrent').value = '';
-            document.getElementById('changePwdNew').value = '';
-            document.getElementById('changePwdConfirm').value = '';
-            window._isFirstLogin = false;
-        } else {
-            switchTab(tabId);
-            if (tabId === 'teacher' && currentUser && currentUser.isTeacher) {
-                renderTeacherStudentList();
+    }
+    
+    // 自訂題數
+    const customInput = document.getElementById('customCount');
+    if (customInput) {
+        customInput.addEventListener('change', (e) => {
+            let val = parseInt(e.target.value);
+            if (isNaN(val)) val = 10;
+            let maxVal = parseInt(customInput.max);
+            if (!isNaN(maxVal) && val > maxVal) val = maxVal;
+            if (val < 1) val = 1;
+            customCount = val;
+            selectedCount = val;
+            customInput.value = val;
+            document.getElementById('count-10').classList.remove('active');
+            document.getElementById('count-20').classList.remove('active');
+            if (document.getElementById('count-36')) document.getElementById('count-36').classList.remove('active');
+        });
+    }
+    
+    // 開始練習
+    document.getElementById('startPracticeBtn').addEventListener('click', () => {
+        if (window._singleRedoQid) {
+            let qid = window._singleRedoQid;
+            window._singleRedoQid = null;
+            let unit = pendingUnit, chapter = pendingChapter, allQs = [...window.ALL_UNITS[unit].chapters[chapter].questions], targetQ = allQs.find(q => q.id === qid);
+            if (targetQ) {
+                currentUnit = unit;
+                currentChapter = chapter;
+                currentQuestions = [targetQ];
+                currentOptionsMapping = currentQuestions.map(q => { let letters = ['A', 'B', 'C', 'D'], map = {}; for (let i = 0; i < 4; i++) { let optText = q.options[i].substring(3); map[letters[i]] = optText; } return { letterToText: map, correctLetter: q.correct }; });
+                currentAnswers = new Array(1).fill(null);
+                currentQIndex = 0;
+                timeRemaining = 90;
+                updateTimerDisplay();
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => { if (timeRemaining <= 0) submitAll(); else { timeRemaining--; updateTimerDisplay(); } }, 1000);
+                document.getElementById('settingsModal').style.display = 'none';
+                showQuizModal();
             }
+        } else {
+            startPracticeWithSettings();
         }
     });
-});
-
-document.getElementById('teacherCreateStudentBtn').addEventListener('click', createStudentAccount);
-
-document.getElementById('teacherRefreshBtn').addEventListener('click', function() {
-    if (currentUser && currentUser.isTeacher) {
-        renderTeacherStudentList();
+    
+    // 取消
+    document.getElementById('cancelSettingsBtn').addEventListener('click', () => document.getElementById('settingsModal').style.display = 'none');
+    
+    // 關閉題解
+    document.getElementById('closeExplainBtn').addEventListener('click', () => { document.getElementById('explainModal').style.display = 'none'; if (lastResults) displayResults(lastResults); });
+    
+    // 提交答案（手機版）
+    document.getElementById('submitAllBtn').addEventListener('click', () => submitAll());
+    
+    // 關閉結果
+    document.getElementById('closeResultBtn').addEventListener('click', () => document.getElementById('resultModal').style.display = 'none');
+    document.getElementById('closeZoomBtn').addEventListener('click', closeImageZoom);
+    
+    // 上一題 / 下一題（手機版）
+    document.getElementById('prevBtn').addEventListener('click', () => { if (currentQIndex > 0) { currentQIndex--; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
+    document.getElementById('nextBtn').addEventListener('click', () => { if (currentQIndex < currentQuestions.length - 1) { currentQIndex++; renderQuizNav(); renderCurrentQuestion(); updateNavButtons(); } });
+    
+    // 桌面版
+    const desktopSubmitBtn = document.getElementById('desktopSubmitBtn');
+    if (desktopSubmitBtn) {
+        desktopSubmitBtn.addEventListener('click', submitDesktopAll);
     }
-});
-
-// ============================================================
-// 【錯誤標示區】如果顯示密碼按鈕沒有作用，請檢查：
-// 1. 按鈕的 id 是否與 JavaScript 中綁定的事件一致
-// 2. 按鈕是否正確找到對應的密碼輸入框
-// 3. 密碼輸入框的 id 是否正確
-// ============================================================
-// === 顯示密碼按鈕（所有密碼欄位） ===
-function setupTogglePassword(inputId, btnId) {
-    var btn = document.getElementById(btnId);
-    var input = document.getElementById(inputId);
-    if (btn && input) {
-        btn.addEventListener('click', function() {
-            if (input.type === 'password') {
-                input.type = 'text';
-                btn.textContent = '🙈';
-            } else {
-                input.type = 'password';
-                btn.textContent = '👁️';
+    const desktopPrevBtn = document.getElementById('desktopPrevBtn');
+    const desktopNextBtn = document.getElementById('desktopNextBtn');
+    if (desktopPrevBtn) {
+        desktopPrevBtn.addEventListener('click', function() {
+            if (currentQIndex > 0) {
+                currentQIndex--;
+                renderDesktopQuizNav();
+                renderDesktopCurrentQuestion();
+                updateDesktopNavButtons();
             }
         });
     }
-}
-
-// 登入畫面
-setupTogglePassword('password', 'togglePasswordBtn');
-// 忘記密碼
-setupTogglePassword('forgotPassword', 'toggleForgotPwdBtn');
-// 管理密碼驗證
-setupTogglePassword('adminPasswordInput', 'toggleAdminPwdBtn');
-// 修改密碼 - 目前密碼
-setupTogglePassword('changePwdCurrent', 'toggleChangePwdCurrentBtn');
-// 修改密碼 - 新密碼
-setupTogglePassword('changePwdNew', 'toggleChangePwdNewBtn');
-// 修改密碼 - 確認新密碼
-setupTogglePassword('changePwdConfirm', 'toggleChangePwdConfirmBtn');
-
-document.addEventListener('DOMContentLoaded', function() {
-    var saved = localStorage.getItem('ms_chem_login');
-    if (saved) {
-        try {
-            var data = JSON.parse(saved);
-            if (data.userId) {
-                document.getElementById('userId').value = data.userId;
+    if (desktopNextBtn) {
+        desktopNextBtn.addEventListener('click', function() {
+            if (currentQIndex < currentQuestions.length - 1) {
+                currentQIndex++;
+                renderDesktopQuizNav();
+                renderDesktopCurrentQuestion();
+                updateDesktopNavButtons();
             }
-        } catch(e) {}
+        });
+    }
+    const desktopPeriodicBtn = document.getElementById('desktopPeriodicBtn');
+    if (desktopPeriodicBtn) {
+        desktopPeriodicBtn.addEventListener('click', showPeriodicTable);
     }
 });
