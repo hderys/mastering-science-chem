@@ -1,740 +1,188 @@
-// ===== Firebase 配置 =====
-const firebaseConfig = {
-    apiKey: "AIzaSyBWUr-qFjDuAbRn2ueCOA24Bx5vHhGwCzs",
-    authDomain: "mastering-science.firebaseapp.com",
-    projectId: "mastering-science",
-    storageBucket: "mastering-science.firebasestorage.app",
-    messagingSenderId: "969510026630",
-    appId: "1:969510026630:web:5c0ff3ffc7b3bdc04c8007"
-};
-
-// ===== 初始化 Firebase =====
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-// ===== 萬用密碼（寫死在程式碼中） =====
-const MASTER_RESET_PASSWORD = 'Demo1234';
-
-// ===== 全域變數 =====
-let currentUser = null;
-let pendingAdminAction = null; // 暫存管理操作
-
-// ===== 顯示狀態 =====
-function setStatus(text, color) {
-    const el = document.getElementById('firebaseStatus');
-    if (el) {
-        el.textContent = text;
-        el.style.color = color || '#2e0f5a';
-    }
-}
-
-function showResult(text, color) {
-    const el = document.getElementById('result');
-    if (el) {
-        el.textContent = text;
-        el.style.color = color || '#2e0f5a';
-    }
-}
-
-function showForgotResult(text, color) {
-    const el = document.getElementById('forgotResult');
-    if (el) {
-        el.textContent = text;
-        el.style.color = color || '#2e0f5a';
-    }
-}
-
-function showChangePwdResult(text, color) {
-    const el = document.getElementById('changePwdResult');
-    if (el) {
-        el.textContent = text;
-        el.style.color = color || '#2e0f5a';
-    }
-}
-
-function showAdminVerifyResult(text, color) {
-    const el = document.getElementById('adminVerifyResult');
-    if (el) {
-        el.textContent = text;
-        el.style.color = color || '#2e0f5a';
-    }
-}
-
-function showChangePwdPanelResult(text, color) {
-    const el = document.getElementById('changePwdPanelResult');
-    if (el) {
-        el.textContent = text;
-        el.style.color = color || '#2e0f5a';
-    }
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-function openModal(modalId) {
-    document.getElementById(modalId).style.display = 'flex';
-}
-
-// ===== Auth 錯誤訊息 =====
-function getAuthErrorMessage(e) {
-    const map = {
-        'auth/user-not-found': '❌ 帳戶不存在！請確認學號是否正確',
-        'auth/wrong-password': '❌ 密碼錯誤！請確認密碼',
-        'auth/invalid-credential': '❌ 帳戶異常，請聯絡老師',
-        'auth/too-many-requests': '❌ 登入嘗試過多，請稍後再試',
-        'auth/network-request-failed': '❌ 網路連線失敗，請檢查網路',
-        'auth/user-disabled': '❌ 帳戶已被停用，請聯絡老師',
-        'auth/email-already-in-use': '⚠️ 此學號已被使用'
-    };
-    return map[e.code] || '❌ ' + e.message;
-}
-
-// ===== 從 localStorage 找用戶 =====
-function findUserInLocal(userId) {
-    const raw = localStorage.getItem('ms_chem_users');
-    if (raw) {
-        try {
-            const db = JSON.parse(raw);
-            return db.users.find(u => u.userId === userId);
-        } catch(e) {}
-    }
-    return null;
-}
-
-// ===== 保存用戶到 localStorage =====
-function saveUserToLocal(user) {
-    const raw = localStorage.getItem('ms_chem_users');
-    let db = raw ? JSON.parse(raw) : { users: [] };
-    const idx = db.users.findIndex(u => u.userId === user.userId);
-    if (idx >= 0) {
-        db.users[idx] = user;
-    } else {
-        db.users.push(user);
-    }
-    localStorage.setItem('ms_chem_users', JSON.stringify(db));
-}
-
-// ===== 讀取用戶（從 Firestore，失敗則從 localStorage） =====
-async function loadUser(userId) {
-    try {
-        const doc = await db.collection('users').doc(userId).get();
-        if (doc.exists) {
-            const data = doc.data();
-            data.userId = userId;
-            // 同步到 localStorage
-            saveUserToLocal(data);
-            return data;
-        }
-    } catch(e) {
-        console.warn('⚠️ Firestore 讀取失敗:', e.message);
-    }
-    // 從 localStorage 找
-    const local = findUserInLocal(userId);
-    if (local) return local;
-    return null;
-}
-
-// ===== 寫入用戶（先寫 Firestore，再寫 localStorage） =====
-async function saveUser(user) {
-    try {
-        await db.collection('users').doc(user.userId).set(user, { merge: true });
-        console.log('✅ Firestore 寫入成功');
-    } catch(e) {
-        console.warn('⚠️ Firestore 寫入失敗:', e.message);
-    }
-    saveUserToLocal(user);
-}
-
-// ===== 登入函數 =====
-async function handleLogin(userId, password) {
-    showResult('⏳ 登入中...', '#f59e0b');
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 登入測試 - 視覺版</title>
+    <link rel="stylesheet" href="style.css">
     
-    try {
-        const email = userId + '@mastering-science.com';
-        await auth.signInWithEmailAndPassword(email, password);
-        showResult('✅ Auth 登入成功！讀取資料中...', '#10b981');
+    <!-- Firebase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/firebase@12.15.0/firebase-app-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/firebase@12.15.0/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/firebase@12.15.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div id="app">
+    <!-- ===== 登入畫面 ===== -->
+    <div id="loginScreen">
+        <h1>🧪 登入測試</h1>
+        <div id="firebaseStatus">⏳ Firebase 初始化中...</div>
         
-        const user = await loadUser(userId);
-        if (user) {
-            currentUser = user;
-            const role = user.isTeacher ? '🧑‍🏫 老師' : '👨‍🎓 學生';
-            showResult(`✅ 登入成功！\n👤 ${user.name} (${role})\n📚 班級：${user.className}`, '#10b981');
-            enterMainApp(user);
-        } else {
-            showResult('❌ 找不到用戶資料', '#dc2626');
-            await auth.signOut();
-        }
-    } catch(e) {
-        console.error('登入錯誤:', e);
-        showResult(getAuthErrorMessage(e), '#dc2626');
-    }
-}
+        <input type="text" id="userId" placeholder="學號 (例如: VIP001)" value="VIP001">
+        <input type="password" id="password" placeholder="密碼" value="Demo1234">
+        <button id="loginBtn">🔒 登入</button>
+        <button id="testBtn" class="btn-test">🔧 手動測試 Auth</button>
+        <button id="forgotPasswordBtn" class="btn-forgot">🔑 忘記密碼？</button>
+        <div id="result"></div>
+    </div>
 
-// ===== 進入主畫面 =====
-function enterMainApp(user) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainScreen').style.display = 'block';
-    
-    const role = user.isTeacher ? '🧑‍🏫 老師' : '👨‍🎓 學生';
-    document.getElementById('userLabel').textContent = `👋 ${user.name} (${user.className}) ${role}`;
-    
-    const teacherTab = document.getElementById('teacherTab');
-    if (user.isTeacher) {
-        teacherTab.style.display = 'inline-block';
-    } else {
-        teacherTab.style.display = 'none';
-    }
-    
-    switchTab('practice');
-    if (user.isTeacher) renderTeacherStudentList();
-}
+    <!-- ===== 忘記密碼彈窗 ===== -->
+    <div id="forgotModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h2>🔑 忘記密碼</h2>
+            <p style="color:#888; font-size:14px; margin-bottom:12px;">請輸入您的學號及驗證資訊</p>
+            <input type="text" id="forgotUserId" placeholder="學號 (例如: VIP001)">
+            <input type="password" id="forgotPassword" placeholder="驗證密碼">
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button id="forgotCancelBtn" class="btn-cancel" style="flex:1;">取消</button>
+                <button id="forgotSubmitBtn" class="btn-primary" style="flex:1;">驗證</button>
+            </div>
+            <div id="forgotResult" style="margin-top:12px; padding:8px; border-radius:8px; min-height:30px; font-size:14px;"></div>
+        </div>
+    </div>
 
-// ===== 切換分頁 =====
-function switchTab(tabId) {
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    const target = document.getElementById(tabId + 'Panel');
-    if (target) target.classList.add('active');
-    
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    const tabBtn = document.querySelector(`.tab[data-tab="${tabId}"]`);
-    if (tabBtn) tabBtn.classList.add('active');
-}
+    <!-- ===== 修改密碼彈窗 ===== -->
+    <div id="changePwdModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h2>🔐 修改密碼</h2>
+            <p style="color:#888; font-size:14px; margin-bottom:12px;">請輸入新密碼（至少 4 個字元）</p>
+            <input type="password" id="newPassword" placeholder="新密碼">
+            <input type="password" id="confirmPassword" placeholder="確認新密碼">
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button id="changePwdCancelBtn" class="btn-cancel" style="flex:1;">取消</button>
+                <button id="changePwdSubmitBtn" class="btn-primary" style="flex:1;">確認修改</button>
+            </div>
+            <div id="changePwdResult" style="margin-top:12px; padding:8px; border-radius:8px; min-height:30px; font-size:14px;"></div>
+        </div>
+    </div>
 
-// ===== 登出 =====
-function logout() {
-    if (confirm('確定要登出嗎？')) {
-        auth.signOut();
-        currentUser = null;
-        document.getElementById('loginScreen').style.display = 'block';
-        document.getElementById('mainScreen').style.display = 'none';
-        document.getElementById('password').value = '';
-        showResult('已登出', '#999');
-    }
-}
+    <!-- ===== 管理密碼驗證彈窗（老師後台高風險操作） ===== -->
+    <div id="adminVerifyModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h2>🔐 管理員驗證</h2>
+            <p style="color:#888; font-size:14px; margin-bottom:12px;">此操作需要管理密碼驗證</p>
+            <input type="password" id="adminPasswordInput" placeholder="請輸入管理密碼">
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button id="adminVerifyCancelBtn" class="btn-cancel" style="flex:1;">取消</button>
+                <button id="adminVerifySubmitBtn" class="btn-primary" style="flex:1;">驗證</button>
+            </div>
+            <div id="adminVerifyResult" style="margin-top:12px; padding:8px; border-radius:8px; min-height:30px; font-size:14px;"></div>
+        </div>
+    </div>
 
-// ===== 修改密碼（從分頁面板） =====
-async function changePasswordFromPanel() {
-    const currentPwd = document.getElementById('changePwdCurrent').value.trim();
-    const newPwd = document.getElementById('changePwdNew').value.trim();
-    const confirmPwd = document.getElementById('changePwdConfirm').value.trim();
-    const resultEl = document.getElementById('changePwdPanelResult');
-
-    if (!currentPwd || !newPwd || !confirmPwd) {
-        resultEl.textContent = '⚠️ 請填寫所有欄位';
-        resultEl.style.color = '#f59e0b';
-        return;
-    }
-
-    if (newPwd.length < 4) {
-        resultEl.textContent = '⚠️ 新密碼至少 4 個字元';
-        resultEl.style.color = '#f59e0b';
-        return;
-    }
-
-    if (newPwd !== confirmPwd) {
-        resultEl.textContent = '❌ 兩次輸入的密碼不一致';
-        resultEl.style.color = '#dc2626';
-        return;
-    }
-
-    // 驗證目前密碼
-    if (currentPwd !== currentUser.password) {
-        resultEl.textContent = '❌ 目前密碼錯誤';
-        resultEl.style.color = '#dc2626';
-        return;
-    }
-
-    resultEl.textContent = '⏳ 更新中...';
-    resultEl.style.color = '#f59e0b';
-
-    try {
-        // 更新 Auth
-        const email = currentUser.userId + '@mastering-science.com';
-        await auth.signInWithEmailAndPassword(email, currentPwd);
-        await auth.currentUser.updatePassword(newPwd);
+    <!-- ===== 主畫面（登入後顯示） ===== -->
+    <div id="mainScreen" style="display:none;">
+        <!-- 頂部導航 -->
+        <div class="top-bar">
+            <h1>📘 Mastering Science</h1>
+            <span id="userLabel"></span>
+        </div>
         
-        // 更新 Firestore
-        currentUser.password = newPwd;
-        await saveUser(currentUser);
+        <!-- 分頁按鈕 -->
+        <div class="nav-tabs">
+            <button class="tab active" data-tab="practice">📖 練習</button>
+            <button class="tab" data-tab="myMistakes">❌ 錯題</button>
+            <button class="tab" data-tab="achievements">🏆 成就</button>
+            <button class="tab" data-tab="teacher" id="teacherTab" style="display:none;">🧑‍🏫 老師後台</button>
+            <button class="tab" data-tab="changePwd" id="changePwdTab">🔑 修改密碼</button>
+            <button class="tab" data-tab="logout" id="logoutTab" style="color:#dc2626;">🚪 登出</button>
+        </div>
         
-        resultEl.textContent = '✅ 密碼已成功修改！';
-        resultEl.style.color = '#10b981';
-        
-        document.getElementById('changePwdCurrent').value = '';
-        document.getElementById('changePwdNew').value = '';
-        document.getElementById('changePwdConfirm').value = '';
-        
-        setTimeout(() => {
-            resultEl.textContent = '';
-        }, 3000);
-    } catch(e) {
-        console.error('修改密碼錯誤:', e);
-        resultEl.textContent = '❌ ' + getAuthErrorMessage(e);
-        resultEl.style.color = '#dc2626';
-    }
-}
-
-// ===== 忘記密碼（彈窗） =====
-async function handleForgotPassword() {
-    const userId = document.getElementById('forgotUserId').value.trim();
-    const inputPwd = document.getElementById('forgotPassword').value.trim();
-    
-    if (!userId || !inputPwd) {
-        showForgotResult('⚠️ 請輸入學號和驗證密碼', '#f59e0b');
-        return;
-    }
-
-    showForgotResult('⏳ 驗證中...', '#f59e0b');
-
-    try {
-        const user = await loadUser(userId);
-        if (!user) {
-            showForgotResult('❌ 學號不存在', '#dc2626');
-            return;
-        }
-
-        // 判斷是老師還是學生
-        if (user.isTeacher) {
-            // 老師：驗證萬用密碼
-            if (inputPwd === MASTER_RESET_PASSWORD) {
-                // 產生新密碼
-                const newPwd = generatePassword();
-                user.password = newPwd;
-                user.isFirstLogin = true;
-                await saveUser(user);
-
-                // 更新 Auth
-                try {
-                    const email = userId + '@mastering-science.com';
-                    await auth.signInWithEmailAndPassword(email, MASTER_RESET_PASSWORD);
-                    await auth.currentUser.updatePassword(newPwd);
-                    await auth.signOut();
-                } catch(e) {
-                    console.warn('⚠️ Auth 更新失敗:', e.message);
-                }
-
-                showForgotResult(`✅ 驗證成功！\n新密碼：${newPwd}\n請用此密碼登入並修改密碼`, '#10b981');
-                
-                // 清空密碼欄位（安全性）
-                document.getElementById('forgotPassword').value = '';
-            } else {
-                showForgotResult('❌ 驗證密碼錯誤', '#dc2626');
-            }
-        } else {
-            // 學生：直接顯示請聯絡老師
-            showForgotResult('❌ 請聯絡老師重設密碼', '#dc2626');
-        }
-    } catch(e) {
-        console.error('忘記密碼錯誤:', e);
-        showForgotResult('❌ ' + e.message, '#dc2626');
-    }
-}
-
-// ===== 產生隨機密碼 =====
-function generatePassword() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    let pwd = '';
-    for (let i = 0; i < 8; i++) {
-        pwd += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return pwd;
-}
-
-// ===== 老師後台：渲染學生列表 =====
-async function renderTeacherStudentList() {
-    const container = document.getElementById('teacherStudentList');
-    if (!container) return;
-    if (!currentUser || !currentUser.isTeacher) {
-        container.innerHTML = '⚠️ 只有老師可以查看';
-        return;
-    }
-
-    try {
-        // 從 Firestore 讀取該班級所有學生
-        const snapshot = await db.collection('users')
-            .where('className', '==', currentUser.className)
-            .where('isTeacher', '==', false)
-            .get();
-        
-        const students = [];
-        snapshot.forEach(doc => students.push(doc.data()));
-        
-        // 同時從 localStorage 讀取（可能有些尚未同步到 Firestore）
-        const raw = localStorage.getItem('ms_chem_users');
-        if (raw) {
-            const db = JSON.parse(raw);
-            for (const u of db.users) {
-                if (u.className === currentUser.className && !u.isTeacher) {
-                    if (!students.find(s => s.userId === u.userId)) {
-                        students.push(u);
-                    }
-                }
-            }
-        }
-
-        if (students.length === 0) {
-            container.innerHTML = '<div style="color:#999; padding:12px 0;">尚未建立學生帳戶</div>';
-            return;
-        }
-
-        let html = `<table class="teacher-table">
-            <thead><tr>
-                <th>姓名</th><th>學號</th><th>狀態</th><th>操作</th>
-            </tr></thead><tbody>`;
-
-        for (const s of students) {
-            const status = s.isFirstLogin ? '⏳ 首次登入' : '✅ 已啟用';
-            const statusClass = s.isFirstLogin ? 'first' : 'active';
-            html += `<tr>
-                <td>${s.name}</td>
-                <td>${s.userId}</td>
-                <td><span class="status-badge ${statusClass}">${status}</span></td>
-                <td>
-                    <div class="student-actions">
-                        <button class="btn-pwd" onclick="showStudentPassword('${s.userId}')">🔑 密碼</button>
-                        <button class="btn-reset" onclick="resetStudentPassword('${s.userId}')">🔄 重設</button>
-                        <button class="btn-delete" onclick="deleteStudentAccount('${s.userId}')">🗑️ 刪除</button>
+        <!-- 分頁內容 -->
+        <div id="practicePanel" class="panel">
+            <div class="card">
+                <h3>📖 練習功能</h3>
+                <p>這是學生練習介面（僅顯示框架）</p>
+                <div style="background:#f0edf8; padding:20px; border-radius:12px; margin-top:10px;">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <span class="badge">單元 1: 地球</span>
+                        <span class="badge">單元 2: 微觀世界</span>
+                        <span class="badge">單元 3: 金屬</span>
                     </div>
-                </td>
-            </tr>`;
-        }
+                    <div style="margin-top:16px; color:#888; font-size:14px;">
+                        ✅ 登入成功！這是範例畫面。<br>
+                        🔄 完整功能會在正式版恢復。
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="myMistakesPanel" class="panel" style="display:none;">
+            <div class="card">
+                <h3>❌ 我的錯題</h3>
+                <p>這裡會顯示錯題列表（範例）</p>
+                <div style="background:#fef2f2; padding:12px; border-radius:8px; margin-top:10px; border-left:4px solid #dc2626;">
+                    <div>📝 題目範例：Which of the following elements is a semi-metal?</div>
+                    <div style="font-size:13px; color:#dc2626; margin-top:4px;">❌ 答錯 3 次</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="achievementsPanel" class="panel" style="display:none;">
+            <div class="card">
+                <h3>🏆 我的成就</h3>
+                <p>這裡會顯示成就列表（範例）</p>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+                    <div class="achieve-demo unlocked">✅ 初試啼聲</div>
+                    <div class="achieve-demo unlocked">✅ 十題達人</div>
+                    <div class="achieve-demo locked">🔒 千題之王</div>
+                    <div class="achieve-demo locked">🔒 全科目制霸</div>
+                </div>
+            </div>
+        </div>
 
-        html += '</tbody></table>';
-        container.innerHTML = html;
-
-    } catch(e) {
-        console.error('讀取學生列表失敗:', e);
-        container.innerHTML = '⚠️ 讀取失敗，請重新整理';
-    }
-}
-
-// ===== 老師後台：顯示學生密碼 =====
-function showStudentPassword(userId) {
-    // 需要管理密碼驗證
-    pendingAdminAction = { type: 'showPwd', userId: userId };
-    openModal('adminVerifyModal');
-    document.getElementById('adminPasswordInput').value = '';
-    showAdminVerifyResult('', '');
-}
-
-// ===== 老師後台：重設學生密碼 =====
-function resetStudentPassword(userId) {
-    pendingAdminAction = { type: 'resetPwd', userId: userId };
-    openModal('adminVerifyModal');
-    document.getElementById('adminPasswordInput').value = '';
-    showAdminVerifyResult('', '');
-}
-
-// ===== 老師後台：刪除學生帳戶 =====
-function deleteStudentAccount(userId) {
-    if (userId === currentUser?.userId) {
-        alert('⚠️ 無法刪除自己的帳戶');
-        return;
-    }
-    if (!confirm(`確定要刪除學生 ${userId} 的帳戶嗎？`)) return;
-    
-    pendingAdminAction = { type: 'delete', userId: userId };
-    openModal('adminVerifyModal');
-    document.getElementById('adminPasswordInput').value = '';
-    showAdminVerifyResult('', '');
-}
-
-// ===== 管理密碼驗證 =====
-async function handleAdminVerify() {
-    const inputPwd = document.getElementById('adminPasswordInput').value.trim();
-    
-    if (!inputPwd) {
-        showAdminVerifyResult('⚠️ 請輸入管理密碼', '#f59e0b');
-        return;
-    }
-
-    if (!pendingAdminAction) {
-        showAdminVerifyResult('⚠️ 無待處理操作', '#f59e0b');
-        return;
-    }
-
-    // 驗證管理密碼
-    if (inputPwd !== currentUser.adminPassword) {
-        showAdminVerifyResult('❌ 管理密碼錯誤', '#dc2626');
-        // 記錄失敗嘗試
-        console.warn('⚠️ 管理密碼驗證失敗:', currentUser.userId, new Date());
-        return;
-    }
-
-    showAdminVerifyResult('✅ 驗證成功！執行中...', '#10b981');
-
-    try {
-        const action = pendingAdminAction;
-        pendingAdminAction = null;
-        closeModal('adminVerifyModal');
-
-        if (action.type === 'showPwd') {
-            const user = await loadUser(action.userId);
-            if (user) {
-                const pwd = user.password || user.initialPassword || '（無法取得密碼）';
-                alert(`🔑 學生 ${user.name}（${user.userId}）的密碼：\n${pwd}`);
-            } else {
-                alert('❌ 找不到該學生');
-            }
-        } else if (action.type === 'resetPwd') {
-            const newPwd = generatePassword();
-            const user = await loadUser(action.userId);
-            if (user) {
-                user.password = newPwd;
-                user.isFirstLogin = true;
-                await saveUser(user);
+        <div id="changePwdPanel" class="panel" style="display:none;">
+            <div class="card">
+                <h3>🔐 修改密碼</h3>
+                <p style="color:#888; font-size:14px; margin-bottom:16px;">修改您的登入密碼（至少 4 個字元）</p>
+                <input type="password" id="changePwdCurrent" placeholder="目前密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; margin-bottom:10px; outline:none;">
+                <input type="password" id="changePwdNew" placeholder="新密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; margin-bottom:10px; outline:none;">
+                <input type="password" id="changePwdConfirm" placeholder="確認新密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; margin-bottom:10px; outline:none;">
+                <button id="changePwdFromPanelBtn" class="btn-primary" style="width:100%; padding:12px; border:none; border-radius:40px; font-size:16px; font-weight:600; cursor:pointer;">✅ 確認修改</button>
+                <div id="changePwdPanelResult" style="margin-top:12px; padding:8px; border-radius:8px; min-height:30px; font-size:14px;"></div>
+            </div>
+        </div>
+        
+        <div id="teacherPanel" class="panel" style="display:none;">
+            <div class="card">
+                <h3>🧑‍🏫 老師後台</h3>
+                <p style="color:#888; font-size:14px; margin-bottom:12px;">管理班級與學生帳戶</p>
                 
-                // 更新 Auth
-                try {
-                    const email = user.userId + '@mastering-science.com';
-                    await auth.signInWithEmailAndPassword(email, user.password);
-                    await auth.currentUser.updatePassword(newPwd);
-                    await auth.signOut();
-                } catch(e) {
-                    console.warn('⚠️ Auth 更新失敗:', e.message);
-                }
+                <!-- 建立學生 -->
+                <div style="background:#f0fdf4; padding:16px; border-radius:12px; margin-bottom:12px; border:1px solid #10b981;">
+                    <div style="font-weight:600; color:#065f46; margin-bottom:8px;">📝 建立學生帳戶</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-bottom:8px;">
+                        <input type="text" id="teacherNewId" placeholder="學號 (留空自動)" style="padding:8px 12px; border:2px solid #e0d6f5; border-radius:40px; font-size:13px; outline:none;">
+                        <input type="text" id="teacherNewName" placeholder="姓名" style="padding:8px 12px; border:2px solid #e0d6f5; border-radius:40px; font-size:13px; outline:none;">
+                        <input type="text" id="teacherNewClass" placeholder="班級" style="padding:8px 12px; border:2px solid #e0d6f5; border-radius:40px; font-size:13px; outline:none;">
+                        <input type="text" id="teacherNewPhone" placeholder="電話" style="padding:8px 12px; border:2px solid #e0d6f5; border-radius:40px; font-size:13px; outline:none;">
+                    </div>
+                    <button id="teacherCreateStudentBtn" class="btn-primary" style="padding:8px 16px; border:none; border-radius:40px; font-weight:600; cursor:pointer;">✅ 建立帳戶</button>
+                    <div id="teacherCreateResult" style="margin-top:8px; font-size:13px;"></div>
+                </div>
                 
-                alert(`✅ 密碼已重設！\n學生：${user.name}\n新密碼：${newPwd}`);
-                renderTeacherStudentList();
-            } else {
-                alert('❌ 找不到該學生');
-            }
-        } else if (action.type === 'delete') {
-            // 從 Firestore 刪除
-            await db.collection('users').doc(action.userId).delete();
-            // 從 localStorage 刪除
-            const raw = localStorage.getItem('ms_chem_users');
-            if (raw) {
-                const db = JSON.parse(raw);
-                db.users = db.users.filter(u => u.userId !== action.userId);
-                localStorage.setItem('ms_chem_users', JSON.stringify(db));
-            }
-            alert(`✅ 已刪除學生 ${action.userId}`);
-            renderTeacherStudentList();
-        }
-    } catch(e) {
-        console.error('管理操作失敗:', e);
-        alert('❌ 操作失敗：' + e.message);
-    }
-}
+                <!-- 學生列表 -->
+                <div style="background:#f9f7ff; padding:16px; border-radius:12px; margin-bottom:12px;">
+                    <div style="font-weight:600; color:#2e0f5a; margin-bottom:8px;">👨‍🎓 學生列表</div>
+                    <div id="teacherStudentList" style="font-size:13px;">
+                        <!-- 由 JavaScript 動態產生 -->
+                    </div>
+                </div>
+                
+                <!-- 操作按鈕 -->
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                    <button id="teacherRefreshBtn" class="btn-secondary" style="padding:8px 16px; border:2px solid #4a1d8c; border-radius:40px; background:white; color:#4a1d8c; font-weight:600; cursor:pointer;">🔄 重新整理</button>
+                </div>
+                
+                <div style="margin-top:12px; font-size:13px; color:#888;">
+                    🔑 高風險操作（建立/刪除/重設密碼）需要輸入管理密碼驗證。
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-// ===== 老師後台：建立學生帳戶 =====
-async function createStudentAccount() {
-    const customId = document.getElementById('teacherNewId').value.trim() || null;
-    const name = document.getElementById('teacherNewName').value.trim();
-    const className = document.getElementById('teacherNewClass').value.trim() || currentUser.className;
-    const phone = document.getElementById('teacherNewPhone').value.trim();
-    const resultEl = document.getElementById('teacherCreateResult');
-
-    if (!name || !phone) {
-        resultEl.innerHTML = '<span style="color:#dc2626;">⚠️ 請填寫姓名和電話號碼</span>';
-        return;
-    }
-
-    // 需要管理密碼驗證
-    pendingAdminAction = { 
-        type: 'create', 
-        data: { customId, name, className, phone }
-    };
-    openModal('adminVerifyModal');
-    document.getElementById('adminPasswordInput').value = '';
-    showAdminVerifyResult('', '');
-}
-
-// ===== 處理建立學生的驗證（由 adminVerify 調用） =====
-async function handleCreateStudent(data) {
-    const userId = data.customId || generateUserId(data.className);
-    const initialPassword = generatePassword();
-    const newUser = {
-        userId: userId,
-        name: data.name,
-        className: data.className,
-        phone: data.phone,
-        initialPassword: initialPassword,
-        password: initialPassword,
-        isFirstLogin: true,
-        isTeacher: false,
-        createdAt: new Date().toISOString()
-    };
-
-    await saveUser(newUser);
-
-    // 建立 Auth 帳戶
-    try {
-        const email = userId + '@mastering-science.com';
-        await auth.createUserWithEmailAndPassword(email, initialPassword);
-    } catch(e) {
-        if (e.code !== 'auth/email-already-in-use') {
-            console.warn('⚠️ Auth 建立失敗:', e.message);
-        }
-    }
-
-    const resultEl = document.getElementById('teacherCreateResult');
-    resultEl.innerHTML = `<span style="color:#10b981;">✅ 帳戶已建立！\n學號：${userId}，密碼：${initialPassword}</span>`;
-    
-    document.getElementById('teacherNewId').value = '';
-    document.getElementById('teacherNewName').value = '';
-    document.getElementById('teacherNewPhone').value = '';
-    
-    renderTeacherStudentList();
-}
-
-function generateUserId(className) {
-    const raw = localStorage.getItem('ms_chem_users');
-    const db = raw ? JSON.parse(raw) : { users: [] };
-    const classUsers = db.users.filter(u => u.className === className);
-    const num = classUsers.length + 1;
-    return String(num).padStart(6, '0');
-}
-
-// ===== 監聽 Auth 狀態 =====
-auth.onAuthStateChanged(user => {
-    if (user) {
-        setStatus(`✅ Auth 已連線: ${user.email}`, '#10b981');
-        console.log('✅ Auth 用戶:', user.email);
-    } else {
-        setStatus('⏳ 等待登入...', '#999');
-    }
-});
-
-// ===== Firebase 初始化完成 =====
-setStatus('✅ Firebase 已初始化', '#10b981');
-
-// ===== 事件綁定 =====
-
-// 登入
-document.getElementById('loginBtn').addEventListener('click', () => {
-    const userId = document.getElementById('userId').value.trim();
-    const password = document.getElementById('password').value.trim();
-    if (userId && password) {
-        handleLogin(userId, password);
-    } else {
-        showResult('⚠️ 請輸入學號和密碼', '#f59e0b');
-    }
-});
-
-document.getElementById('password').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') document.getElementById('loginBtn').click();
-});
-document.getElementById('userId').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') document.getElementById('loginBtn').click();
-});
-
-// 手動測試
-document.getElementById('testBtn').addEventListener('click', () => {
-    const userId = document.getElementById('userId').value.trim();
-    const password = document.getElementById('password').value.trim();
-    if (!userId || !password) {
-        alert('請先輸入學號和密碼');
-        return;
-    }
-    const email = userId + '@mastering-science.com';
-    auth.signInWithEmailAndPassword(email, password)
-        .then(() => {
-            alert('✅ Auth API 測試成功！\n請看 Console 日誌');
-            console.log('✅ Auth 用戶:', auth.currentUser);
-        })
-        .catch(e => {
-            alert('❌ Auth API 測試失敗：\n' + getAuthErrorMessage(e));
-            console.error(e);
-        });
-});
-
-// 忘記密碼
-document.getElementById('forgotPasswordBtn').addEventListener('click', () => {
-    openModal('forgotModal');
-    document.getElementById('forgotUserId').value = '';
-    document.getElementById('forgotPassword').value = '';
-    showForgotResult('', '');
-});
-
-document.getElementById('forgotCancelBtn').addEventListener('click', () => {
-    closeModal('forgotModal');
-});
-
-document.getElementById('forgotSubmitBtn').addEventListener('click', handleForgotPassword);
-
-document.getElementById('forgotPassword').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleForgotPassword();
-});
-
-// 修改密碼（分頁面板）
-document.getElementById('changePwdFromPanelBtn').addEventListener('click', changePasswordFromPanel);
-document.getElementById('changePwdNew').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') changePasswordFromPanel();
-});
-document.getElementById('changePwdConfirm').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') changePasswordFromPanel();
-});
-
-// 管理密碼驗證
-document.getElementById('adminVerifySubmitBtn').addEventListener('click', async () => {
-    if (pendingAdminAction?.type === 'create') {
-        await handleAdminVerify();
-        if (pendingAdminAction === null) {
-            // 驗證成功後執行建立
-            const data = pendingAdminAction?.data;
-            if (data) {
-                pendingAdminAction = null;
-                await handleCreateStudent(data);
-            }
-        }
-    } else {
-        await handleAdminVerify();
-    }
-});
-
-document.getElementById('adminVerifyCancelBtn').addEventListener('click', () => {
-    pendingAdminAction = null;
-    closeModal('adminVerifyModal');
-});
-
-document.getElementById('adminPasswordInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') document.getElementById('adminVerifySubmitBtn').click();
-});
-
-// 分頁切換
-document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        const tabId = tab.dataset.tab;
-        if (tabId === 'logout') {
-            logout();
-        } else if (tabId === 'changePwd') {
-            switchTab(tabId);
-            document.getElementById('changePwdPanelResult').textContent = '';
-            document.getElementById('changePwdCurrent').value = '';
-            document.getElementById('changePwdNew').value = '';
-            document.getElementById('changePwdConfirm').value = '';
-        } else {
-            switchTab(tabId);
-            if (tabId === 'teacher' && currentUser?.isTeacher) {
-                renderTeacherStudentList();
-            }
-        }
-    });
-});
-
-// 老師後台：建立學生
-document.getElementById('teacherCreateStudentBtn').addEventListener('click', createStudentAccount);
-
-// 老師後台：重新整理
-document.getElementById('teacherRefreshBtn').addEventListener('click', () => {
-    if (currentUser?.isTeacher) renderTeacherStudentList();
-});
-
-// ===== 頁面載入時檢查自動登入 =====
-document.addEventListener('DOMContentLoaded', function() {
-    const saved = localStorage.getItem('ms_chem_login');
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            if (data.userId) {
-                document.getElementById('userId').value = data.userId;
-                // 自動登入（可選）
-                // handleLogin(data.userId, data.password);
-            }
-        } catch(e) {}
-    }
-});
+<script src="script.js"></script>
+</body>
+</html>
