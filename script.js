@@ -1,3 +1,1042 @@
+// 防止 Ctrl + 滾輪縮放
+document.addEventListener('wheel', function(e) {
+    if (e.ctrlKey) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// 防止 Ctrl + +/- 縮放
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '_')) {
+        e.preventDefault();
+    }
+});
+
+// ==================== 全域變量 ====================
+let currentUser = null;
+let userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
+let currentUnit = null;
+let currentChapter = null;
+let currentQuestions = [];
+let currentOptionsMapping = [];
+let currentAnswers = [];
+let currentQIndex = 0;
+let timerInterval = null;
+let timeRemaining = 0;
+let pendingUnit = null;
+let pendingChapter = null;
+let lastResults = null;
+let selectedDifficulty = 1;
+let selectedCount = 10;
+let isTrialMode = false;
+let excludeTranslate = true;
+let blinkInterval = null;
+let customCount = 10;
+let isSingleQuestionMode = false;
+let singleQuestionSource = null;
+let startTime = null;
+let isFirstLoginFlow = false; // 【新增】標記是否為首次登入流程
+
+// 成績總表控制變量
+let showOnlyWrong = false;
+let showAnswers = false;
+
+// 登入相關變量
+let loginAttempts = 0;
+const MAX_LOGIN_ATTEMPTS = 5;
+
+// Firebase 同步狀態
+let firestoreEnabled = false;
+
+// 成就積分對應表
+const ACHIEVEMENT_POINTS = {
+    'firstPractice': 10,
+    'tenQuestions': 25,
+    'fiveHundred': 50,
+    'thousand': 100,
+    'perfectLesson': 50,
+    'dseComplete': 50,
+    'speedStar': 50,
+    'consecutive20': 100,
+    'allChaptersMaster': 200,
+    'fiveStarStreak': 200,
+    'mistakeEraser': 50,
+    'collector': 25,
+    'weekChallenge': 100,
+    'star1': 10,
+    'star3': 25,
+    'star5': 50,
+    'trial': 50,
+    'blankPaper': -10,
+    'downwardTrend': -10
+};
+
+// ==================== 在登入畫面顯示狀態（中文） ====================
+function showFirestoreStatus(text, bg, color) {
+    const statusEl = document.getElementById('firestoreReadStatus');
+    if (!statusEl) {
+        const div = document.createElement('div');
+        div.id = 'firestoreReadStatus';
+        div.style.cssText = 'text-align:center; padding:10px; margin:10px 0; border-radius:8px; font-size:14px; font-weight:bold;';
+        const loginScreen = document.getElementById('loginScreen');
+        if (loginScreen) {
+            loginScreen.insertBefore(div, loginScreen.querySelector('#loginBtn'));
+        }
+    }
+    const el = document.getElementById('firestoreReadStatus');
+    el.textContent = text;
+    el.style.background = bg;
+    el.style.color = color;
+}
+
+// ==================== 取得 Auth 錯誤的中文對應 ====================
+function getAuthErrorMessage(e) {
+    const code = e.code;
+    const message = e.message;
+    let userMessage = '';
+    
+    switch(code) {
+        case 'auth/user-not-found':
+            userMessage = '❌ 帳戶不存在！請先建立帳戶或確認學號是否正確';
+            break;
+        case 'auth/wrong-password':
+            userMessage = '❌ 密碼錯誤！請確認密碼是否正確，或向老師索取新密碼';
+            break;
+        case 'auth/invalid-credential':
+            userMessage = '❌ 帳戶異常！可能是帳戶被刪除或密碼錯誤，請聯絡老師';
+            break;
+        case 'auth/too-many-requests':
+            userMessage = '❌ 登入嘗試過多，請稍後再試';
+            break;
+        case 'auth/network-request-failed':
+            userMessage = '❌ 網路連線失敗，請檢查網路後重試';
+            break;
+        case 'auth/user-disabled':
+            userMessage = '❌ 帳戶已被停用，請聯絡老師';
+            break;
+        case 'auth/email-already-in-use':
+            userMessage = '⚠️ 此學號已被其他帳戶使用';
+            break;
+        default:
+            userMessage = '❌ Auth 驗證失敗：' + message;
+            break;
+    }
+    
+    // 同時在 console 顯示完整錯誤碼（方便除錯）
+    console.log('🔍 完整錯誤碼:', code);
+    console.log('🔍 完整錯誤訊息:', message);
+    
+    return userMessage;
+}
+
+// ==================== Firebase 初始化檢查 ====================
+function checkFirebase() {
+    // 強制啟用 Firestore
+    firestoreEnabled = true;
+    console.log('✅ Firestore 已強制啟用');
+    return true;
+}
+
+// ==================== Firestore 數據同步函數 ====================
+async function syncToFirestore(collection, docId, data) {
+    if (!firestoreEnabled || !currentUser) return false;
+    try {
+        await firebase.firestore()
+            .collection(collection)
+            .doc(docId)
+            .set(data, { merge: true });
+        return true;
+    } catch(e) {
+        console.warn('⚠️ Firestore 同步失敗:', e.message);
+        return false;
+    }
+}
+
+async function loadFromFirestore(collection, docId) {
+    if (!firestoreEnabled || !currentUser) return null;
+    try {
+        const doc = await firebase.firestore()
+            .collection(collection)
+            .doc(docId)
+            .get();
+        if (doc.exists) {
+            return doc.data();
+        }
+        return null;
+    } catch(e) {
+        console.warn('⚠️ Firestore 讀取失敗:', e.message);
+        return null;
+    }
+}
+
+// ==================== Firebase 遷移相關函數 ====================
+async function saveMigrationToFirebase(migrationData) {
+    if (!firestoreEnabled) {
+        console.warn('⚠️ Firestore 未啟用，遷移請求儲存到 localStorage');
+        const db = getUsers();
+        if (!db.migrations) db.migrations = [];
+        db.migrations.push(migrationData);
+        saveUsers(db);
+        return migrationData;
+    }
+    
+    try {
+        await firebase.firestore()
+            .collection('migrations')
+            .doc(migrationData.code)
+            .set(migrationData, { merge: true });
+        console.log('✅ 遷移請求已儲存到 Firebase');
+        return migrationData;
+    } catch(e) {
+        console.warn('⚠️ Firebase 儲存失敗，改用 localStorage:', e.message);
+        const db = getUsers();
+        if (!db.migrations) db.migrations = [];
+        db.migrations.push(migrationData);
+        saveUsers(db);
+        return migrationData;
+    }
+}
+
+async function getMigrationsFromFirebase() {
+    if (!firestoreEnabled) {
+        const db = getUsers();
+        return db.migrations || [];
+    }
+    
+    try {
+        const snapshot = await firebase.firestore()
+            .collection('migrations')
+            .where('status', '==', 'pending')
+            .get();
+        const migrations = [];
+        snapshot.forEach(doc => {
+            migrations.push(doc.data());
+        });
+        console.log(`✅ 從 Firebase 讀取 ${migrations.length} 個待處理遷移請求`);
+        return migrations;
+    } catch(e) {
+        console.warn('⚠️ Firebase 讀取失敗，改用 localStorage:', e.message);
+        const db = getUsers();
+        return db.migrations || [];
+    }
+}
+
+async function getMigrationByCodeFromFirebase(code) {
+    if (!firestoreEnabled) {
+        const db = getUsers();
+        return (db.migrations || []).find(m => m.code === code && m.status === 'pending');
+    }
+    
+    try {
+        const doc = await firebase.firestore()
+            .collection('migrations')
+            .doc(code)
+            .get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data.status === 'pending') {
+                return data;
+            }
+        }
+        return null;
+    } catch(e) {
+        console.warn('⚠️ Firebase 讀取失敗，改用 localStorage:', e.message);
+        const db = getUsers();
+        return (db.migrations || []).find(m => m.code === code && m.status === 'pending');
+    }
+}
+
+async function updateMigrationStatusInFirebase(code, status, newUserId) {
+    if (!firestoreEnabled) {
+        const db = getUsers();
+        if (!db.migrations) db.migrations = [];
+        const migration = db.migrations.find(m => m.code === code);
+        if (migration) {
+            migration.status = status;
+            migration.completedAt = new Date().toISOString();
+            migration.newUserId = newUserId;
+            saveUsers(db);
+        }
+        return;
+    }
+    
+    try {
+        await firebase.firestore()
+            .collection('migrations')
+            .doc(code)
+            .update({
+                status: status,
+                completedAt: new Date().toISOString(),
+                newUserId: newUserId
+            });
+        console.log(`✅ 遷移請求 ${code} 已更新為 ${status}`);
+    } catch(e) {
+        console.warn('⚠️ Firebase 更新失敗，改用 localStorage:', e.message);
+        const db = getUsers();
+        if (!db.migrations) db.migrations = [];
+        const migration = db.migrations.find(m => m.code === code);
+        if (migration) {
+            migration.status = status;
+            migration.completedAt = new Date().toISOString();
+            migration.newUserId = newUserId;
+            saveUsers(db);
+        }
+    }
+}
+
+// ==================== 從 Firebase 讀取學生數據 ====================
+async function loadAllStudentsFromFirebase(className) {
+    console.log('📥 從 Firebase 讀取學生數據:', className);
+    
+    const db = getUsers();
+    const localStudents = db.users.filter(u => u.className === className && !u.isTeacher);
+    console.log(`📊 localStorage: ${localStudents.length} 位學生`);
+    
+    if (!firestoreEnabled) {
+        return localStudents;
+    }
+    
+    try {
+        const snapshot = await firebase.firestore()
+            .collection('users')
+            .where('className', '==', className)
+            .where('isTeacher', '==', false)
+            .get();
+        const firebaseStudents = [];
+        snapshot.forEach(doc => {
+            firebaseStudents.push(doc.data());
+        });
+        console.log(`📊 Firebase: ${firebaseStudents.length} 位學生`);
+        
+        const merged = [...firebaseStudents];
+        for (const s of localStudents) {
+            if (!merged.find(m => m.userId === s.userId)) {
+                merged.push(s);
+            }
+        }
+        return merged;
+    } catch(e) {
+        console.warn('⚠️ Firebase 讀取失敗，使用 localStorage:', e.message);
+        return localStudents;
+    }
+}
+
+// ==================== format 函數 ====================
+function format(date, pattern) {
+    let year = date.getFullYear();
+    let month = String(date.getMonth() + 1).padStart(2, '0');
+    let day = String(date.getDate()).padStart(2, '0');
+    return pattern.replace('yyyy', year).replace('MM', month).replace('dd', day);
+}
+
+// ==================== 數據操作函數 ====================
+function saveUserData() {
+    if (!currentUser) return;
+    const userId = currentUser.id || currentUser.userId;
+    localStorage.setItem(`ms_chem_${userId}`, JSON.stringify(userData));
+    if (firestoreEnabled) {
+        syncToFirestore('users', userId, {
+            latestStatus: userData.latestStatus || {},
+            allAttempts: userData.allAttempts || [],
+            favorites: userData.favorites || [],
+            practiceHistory: userData.practiceHistory || [],
+            achievements: userData.achievements || {},
+            stats: userData.stats || {},
+            lastUpdated: new Date().toISOString()
+        });
+    }
+}
+
+async function loadUserData() {
+    if (!currentUser) return;
+    const userId = currentUser.id || currentUser.userId;
+    
+    if (firestoreEnabled) {
+        try {
+            const cloudData = await loadFromFirestore('users', userId);
+            if (cloudData) {
+                userData = {
+                    latestStatus: cloudData.latestStatus || {},
+                    allAttempts: cloudData.allAttempts || [],
+                    favorites: cloudData.favorites || [],
+                    practiceHistory: cloudData.practiceHistory || [],
+                    achievements: cloudData.achievements || {},
+                    stats: cloudData.stats || { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null }
+                };
+                if (!userData.practiceHistory) userData.practiceHistory = [];
+                if (!userData.achievements) userData.achievements = {};
+                if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
+                if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
+                localStorage.setItem(`ms_chem_${userId}`, JSON.stringify(userData));
+                console.log('✅ 從 Firebase 載入數據');
+                return;
+            }
+        } catch(e) {
+            console.warn('⚠️ Firebase 讀取失敗:', e.message);
+        }
+    }
+    
+    const raw = localStorage.getItem(`ms_chem_${userId}`);
+    if (raw) {
+        userData = JSON.parse(raw);
+        if (!userData.practiceHistory) userData.practiceHistory = [];
+        if (!userData.achievements) userData.achievements = {};
+        if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
+        if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
+        console.log('✅ 從 localStorage 載入數據');
+        if (firestoreEnabled) {
+            syncToFirestore('users', userId, {
+                latestStatus: userData.latestStatus || {},
+                allAttempts: userData.allAttempts || [],
+                favorites: userData.favorites || [],
+                practiceHistory: userData.practiceHistory || [],
+                achievements: userData.achievements || {},
+                stats: userData.stats || {},
+                lastUpdated: new Date().toISOString()
+            });
+        }
+        return;
+    }
+    
+    userData = { latestStatus: {}, allAttempts: [], favorites: [], practiceHistory: [], achievements: {} };
+    if (!userData.practiceHistory) userData.practiceHistory = [];
+    if (!userData.achievements) userData.achievements = {};
+    if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
+    if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
+    saveUserData();
+}
+
+function recordBatch(answers) {
+    for (let a of answers) {
+        userData.latestStatus[a.qid] = a.isCorrect;
+        userData.allAttempts.push({ qid: a.qid, isCorrect: a.isCorrect, timestamp: Date.now() });
+    }
+    saveUserData();
+}
+
+// ==================== 進度計算函數 ====================
+function getUnitMastery(unit) {
+    let total = 0, correct = 0;
+    for (let ch in window.ALL_UNITS[unit].chapters) {
+        for (let q of window.ALL_UNITS[unit].chapters[ch].questions) {
+            total++;
+            if (userData.latestStatus[q.id] === true) correct++;
+        }
+    }
+    return total === 0 ? 0 : Math.round(correct / total * 100);
+}
+
+function getChapterTotalQuestions(unit, chapter) {
+    return window.ALL_UNITS[unit]?.chapters[chapter]?.questions.length || 0;
+}
+
+function getChapterMastery(unit, chapter) {
+    let questions = window.ALL_UNITS[unit]?.chapters[chapter]?.questions || [];
+    if (questions.length === 0) return 0;
+    let correct = 0;
+    for (let q of questions) if (userData.latestStatus[q.id] === true) correct++;
+    return Math.round(correct / questions.length * 100);
+}
+
+function getChapterDifficultyMastery(unit, chapter, difficultyLevel) {
+    let questions = window.ALL_UNITS[unit]?.chapters[chapter]?.questions || [];
+    let total = 0, correct = 0;
+    for (let q of questions) {
+        if (q.difficulty_level === difficultyLevel) {
+            total++;
+            if (userData.latestStatus[q.id] === true) correct++;
+        }
+    }
+    return total === 0 ? 0 : Math.round(correct / total * 100);
+}
+
+function getCurrentWrongByChapter() {
+    let wrongByChapter = {};
+    for (let u in window.ALL_UNITS) {
+        for (let c in window.ALL_UNITS[u].chapters) {
+            for (let q of window.ALL_UNITS[u].chapters[c].questions) {
+                if (userData.latestStatus[q.id] === false) {
+                    if (!wrongByChapter[c]) wrongByChapter[c] = [];
+                    wrongByChapter[c].push({ ...q, chapterName: window.ALL_UNITS[u].chapters[c].name });
+                }
+            }
+        }
+    }
+    return wrongByChapter;
+}
+
+function getPastWrongByChapter() {
+    const wrongQids = new Set();
+    for (let att of userData.allAttempts) if (!att.isCorrect) wrongQids.add(att.qid);
+    let pastByChapter = {};
+    for (let u in window.ALL_UNITS) {
+        for (let c in window.ALL_UNITS[u].chapters) {
+            for (let q of window.ALL_UNITS[u].chapters[c].questions) {
+                if (wrongQids.has(q.id)) {
+                    if (!pastByChapter[c]) pastByChapter[c] = [];
+                    pastByChapter[c].push({ ...q, chapterName: window.ALL_UNITS[u].chapters[c].name });
+                }
+            }
+        }
+    }
+    return pastByChapter;
+}
+
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function hasEverWrong(qid) {
+    return userData.allAttempts.some(att => att.qid === qid && !att.isCorrect);
+}
+
+function isNotAttempted(qid) {
+    return !userData.allAttempts.some(att => att.qid === qid);
+}
+
+// ==================== 登入相關函數 ====================
+function showLoginError(msg) {
+    const errEl = document.getElementById('loginError');
+    if (!errEl) return;
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    setTimeout(() => { errEl.style.display = 'none'; }, 4000);
+}
+
+function clearLoginError() {
+    const errEl = document.getElementById('loginError');
+    if (errEl) errEl.style.display = 'none';
+}
+
+function closeModal(modalId) {
+    const el = document.getElementById(modalId);
+    if (el) el.classList.remove('show');
+}
+
+function formatTime(seconds) {
+    if (!seconds || seconds < 0) return '-';
+    let m = Math.floor(seconds / 60);
+    let s = seconds % 60;
+    if (m === 0) return `${s}秒`;
+    return `${m}分${s}秒`;
+}
+
+function getUsers() {
+    const raw = localStorage.getItem('ms_chem_users');
+    if (raw) {
+        try { return JSON.parse(raw); } catch(e) { return { users: [] }; }
+    }
+    return { users: [] };
+}
+
+function saveUsers(users) {
+    localStorage.setItem('ms_chem_users', JSON.stringify(users));
+}
+
+function findUser(userId) {
+    const db = getUsers();
+    return db.users.find(u => u.userId === userId);
+}
+
+function updateUser(userId, data) {
+    const db = getUsers();
+    const index = db.users.findIndex(u => u.userId === userId);
+    if (index !== -1) {
+        db.users[index] = { ...db.users[index], ...data };
+        saveUsers(db);
+        if (firestoreEnabled) {
+            firebase.firestore()
+                .collection('users')
+                .doc(userId)
+                .set(db.users[index], { merge: true })
+                .then(() => console.log('✅ 用戶資料已同步到 Firebase:', userId))
+                .catch(e => console.warn('⚠️ Firebase 更新失敗:', e.message));
+        }
+        return db.users[index];
+    }
+    return null;
+}
+
+function generateRandomPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let pwd = '';
+    for (let i = 0; i < 8; i++) {
+        pwd += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return pwd;
+}
+
+function generateUserId(className) {
+    const db = getUsers();
+    const classUsers = db.users.filter(u => u.className === className);
+    const num = classUsers.length + 1;
+    return String(num).padStart(6, '0');
+}
+
+// ==================== 建立用戶（支援自訂學號 + Firebase Auth） ====================
+function createUser(name, className, phone, customUserId = null) {
+    const db = getUsers();
+    const userId = customUserId || generateUserId(className);
+    const initialPassword = generateRandomPassword();
+    const user = {
+        userId: userId,
+        name: name,
+        className: className,
+        phone: phone,
+        initialPassword: initialPassword,
+        password: null,
+        isFirstLogin: true,
+        isTeacher: false,
+        managedClasses: [className],
+        createdAt: new Date().toISOString(),
+        latestStatus: {},
+        allAttempts: [],
+        favorites: [],
+        practiceHistory: [],
+        achievements: {},
+        stats: { totalQuestionsAnswered: 0, totalCorrect: 0 }
+    };
+    
+    db.users.push(user);
+    saveUsers(db);
+    
+    if (firestoreEnabled) {
+        firebase.firestore()
+            .collection('users')
+            .doc(userId)
+            .set(user, { merge: true })
+            .then(() => console.log('✅ 用戶已存入 Firebase:', userId))
+            .catch(e => console.warn('⚠️ Firebase 儲存失敗:', e.message));
+    }
+    
+    // 建立 Firebase Auth 帳戶（重要！手機登入需要）
+    if (firestoreEnabled) {
+        const email = userId + '@mastering-science.com';
+        firebase.auth().createUserWithEmailAndPassword(email, initialPassword)
+            .then(() => console.log('✅ Firebase Auth 帳戶已建立:', userId))
+            .catch(e => {
+                if (e.code !== 'auth/email-already-in-use') {
+                    console.warn('⚠️ Firebase Auth 建立失敗:', e.message);
+                }
+            });
+    }
+    
+    return user;
+}
+
+// ==================== 登入處理 ====================
+async function handleLogin(userId, password) {
+    clearLoginError();
+    let user = null;
+    
+    // ===== 步驟 1：Auth 登入 =====
+    showFirestoreStatus('⏳ 步驟 1/3：正在驗證身份...', '#e9e4f5', '#2e0f5a');
+    
+    try {
+        // 如果還沒有 Auth 用戶，嘗試登入
+        if (!firebase.auth().currentUser) {
+            const email = userId + '@mastering-science.com';
+            await firebase.auth().signInWithEmailAndPassword(email, password);
+            console.log('✅ Auth 登入成功');
+        } else {
+            // 檢查當前 Auth 用戶是否匹配
+            const currentEmail = firebase.auth().currentUser?.email;
+            if (currentEmail && currentEmail !== userId + '@mastering-science.com') {
+                await firebase.auth().signOut();
+                const email = userId + '@mastering-science.com';
+                await firebase.auth().signInWithEmailAndPassword(email, password);
+                console.log('✅ 重新登入 Auth 成功');
+            }
+        }
+        
+        // ===== 檢查 Auth 狀態 =====
+        const authUser = firebase.auth().currentUser;
+        if (!authUser) {
+            showFirestoreStatus('❌ Auth 狀態異常，請重新登入', '#f8d7da', '#7f1d1d');
+            showLoginError('❌ 登入異常，請重新嘗試');
+            return;
+        }
+        
+        console.log('✅ Auth 用戶:', authUser.uid);
+        showFirestoreStatus('✅ 步驟 1/3：身份驗證成功', '#d4edda', '#065f46');
+        
+    } catch(e) {
+        console.warn('⚠️ Auth 登入失敗:', e.code, e.message);
+        // 用中文顯示錯誤訊息
+        const errorMsg = getAuthErrorMessage(e);
+        showFirestoreStatus('❌ ' + errorMsg, '#f8d7da', '#7f1d1d');
+        showLoginError('❌ ' + errorMsg);
+        return;
+    }
+    
+    // ===== 步驟 2：讀取 Firestore =====
+    showFirestoreStatus('⏳ 步驟 2/3：讀取用戶資料...', '#e9e4f5', '#2e0f5a');
+    
+    try {
+        const doc = await firebase.firestore()
+            .collection('users')
+            .doc(userId)
+            .get();
+        if (doc.exists) {
+            user = doc.data();
+            console.log('✅ 從 Firestore 找到用戶:', userId);
+            showFirestoreStatus('✅ 步驟 2/3：找到用戶資料！', '#d4edda', '#065f46');
+            
+            // 同步到 localStorage
+            const db = getUsers();
+            const existing = db.users.find(u => u.userId === userId);
+            if (existing) {
+                Object.assign(existing, user);
+            } else {
+                db.users.push(user);
+            }
+            saveUsers(db);
+        } else {
+            console.log('⚠️ Firestore 無此用戶:', userId);
+            showFirestoreStatus('⚠️ 步驟 2/3：Firestore 無此用戶，檢查本地儲存', '#fef3c7', '#7c5a00');
+        }
+    } catch(e) {
+        console.warn('⚠️ Firestore 讀取失敗:', e.message);
+        if (e.message.includes('permission') || e.message.includes('denied')) {
+            showFirestoreStatus('❌ 步驟 2/3：Security Rules 擋住了！請確認 Firebase 規則已發布', '#f8d7da', '#7f1d1d');
+        } else if (e.message.includes('network') || e.message.includes('offline')) {
+            showFirestoreStatus('❌ 步驟 2/3：網路連線失敗，請檢查網路', '#f8d7da', '#7f1d1d');
+        } else {
+            showFirestoreStatus('❌ 步驟 2/3：Firestore 讀取失敗 - ' + e.message, '#f8d7da', '#7f1d1d');
+        }
+    }
+    
+    // ===== 步驟 3：如果 Firestore 找不到，從 localStorage 查詢 =====
+    if (!user) {
+        showFirestoreStatus('⏳ 步驟 3/3：嘗試本地儲存...', '#e9e4f5', '#2e0f5a');
+        user = findUser(userId);
+        if (user) {
+            console.log('✅ 從 localStorage 找到用戶:', userId);
+            showFirestoreStatus('✅ 步驟 3/3：從本地儲存找到用戶', '#d4edda', '#065f46');
+        } else {
+            showFirestoreStatus('⚠️ 步驟 3/3：本地儲存也沒有', '#fef3c7', '#7c5a00');
+        }
+    }
+    
+    if (!user) {
+        showFirestoreStatus('❌ 步驟 3/3：帳號不存在（Firestore 和本地都找不到）', '#f8d7da', '#7f1d1d');
+        showLoginError('❌ 帳號不存在，請確認登入 ID');
+        return;
+    }
+    
+    // ===== 檢查密碼 =====
+    const isValid = (user.password && user.password === password) ||
+                    (user.isFirstLogin && user.initialPassword === password);
+    
+    if (!isValid) {
+        loginAttempts++;
+        const remaining = MAX_LOGIN_ATTEMPTS - loginAttempts;
+        if (remaining <= 0) {
+            showLoginError('❌ 密碼錯誤次數過多，請稍後再試');
+            document.getElementById('loginBtn').disabled = true;
+            setTimeout(() => {
+                document.getElementById('loginBtn').disabled = false;
+                loginAttempts = 0;
+            }, 30000);
+            return;
+        }
+        showFirestoreStatus('❌ 密碼錯誤，剩餘 ' + remaining + ' 次', '#f8d7da', '#7f1d1d');
+        showLoginError(`❌ 密碼錯誤，剩餘嘗試次數：${remaining}`);
+        return;
+    }
+    
+    // ===== 登入成功 =====
+    showFirestoreStatus('✅ 登入成功！歡迎回來 ' + user.name, '#d4edda', '#065f46');
+    loginAttempts = 0;
+    currentUser = user;
+    
+    // 記住我
+    if (document.getElementById('rememberMeCheckbox').checked) {
+        localStorage.setItem('ms_chem_login', JSON.stringify({ userId: userId, password: password }));
+    } else {
+        localStorage.removeItem('ms_chem_login');
+    }
+    
+    // ============================================================
+    // 【修改】檢查是否為首次登入
+    // ============================================================
+    if (user.isFirstLogin === true) {
+        showFirestoreStatus('🔐 首次登入，請設定您的密碼', '#f59e0b', '#7c5a00');
+        isFirstLoginFlow = true;
+        // 切換到修改密碼分頁並顯示提示
+        switchTab('changePwd');
+        document.getElementById('changePwdCurrent').value = password;
+        document.getElementById('changePwdCurrent').disabled = true;
+        var resultEl = document.getElementById('changePwdPanelResult');
+        if (resultEl) {
+            resultEl.textContent = '🔐 首次登入，請設定您的密碼（至少 4 個字元）';
+            resultEl.style.color = '#f59e0b';
+            resultEl.style.fontWeight = 'bold';
+        }
+        return;
+    }
+    
+    // 非首次登入，進入主畫面
+    enterMainApp(user);
+}
+
+function enterMainApp(user) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    
+    const teacherTab = document.getElementById('teacherTab');
+    if (user.isTeacher) {
+        teacherTab.style.display = 'inline-block';
+    } else {
+        teacherTab.style.display = 'none';
+    }
+    
+    updateUserLabel();
+    
+    loadUserData().then(() => {
+        renderPractice();
+        initTabs();
+        document.querySelector('.tab[data-tab="practice"]').click();
+        setupLogout();
+    });
+}
+
+function logout() {
+    if (confirm('⚠️ 確定要登出嗎？\n\n登出後：\n✅ 您的學習進度、成就、錯題會完全保留\n❌ 下次登入需要重新輸入密碼\n\n如果您只是要關閉瀏覽器，可以直接關閉，不需要登出。')) {
+        currentUser = null;
+        localStorage.removeItem('ms_chem_login');
+        document.getElementById('loginScreen').style.display = 'block';
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('userLabel').innerHTML = '';
+        clearLoginError();
+        document.getElementById('loginBtn').disabled = false;
+        loginAttempts = 0;
+    }
+}
+
+function checkAutoLogin() {
+    const saved = localStorage.getItem('ms_chem_login');
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            if (data.userId && data.password) {
+                document.getElementById('loginUserId').value = data.userId;
+                document.getElementById('loginPassword').value = data.password;
+                const rememberMe = document.getElementById('rememberMeCheckbox');
+                if (rememberMe) rememberMe.checked = true;
+                setTimeout(async () => {
+                    await handleLogin(data.userId, data.password);
+                }, 300);
+                return true;
+            }
+        } catch(e) {}
+    }
+    return false;
+}
+
+function updateUserLabel() {
+    if (!currentUser) return;
+    document.getElementById('userLabel').innerHTML = `
+        👋 ${currentUser.name} (${currentUser.className})
+        <button id="logoutBtn" class="btn btn-small" style="background:#dc2626; margin-left:8px; padding:0.15rem 0.5rem; font-size:0.6rem;">登出</button>
+    `;
+    setupLogout();
+}
+
+// ==================== 忘記密碼 ====================
+document.getElementById('forgotPasswordLink')?.addEventListener('click', function() {
+    document.getElementById('forgotPasswordModal').classList.add('show');
+    document.getElementById('forgotUserId').value = '';
+    document.getElementById('forgotPhone').value = '';
+    document.getElementById('forgotMessage').innerHTML = '';
+    document.getElementById('forgotError').style.display = 'none';
+});
+
+document.getElementById('forgotSubmitBtn')?.addEventListener('click', function() {
+    const userId = document.getElementById('forgotUserId').value.trim();
+    const phone = document.getElementById('forgotPhone').value.trim();
+    const errEl = document.getElementById('forgotError');
+    const msgEl = document.getElementById('forgotMessage');
+
+    if (!userId || !phone) {
+        errEl.textContent = '⚠️ 請輸入學號和電話號碼';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    const user = findUser(userId);
+    if (!user) {
+        errEl.textContent = '❌ 學號不存在';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    if (user.phone !== phone) {
+        errEl.textContent = '❌ 電話號碼不正確';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    errEl.style.display = 'none';
+    const newPwd = generateRandomPassword();
+    updateUser(userId, {
+        initialPassword: newPwd,
+        password: null,
+        isFirstLogin: true
+    });
+
+    msgEl.innerHTML = `<div class="alert alert-success">✅ 驗證成功！新的初始密碼已設定：<br><strong style="font-size:20px; font-family:monospace;">${newPwd}</strong><br>請用這個密碼登入，然後修改密碼。</div>`;
+
+    setTimeout(() => {
+        closeModal('forgotPasswordModal');
+        document.getElementById('loginUserId').value = userId;
+        document.getElementById('loginPassword').value = '';
+    }, 3000);
+});
+
+// ==================== 修改密碼（支援 Enter 送出） ====================
+function openChangePasswordModal(isFirstLogin = false) {
+    const modal = document.getElementById('changePasswordModal');
+    const title = document.getElementById('changePasswordTitle');
+    const desc = document.getElementById('changePasswordDesc');
+    const cancelBtn = document.getElementById('changePasswordCancelBtn');
+
+    if (isFirstLogin) {
+        title.textContent = '🔐 首次登入 - 設定密碼';
+        desc.textContent = '這是您第一次登入，請設定自己的密碼。';
+        cancelBtn.style.display = 'none';
+    } else {
+        title.textContent = '🔑 修改密碼';
+        desc.textContent = '請輸入新的密碼。';
+        cancelBtn.style.display = 'block';
+    }
+
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    document.getElementById('changePasswordMessage').innerHTML = '';
+    document.getElementById('changePasswordError').style.display = 'none';
+    modal.classList.add('show');
+}
+
+document.getElementById('changePasswordCancelBtn')?.addEventListener('click', function() {
+    closeModal('changePasswordModal');
+});
+
+document.getElementById('changePasswordBtn')?.addEventListener('click', function() {
+    const newPwd = document.getElementById('newPassword').value;
+    const confirmPwd = document.getElementById('confirmPassword').value;
+    const errEl = document.getElementById('changePasswordError');
+    const msgEl = document.getElementById('changePasswordMessage');
+
+    if (newPwd.length < 4) {
+        errEl.textContent = '⚠️ 密碼至少 4 個字元';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    if (newPwd !== confirmPwd) {
+        errEl.textContent = '❌ 兩次輸入的密碼不一致';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    errEl.style.display = 'none';
+
+    if (!currentUser) {
+        errEl.textContent = '❌ 請先登入';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    const userId = currentUser.id || currentUser.userId;
+    
+    updateUser(userId, {
+        password: newPwd,
+        isFirstLogin: false
+    });
+
+    if (firestoreEnabled) {
+        const email = userId + '@mastering-science.com';
+        firebase.auth().signInWithEmailAndPassword(email, currentUser.password || '')
+            .then(() => {
+                const user = firebase.auth().currentUser;
+                if (user) {
+                    user.updatePassword(newPwd)
+                        .then(() => console.log('✅ Firebase Auth 密碼已更新'))
+                        .catch(e => console.warn('⚠️ Firebase Auth 密碼更新失敗:', e.message));
+                }
+            })
+            .catch(() => {
+                const email = userId + '@mastering-science.com';
+                firebase.auth().createUserWithEmailAndPassword(email, newPwd)
+                    .then(() => console.log('✅ Firebase Auth 帳戶已建立'))
+                    .catch(e => console.warn('⚠️ Firebase Auth 建立失敗:', e.message));
+            });
+    }
+
+    currentUser = findUser(userId);
+    updateUserLabel();
+
+    msgEl.innerHTML = `<div class="alert alert-success">✅ 密碼已成功修改！</div>`;
+
+    setTimeout(() => {
+        closeModal('changePasswordModal');
+        if (document.getElementById('loginScreen').style.display !== 'none') {
+            document.getElementById('loginUserId').value = userId;
+        }
+    }, 1500);
+});
+
+// 修改密碼彈窗支援 Enter 送出
+document.getElementById('newPassword')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('changePasswordBtn').click();
+    }
+});
+document.getElementById('confirmPassword')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('changePasswordBtn').click();
+    }
+});
+
+// ==================== 密碼顯示切換 ====================
+document.getElementById('togglePasswordBtn')?.addEventListener('click', function() {
+    const input = document.getElementById('loginPassword');
+    if (input.type === 'password') {
+        input.type = 'text';
+        this.textContent = '🙈';
+    } else {
+        input.type = 'password';
+        this.textContent = '👁️';
+    }
+});
+
+// ==================== 登入按鈕 ====================
+document.getElementById('loginBtn')?.addEventListener('click', async function() {
+    const userId = document.getElementById('loginUserId').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    
+    if (!userId || !password) {
+        showLoginError('⚠️ 請輸入登入 ID 和密碼');
+        return;
+    }
+    
+    await handleLogin(userId, password);
+});
+
+document.getElementById('loginPassword')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+document.getElementById('loginUserId')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+
+
 // ==================== 成就系統 ====================
 function showUnlockCard(title, message, date, points) {
     if (points > 0) {
