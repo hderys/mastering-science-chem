@@ -20,7 +20,13 @@
         <div id="firebaseStatus">⏳ Firebase 初始化中...</div>
         
         <input type="text" id="userId" placeholder="學號 (例如: VIP001)" value="VIP001">
-        <input type="password" id="password" placeholder="密碼" value="Demo1234">
+        
+        <!-- 密碼欄位 + 顯示密碼按鈕 -->
+        <div style="position: relative; width: 100%;">
+            <input type="password" id="password" placeholder="密碼" value="Demo1234" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; margin-bottom:10px; outline:none; padding-right: 50px;">
+            <button type="button" id="togglePasswordBtn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #888;">👁️</button>
+        </div>
+        
         <button id="loginBtn">🔒 登入</button>
         <button id="testBtn" class="btn-test">🔧 手動測試 Auth</button>
         <button id="forgotPasswordBtn" class="btn-forgot">🔑 忘記密碼？</button>
@@ -33,7 +39,13 @@
             <h2>🔑 忘記密碼</h2>
             <p style="color:#888; font-size:14px; margin-bottom:12px;">請輸入您的學號及驗證資訊</p>
             <input type="text" id="forgotUserId" placeholder="學號 (例如: VIP001)">
-            <input type="password" id="forgotPassword" placeholder="驗證密碼">
+            
+            <!-- 忘記密碼密碼欄位 + 顯示密碼按鈕 -->
+            <div style="position: relative; width: 100%;">
+                <input type="password" id="forgotPassword" placeholder="驗證密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; margin-bottom:10px; outline:none; padding-right: 50px;">
+                <button type="button" id="toggleForgotPwdBtn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #888;">👁️</button>
+            </div>
+            
             <div style="display:flex; gap:8px; margin-top:8px;">
                 <button id="forgotCancelBtn" class="btn-cancel" style="flex:1;">取消</button>
                 <button id="forgotSubmitBtn" class="btn-primary" style="flex:1;">驗證</button>
@@ -47,7 +59,13 @@
         <div class="modal-content">
             <h2>🔐 管理員驗證</h2>
             <p style="color:#888; font-size:14px; margin-bottom:12px;">此操作需要管理密碼驗證</p>
-            <input type="password" id="adminPasswordInput" placeholder="請輸入管理密碼">
+            
+            <!-- 管理密碼欄位 + 顯示密碼按鈕 -->
+            <div style="position: relative; width: 100%;">
+                <input type="password" id="adminPasswordInput" placeholder="請輸入管理密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; margin-bottom:10px; outline:none; padding-right: 50px;">
+                <button type="button" id="toggleAdminPwdBtn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #888;">👁️</button>
+            </div>
+            
             <div style="display:flex; gap:8px; margin-top:8px;">
                 <button id="adminVerifyCancelBtn" class="btn-cancel" style="flex:1;">取消</button>
                 <button id="adminVerifySubmitBtn" class="btn-primary" style="flex:1;">驗證</button>
@@ -125,9 +143,25 @@
             <div class="card">
                 <h3>🔐 修改密碼</h3>
                 <p style="color:#888; font-size:14px; margin-bottom:16px;">修改您的登入密碼（至少 4 個字元）</p>
-                <input type="password" id="changePwdCurrent" placeholder="目前密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; margin-bottom:10px; outline:none;">
-                <input type="password" id="changePwdNew" placeholder="新密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; margin-bottom:10px; outline:none;">
-                <input type="password" id="changePwdConfirm" placeholder="確認新密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; margin-bottom:10px; outline:none;">
+                
+                <!-- 目前密碼 -->
+                <div style="position: relative; width: 100%; margin-bottom: 10px;">
+                    <input type="password" id="changePwdCurrent" placeholder="目前密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; outline:none; padding-right: 50px;">
+                    <button type="button" id="toggleChangePwdCurrentBtn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #888;">👁️</button>
+                </div>
+                
+                <!-- 新密碼 -->
+                <div style="position: relative; width: 100%; margin-bottom: 10px;">
+                    <input type="password" id="changePwdNew" placeholder="新密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; outline:none; padding-right: 50px;">
+                    <button type="button" id="toggleChangePwdNewBtn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #888;">👁️</button>
+                </div>
+                
+                <!-- 確認新密碼 -->
+                <div style="position: relative; width: 100%; margin-bottom: 10px;">
+                    <input type="password" id="changePwdConfirm" placeholder="確認新密碼" style="width:100%; padding:10px 14px; border:2px solid #e0d6f5; border-radius:40px; font-size:16px; outline:none; padding-right: 50px;">
+                    <button type="button" id="toggleChangePwdConfirmBtn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #888;">👁️</button>
+                </div>
+                
                 <button id="changePwdFromPanelBtn" class="btn-primary" style="width:100%; padding:12px; border:none; border-radius:40px; font-size:16px; font-weight:600; cursor:pointer;">✅ 確認修改</button>
                 <div id="changePwdPanelResult" style="margin-top:12px; padding:8px; border-radius:8px; min-height:30px; font-size:14px;"></div>
             </div>

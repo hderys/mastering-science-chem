@@ -136,6 +136,7 @@ async function saveUser(user) {
 // 1. Auth 登入是否成功（email 格式是否為 userId@mastering-science.com）
 // 2. loadUser 是否回傳正確資料
 // 3. enterMainApp 是否被呼叫
+// 4. 如果是首次登入（isFirstLogin === true），是否觸發強制修改密碼
 // ============================================================
 async function handleLogin(userId, password) {
     showResult('⏳ 登入中...', '#f59e0b');
@@ -147,6 +148,24 @@ async function handleLogin(userId, password) {
         const user = await loadUser(userId);
         if (user) {
             currentUser = user;
+            
+            // ============================================================
+            // 【錯誤標示區】如果首次登入強制修改密碼沒有觸發，請檢查：
+            // 1. currentUser.isFirstLogin 是否為 true
+            // 2. openChangePasswordModal(true) 是否被呼叫
+            // 3. 修改密碼完成後，isFirstLogin 是否被設為 false
+            // ============================================================
+            
+            // === 檢查是否為首次登入 ===
+            if (user.isFirstLogin === true) {
+                showResult('🔐 首次登入，請設定您的密碼', '#f59e0b');
+                // 延遲一下讓畫面更新，再彈出修改密碼視窗
+                setTimeout(function() {
+                    openChangePasswordModal(true);
+                }, 500);
+                return; // 不繼續進入主畫面
+            }
+            
             const role = user.isTeacher ? '🧑‍🏫 老師' : '👨‍🎓 學生';
             showResult(`✅ 登入成功！\n👤 ${user.name} (${role})\n📚 班級：${user.className}`, '#10b981');
             enterMainApp(user);
@@ -192,22 +211,19 @@ function enterMainApp(user) {
 // 4. 所有分頁按鈕的 data-tab 屬性是否與 panel id 對應
 // ============================================================
 function switchTab(tabId) {
-    // 1. 隱藏所有面板（移除 class 並強制隱藏）
     document.querySelectorAll('.panel').forEach(function(p) {
         p.classList.remove('active');
-        p.style.display = 'none';   // 👈 關鍵修復：強制隱藏
+        p.style.display = 'none';
     });
 
-    // 2. 顯示目標面板（加上 class 並強制顯示）
     var target = document.getElementById(tabId + 'Panel');
     if (target) {
         target.classList.add('active');
-        target.style.display = 'block';  // 👈 關鍵修復：強制顯示
+        target.style.display = 'block';
     } else {
         console.warn('⚠️ 找不到面板:', tabId + 'Panel');
     }
 
-    // 3. 更新分頁按鈕樣式
     document.querySelectorAll('.tab').forEach(function(t) {
         t.classList.remove('active');
     });
@@ -229,12 +245,39 @@ function logout() {
 }
 
 // ============================================================
+// 【錯誤標示區】如果 openChangePasswordModal 卡住，請檢查：
+// 1. changePasswordModal 是否存在於 HTML 中
+// 2. 是否正確傳入 isFirstLogin 參數
+// ============================================================
+function openChangePasswordModal(isFirstLogin) {
+    // 使用既有的修改密碼面板，但改成強制彈窗模式
+    // 為了簡化，我們直接切換到修改密碼分頁，並顯示提示
+    if (isFirstLogin) {
+        // 強制切換到修改密碼分頁
+        switchTab('changePwd');
+        // 顯示提示訊息
+        var resultEl = document.getElementById('changePwdPanelResult');
+        if (resultEl) {
+            resultEl.textContent = '🔐 首次登入，請設定您的密碼（至少 4 個字元）';
+            resultEl.style.color = '#f59e0b';
+            resultEl.style.fontWeight = 'bold';
+        }
+        // 標記為首次登入模式，讓修改密碼按鈕知道完成後要進入主畫面
+        window._isFirstLogin = true;
+    } else {
+        switchTab('changePwd');
+        window._isFirstLogin = false;
+    }
+}
+
+// ============================================================
 // 【錯誤標示區】如果 changePasswordFromPanel 卡住，請檢查：
 // 1. 三個密碼輸入框是否都填寫了內容
 // 2. 新密碼是否至少 4 個字元
 // 3. 目前密碼是否與 currentUser.password 一致（Firestore 中的密碼）
 // 4. Auth 更新密碼是否成功（需要先登入 Auth 才能更新）
 // 5. 更新後是否正確寫入 Firestore
+// 6. 如果是首次登入，完成後是否將 isFirstLogin 設為 false 並進入主畫面
 // ============================================================
 async function changePasswordFromPanel() {
     var currentPwd = document.getElementById('changePwdCurrent').value.trim();
@@ -242,28 +285,24 @@ async function changePasswordFromPanel() {
     var confirmPwd = document.getElementById('changePwdConfirm').value.trim();
     var resultEl = document.getElementById('changePwdPanelResult');
 
-    // === 檢查 1：是否全部填寫 ===
     if (!currentPwd || !newPwd || !confirmPwd) {
         resultEl.textContent = '⚠️ 請填寫所有欄位';
         resultEl.style.color = '#f59e0b';
         return;
     }
 
-    // === 檢查 2：新密碼長度 ===
     if (newPwd.length < 4) {
         resultEl.textContent = '⚠️ 新密碼至少 4 個字元';
         resultEl.style.color = '#f59e0b';
         return;
     }
 
-    // === 檢查 3：兩次新密碼是否一致 ===
     if (newPwd !== confirmPwd) {
         resultEl.textContent = '❌ 兩次輸入的密碼不一致';
         resultEl.style.color = '#dc2626';
         return;
     }
 
-    // === 檢查 4：目前密碼是否正確（比對 Firestore 中的 password） ===
     if (currentPwd !== currentUser.password) {
         resultEl.textContent = '❌ 目前密碼錯誤（請確認 Firestore 中的密碼）';
         resultEl.style.color = '#dc2626';
@@ -275,15 +314,30 @@ async function changePasswordFromPanel() {
     resultEl.style.color = '#f59e0b';
 
     try {
-        // === 步驟 1：先登入 Auth（驗證身份） ===
         var email = currentUser.userId + '@mastering-science.com';
         await auth.signInWithEmailAndPassword(email, currentPwd);
-        
-        // === 步驟 2：更新 Auth 密碼 ===
         await auth.currentUser.updatePassword(newPwd);
         
-        // === 步驟 3：更新 Firestore 密碼 ===
         currentUser.password = newPwd;
+        
+        // ============================================================
+        // 【錯誤標示區】如果是首次登入，修改完成後必須：
+        // 1. 將 isFirstLogin 設為 false
+        // 2. 更新 Firestore
+        // 3. 進入主畫面
+        // ============================================================
+        if (window._isFirstLogin === true) {
+            currentUser.isFirstLogin = false;
+            window._isFirstLogin = false;
+            resultEl.textContent = '✅ 密碼設定成功！即將進入主畫面...';
+            resultEl.style.color = '#10b981';
+            await saveUser(currentUser);
+            setTimeout(function() {
+                enterMainApp(currentUser);
+            }, 1000);
+            return;
+        }
+        
         await saveUser(currentUser);
         
         resultEl.textContent = '✅ 密碼已成功修改！（Auth 和 Firestore 已同步）';
@@ -298,7 +352,6 @@ async function changePasswordFromPanel() {
         }, 3000);
     } catch(e) {
         console.error('修改密碼錯誤:', e);
-        // === 錯誤標示：Auth 更新失敗 ===
         if (e.code === 'auth/wrong-password') {
             resultEl.textContent = '❌ Auth 驗證失敗：目前密碼與 Auth 記錄不一致';
         } else if (e.code === 'auth/invalid-credential') {
@@ -335,9 +388,7 @@ async function handleForgotPassword() {
             return;
         }
 
-        // === 判斷是老師還是學生 ===
         if (user.isTeacher) {
-            // === 老師：驗證萬用密碼 ===
             if (inputPwd === MASTER_RESET_PASSWORD) {
                 var newPwd = generatePassword();
                 user.password = newPwd;
@@ -359,7 +410,6 @@ async function handleForgotPassword() {
                 showForgotResult('❌ 驗證密碼錯誤（老師請用 Demo1234）', '#dc2626');
             }
         } else {
-            // === 學生：直接顯示請聯絡老師 ===
             showForgotResult('❌ 請聯絡老師重設密碼', '#dc2626');
         }
     } catch(e) {
@@ -433,7 +483,6 @@ async function renderTeacherStudentList() {
 
     } catch(e) {
         console.error('讀取學生列表失敗:', e);
-        // === 錯誤標示：如果看到 Missing or insufficient permissions ===
         if (e.message.includes('permission')) {
             container.innerHTML = '⚠️ 權限不足：請檢查 Firestore Security Rules 是否允許讀取';
         } else {
@@ -488,7 +537,6 @@ async function handleAdminVerify() {
         return;
     }
 
-    // === 驗證管理密碼 ===
     if (inputPwd !== currentUser.adminPassword) {
         showAdminVerifyResult('❌ 管理密碼錯誤', '#dc2626');
         console.warn('⚠️ 管理密碼驗證失敗:', currentUser.userId, new Date());
@@ -721,6 +769,7 @@ document.querySelectorAll('.tab').forEach(function(tab) {
             document.getElementById('changePwdCurrent').value = '';
             document.getElementById('changePwdNew').value = '';
             document.getElementById('changePwdConfirm').value = '';
+            window._isFirstLogin = false;
         } else {
             switchTab(tabId);
             if (tabId === 'teacher' && currentUser && currentUser.isTeacher) {
@@ -737,6 +786,42 @@ document.getElementById('teacherRefreshBtn').addEventListener('click', function(
         renderTeacherStudentList();
     }
 });
+
+// ============================================================
+// 【錯誤標示區】如果顯示密碼按鈕沒有作用，請檢查：
+// 1. 按鈕的 id 是否與 JavaScript 中綁定的事件一致
+// 2. 按鈕是否正確找到對應的密碼輸入框
+// 3. 密碼輸入框的 id 是否正確
+// ============================================================
+// === 顯示密碼按鈕（所有密碼欄位） ===
+function setupTogglePassword(inputId, btnId) {
+    var btn = document.getElementById(btnId);
+    var input = document.getElementById(inputId);
+    if (btn && input) {
+        btn.addEventListener('click', function() {
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                btn.textContent = '👁️';
+            }
+        });
+    }
+}
+
+// 登入畫面
+setupTogglePassword('password', 'togglePasswordBtn');
+// 忘記密碼
+setupTogglePassword('forgotPassword', 'toggleForgotPwdBtn');
+// 管理密碼驗證
+setupTogglePassword('adminPasswordInput', 'toggleAdminPwdBtn');
+// 修改密碼 - 目前密碼
+setupTogglePassword('changePwdCurrent', 'toggleChangePwdCurrentBtn');
+// 修改密碼 - 新密碼
+setupTogglePassword('changePwdNew', 'toggleChangePwdNewBtn');
+// 修改密碼 - 確認新密碼
+setupTogglePassword('changePwdConfirm', 'toggleChangePwdConfirmBtn');
 
 document.addEventListener('DOMContentLoaded', function() {
     var saved = localStorage.getItem('ms_chem_login');
