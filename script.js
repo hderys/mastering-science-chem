@@ -70,22 +70,30 @@ const ACHIEVEMENT_POINTS = {
     'downwardTrend': -10
 };
 
-// ==================== Firebase 初始化檢查 ====================
-function checkFirebase() {
-    if (typeof firebase !== 'undefined' && firebase.firestore) {
-        try {
-            firestoreEnabled = true;
-            console.log('✅ Firestore 已啟用');
-            return true;
-        } catch(e) {
-            firestoreEnabled = false;
-            console.log('⚠️ Firestore 未啟用，使用 localStorage');
-            return false;
+// ==================== 在登入畫面顯示 Firebase 狀態 ====================
+function showFirestoreStatus(text, bg, color) {
+    const statusEl = document.getElementById('firestoreReadStatus');
+    if (!statusEl) {
+        const div = document.createElement('div');
+        div.id = 'firestoreReadStatus';
+        div.style.cssText = 'text-align:center; padding:8px; margin:10px 0; border-radius:8px; font-size:14px; font-weight:bold;';
+        const loginScreen = document.getElementById('loginScreen');
+        if (loginScreen) {
+            loginScreen.insertBefore(div, loginScreen.querySelector('#loginBtn'));
         }
     }
-    firestoreEnabled = false;
-    console.log('⚠️ Firebase 未載入，使用 localStorage');
-    return false;
+    const el = document.getElementById('firestoreReadStatus');
+    el.textContent = text;
+    el.style.background = bg;
+    el.style.color = color;
+}
+
+// ==================== Firebase 初始化檢查 ====================
+function checkFirebase() {
+    // 強制啟用 Firestore
+    firestoreEnabled = true;
+    console.log('✅ Firestore 已強制啟用');
+    return true;
 }
 
 // ==================== Firestore 數據同步函數 ====================
@@ -566,11 +574,10 @@ function createUser(name, className, phone, customUserId = null) {
     
     // 建立 Firebase Auth 帳戶（重要！手機登入需要）
     if (firestoreEnabled) {
-        const email = userId + '@ms.com';
+        const email = userId + '@mastering-science.com';
         firebase.auth().createUserWithEmailAndPassword(email, initialPassword)
             .then(() => console.log('✅ Firebase Auth 帳戶已建立:', userId))
             .catch(e => {
-                // 如果帳戶已存在，不視為錯誤
                 if (e.code !== 'auth/email-already-in-use') {
                     console.warn('⚠️ Firebase Auth 建立失敗:', e.message);
                 }
@@ -580,44 +587,59 @@ function createUser(name, className, phone, customUserId = null) {
     return user;
 }
 
-// ==================== 登入處理（先 Firebase，再 localStorage） ====================
+// ==================== 登入處理（含手機視覺提示） ====================
 async function handleLogin(userId, password) {
     clearLoginError();
     let user = null;
     
-    if (firestoreEnabled) {
-        try {
-            const doc = await firebase.firestore()
-                .collection('users')
-                .doc(userId)
-                .get();
-            if (doc.exists) {
-                user = doc.data();
-                console.log('✅ 從 Firebase 找到用戶:', userId);
-                const db = getUsers();
-                const existing = db.users.find(u => u.userId === userId);
-                if (existing) {
-                    Object.assign(existing, user);
-                } else {
-                    db.users.push(user);
-                }
-                saveUsers(db);
+    // 顯示正在查詢的狀態
+    showFirestoreStatus('⏳ 正在查詢帳戶...', '#e9e4f5', '#2e0f5a');
+    
+    // 強制從 Firestore 讀取（不管 firestoreEnabled）
+    try {
+        const doc = await firebase.firestore()
+            .collection('users')
+            .doc(userId)
+            .get();
+        if (doc.exists) {
+            user = doc.data();
+            console.log('✅ 從 Firestore 找到用戶:', userId);
+            showFirestoreStatus('✅ 找到用戶資料！', '#d4edda', '#065f46');
+            
+            // 同步到 localStorage
+            const db = getUsers();
+            const existing = db.users.find(u => u.userId === userId);
+            if (existing) {
+                Object.assign(existing, user);
+            } else {
+                db.users.push(user);
             }
-        } catch(e) {
-            console.warn('⚠️ Firebase 讀取失敗:', e.message);
+            saveUsers(db);
+        } else {
+            console.log('⚠️ Firestore 無此用戶:', userId);
+            showFirestoreStatus('⚠️ Firestore 無此用戶，檢查本地儲存', '#fef3c7', '#7c5a00');
+        }
+    } catch(e) {
+        console.warn('⚠️ Firestore 讀取失敗:', e.message);
+        showFirestoreStatus('❌ Firestore 讀取失敗: ' + e.message, '#f8d7da', '#7f1d1d');
+    }
+    
+    // 如果 Firestore 找不到，從 localStorage 查詢
+    if (!user) {
+        user = findUser(userId);
+        if (user) {
+            console.log('✅ 從 localStorage 找到用戶:', userId);
+            showFirestoreStatus('✅ 從本地儲存找到用戶', '#d4edda', '#065f46');
         }
     }
     
     if (!user) {
-        user = findUser(userId);
-        if (user) console.log('✅ 從 localStorage 找到用戶:', userId);
-    }
-    
-    if (!user) {
+        showFirestoreStatus('❌ 帳號不存在（Firestore 和本地都找不到）', '#f8d7da', '#7f1d1d');
         showLoginError('❌ 帳號不存在，請確認登入 ID');
         return;
     }
     
+    // 檢查密碼
     const isValid = (user.password && user.password === password) ||
                     (user.isFirstLogin && user.initialPassword === password);
     
@@ -637,9 +659,11 @@ async function handleLogin(userId, password) {
         return;
     }
     
+    // 登入成功
     loginAttempts = 0;
     currentUser = user;
     
+    // 記住我
     if (document.getElementById('rememberMeCheckbox').checked) {
         localStorage.setItem('ms_chem_login', JSON.stringify({ userId: userId, password: password }));
     } else {
@@ -830,7 +854,7 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', function
     });
 
     if (firestoreEnabled) {
-        const email = userId + '@ms.com';
+        const email = userId + '@mastering-science.com';
         firebase.auth().signInWithEmailAndPassword(email, currentUser.password || '')
             .then(() => {
                 const user = firebase.auth().currentUser;
@@ -841,7 +865,7 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', function
                 }
             })
             .catch(() => {
-                const email = userId + '@ms.com';
+                const email = userId + '@mastering-science.com';
                 firebase.auth().createUserWithEmailAndPassword(email, newPwd)
                     .then(() => console.log('✅ Firebase Auth 帳戶已建立'))
                     .catch(e => console.warn('⚠️ Firebase Auth 建立失敗:', e.message));
