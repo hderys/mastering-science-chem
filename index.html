@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 登入測試 - 視覺版</title>
+    <title>🔐 Mastering Science - 測試版</title>
     <link rel="stylesheet" href="style.css">
     
     <!-- Firebase SDK -->
@@ -42,21 +42,6 @@
         </div>
     </div>
 
-    <!-- ===== 修改密碼彈窗 ===== -->
-    <div id="changePwdModal" class="modal" style="display:none;">
-        <div class="modal-content">
-            <h2>🔐 修改密碼</h2>
-            <p style="color:#888; font-size:14px; margin-bottom:12px;">請輸入新密碼（至少 4 個字元）</p>
-            <input type="password" id="newPassword" placeholder="新密碼">
-            <input type="password" id="confirmPassword" placeholder="確認新密碼">
-            <div style="display:flex; gap:8px; margin-top:8px;">
-                <button id="changePwdCancelBtn" class="btn-cancel" style="flex:1;">取消</button>
-                <button id="changePwdSubmitBtn" class="btn-primary" style="flex:1;">確認修改</button>
-            </div>
-            <div id="changePwdResult" style="margin-top:12px; padding:8px; border-radius:8px; min-height:30px; font-size:14px;"></div>
-        </div>
-    </div>
-
     <!-- ===== 管理密碼驗證彈窗（老師後台高風險操作） ===== -->
     <div id="adminVerifyModal" class="modal" style="display:none;">
         <div class="modal-content">
@@ -89,8 +74,9 @@
             <button class="tab" data-tab="logout" id="logoutTab" style="color:#dc2626;">🚪 登出</button>
         </div>
         
-        <!-- 分頁內容 -->
-        <div id="practicePanel" class="panel">
+        <!-- ===== 分頁內容 ===== -->
+        <!-- 練習 -->
+        <div id="practicePanel" class="panel" style="display:none;">
             <div class="card">
                 <h3>📖 練習功能</h3>
                 <p>這是學生練習介面（僅顯示框架）</p>
@@ -108,6 +94,7 @@
             </div>
         </div>
         
+        <!-- 錯題 -->
         <div id="myMistakesPanel" class="panel" style="display:none;">
             <div class="card">
                 <h3>❌ 我的錯題</h3>
@@ -119,6 +106,7 @@
             </div>
         </div>
         
+        <!-- 成就 -->
         <div id="achievementsPanel" class="panel" style="display:none;">
             <div class="card">
                 <h3>🏆 我的成就</h3>
@@ -132,6 +120,7 @@
             </div>
         </div>
 
+        <!-- ===== 修改密碼 ===== -->
         <div id="changePwdPanel" class="panel" style="display:none;">
             <div class="card">
                 <h3>🔐 修改密碼</h3>
@@ -144,6 +133,7 @@
             </div>
         </div>
         
+        <!-- ===== 老師後台 ===== -->
         <div id="teacherPanel" class="panel" style="display:none;">
             <div class="card">
                 <h3>🧑‍🏫 老師後台</h3>
