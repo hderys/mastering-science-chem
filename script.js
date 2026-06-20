@@ -70,13 +70,13 @@ const ACHIEVEMENT_POINTS = {
     'downwardTrend': -10
 };
 
-// ==================== 在登入畫面顯示 Firebase 狀態 ====================
+// ==================== 在登入畫面顯示狀態（中文） ====================
 function showFirestoreStatus(text, bg, color) {
     const statusEl = document.getElementById('firestoreReadStatus');
     if (!statusEl) {
         const div = document.createElement('div');
         div.id = 'firestoreReadStatus';
-        div.style.cssText = 'text-align:center; padding:8px; margin:10px 0; border-radius:8px; font-size:14px; font-weight:bold;';
+        div.style.cssText = 'text-align:center; padding:10px; margin:10px 0; border-radius:8px; font-size:14px; font-weight:bold;';
         const loginScreen = document.getElementById('loginScreen');
         if (loginScreen) {
             loginScreen.insertBefore(div, loginScreen.querySelector('#loginBtn'));
@@ -587,15 +587,52 @@ function createUser(name, className, phone, customUserId = null) {
     return user;
 }
 
-// ==================== 登入處理（含手機視覺提示） ====================
+// ==================== 登入處理（完整版，含中文狀態顯示） ====================
 async function handleLogin(userId, password) {
     clearLoginError();
     let user = null;
     
-    // 顯示正在查詢的狀態
-    showFirestoreStatus('⏳ 正在查詢帳戶...', '#e9e4f5', '#2e0f5a');
+    // ===== 步驟 1：Auth 登入 + 檢查 Auth 狀態 =====
+    showFirestoreStatus('⏳ 步驟 1/3：正在驗證身份...', '#e9e4f5', '#2e0f5a');
     
-    // 強制從 Firestore 讀取（不管 firestoreEnabled）
+    try {
+        // 如果還沒有 Auth 用戶，嘗試登入
+        if (!firebase.auth().currentUser) {
+            const email = userId + '@mastering-science.com';
+            await firebase.auth().signInWithEmailAndPassword(email, password);
+            console.log('✅ Auth 登入成功');
+        } else {
+            // 檢查當前 Auth 用戶是否匹配
+            const currentEmail = firebase.auth().currentUser?.email;
+            if (currentEmail && currentEmail !== userId + '@mastering-science.com') {
+                await firebase.auth().signOut();
+                const email = userId + '@mastering-science.com';
+                await firebase.auth().signInWithEmailAndPassword(email, password);
+                console.log('✅ 重新登入 Auth 成功');
+            }
+        }
+        
+        // ===== 檢查 Auth 狀態是否真的有效 =====
+        const authUser = firebase.auth().currentUser;
+        if (!authUser) {
+            showFirestoreStatus('❌ 步驟 1/3：Auth 狀態異常，請重新登入', '#f8d7da', '#7f1d1d');
+            showLoginError('❌ 登入異常，請重新嘗試');
+            return;
+        }
+        
+        console.log('✅ Auth 用戶:', authUser.uid);
+        showFirestoreStatus('✅ 步驟 1/3：身份驗證成功', '#d4edda', '#065f46');
+        
+    } catch(e) {
+        console.warn('⚠️ Auth 登入失敗:', e.message);
+        showFirestoreStatus('❌ 步驟 1/3：Auth 驗證失敗 - ' + e.message, '#f8d7da', '#7f1d1d');
+        showLoginError('❌ 登入失敗：' + e.message);
+        return;
+    }
+    
+    // ===== 步驟 2：讀取 Firestore =====
+    showFirestoreStatus('⏳ 步驟 2/3：讀取用戶資料...', '#e9e4f5', '#2e0f5a');
+    
     try {
         const doc = await firebase.firestore()
             .collection('users')
@@ -604,7 +641,7 @@ async function handleLogin(userId, password) {
         if (doc.exists) {
             user = doc.data();
             console.log('✅ 從 Firestore 找到用戶:', userId);
-            showFirestoreStatus('✅ 找到用戶資料！', '#d4edda', '#065f46');
+            showFirestoreStatus('✅ 步驟 2/3：找到用戶資料！', '#d4edda', '#065f46');
             
             // 同步到 localStorage
             const db = getUsers();
@@ -617,29 +654,39 @@ async function handleLogin(userId, password) {
             saveUsers(db);
         } else {
             console.log('⚠️ Firestore 無此用戶:', userId);
-            showFirestoreStatus('⚠️ Firestore 無此用戶，檢查本地儲存', '#fef3c7', '#7c5a00');
+            showFirestoreStatus('⚠️ 步驟 2/3：Firestore 無此用戶，檢查本地儲存', '#fef3c7', '#7c5a00');
         }
     } catch(e) {
         console.warn('⚠️ Firestore 讀取失敗:', e.message);
-        showFirestoreStatus('❌ Firestore 讀取失敗: ' + e.message, '#f8d7da', '#7f1d1d');
+        // ===== 判斷錯誤類型 =====
+        if (e.message.includes('permission') || e.message.includes('denied')) {
+            showFirestoreStatus('❌ 步驟 2/3：Security Rules 擋住了！請確認 Firebase 規則已發布', '#f8d7da', '#7f1d1d');
+        } else if (e.message.includes('network') || e.message.includes('offline')) {
+            showFirestoreStatus('❌ 步驟 2/3：網路連線失敗，請檢查網路', '#f8d7da', '#7f1d1d');
+        } else {
+            showFirestoreStatus('❌ 步驟 2/3：Firestore 讀取失敗 - ' + e.message, '#f8d7da', '#7f1d1d');
+        }
     }
     
-    // 如果 Firestore 找不到，從 localStorage 查詢
+    // ===== 步驟 3：如果 Firestore 找不到，從 localStorage 查詢 =====
     if (!user) {
+        showFirestoreStatus('⏳ 步驟 3/3：嘗試本地儲存...', '#e9e4f5', '#2e0f5a');
         user = findUser(userId);
         if (user) {
             console.log('✅ 從 localStorage 找到用戶:', userId);
-            showFirestoreStatus('✅ 從本地儲存找到用戶', '#d4edda', '#065f46');
+            showFirestoreStatus('✅ 步驟 3/3：從本地儲存找到用戶', '#d4edda', '#065f46');
+        } else {
+            showFirestoreStatus('⚠️ 步驟 3/3：本地儲存也沒有', '#fef3c7', '#7c5a00');
         }
     }
     
     if (!user) {
-        showFirestoreStatus('❌ 帳號不存在（Firestore 和本地都找不到）', '#f8d7da', '#7f1d1d');
+        showFirestoreStatus('❌ 步驟 3/3：帳號不存在（Firestore 和本地都找不到）', '#f8d7da', '#7f1d1d');
         showLoginError('❌ 帳號不存在，請確認登入 ID');
         return;
     }
     
-    // 檢查密碼
+    // ===== 檢查密碼 =====
     const isValid = (user.password && user.password === password) ||
                     (user.isFirstLogin && user.initialPassword === password);
     
@@ -655,11 +702,13 @@ async function handleLogin(userId, password) {
             }, 30000);
             return;
         }
+        showFirestoreStatus('❌ 密碼錯誤，剩餘 ' + remaining + ' 次', '#f8d7da', '#7f1d1d');
         showLoginError(`❌ 密碼錯誤，剩餘嘗試次數：${remaining}`);
         return;
     }
     
-    // 登入成功
+    // ===== 登入成功 =====
+    showFirestoreStatus('✅ 登入成功！歡迎回來 ' + user.name, '#d4edda', '#065f46');
     loginAttempts = 0;
     currentUser = user;
     
