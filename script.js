@@ -88,6 +88,46 @@ function showFirestoreStatus(text, bg, color) {
     el.style.color = color;
 }
 
+// ==================== 取得 Auth 錯誤的中文對應 ====================
+function getAuthErrorMessage(e) {
+    const code = e.code;
+    const message = e.message;
+    let userMessage = '';
+    
+    switch(code) {
+        case 'auth/user-not-found':
+            userMessage = '❌ 帳戶不存在！請先建立帳戶或確認學號是否正確';
+            break;
+        case 'auth/wrong-password':
+            userMessage = '❌ 密碼錯誤！請確認密碼是否正確，或向老師索取新密碼';
+            break;
+        case 'auth/invalid-credential':
+            userMessage = '❌ 帳戶異常！可能是帳戶被刪除或密碼錯誤，請聯絡老師';
+            break;
+        case 'auth/too-many-requests':
+            userMessage = '❌ 登入嘗試過多，請稍後再試';
+            break;
+        case 'auth/network-request-failed':
+            userMessage = '❌ 網路連線失敗，請檢查網路後重試';
+            break;
+        case 'auth/user-disabled':
+            userMessage = '❌ 帳戶已被停用，請聯絡老師';
+            break;
+        case 'auth/email-already-in-use':
+            userMessage = '⚠️ 此學號已被其他帳戶使用';
+            break;
+        default:
+            userMessage = '❌ Auth 驗證失敗：' + message;
+            break;
+    }
+    
+    // 同時在 console 顯示完整錯誤碼（方便除錯）
+    console.log('🔍 完整錯誤碼:', code);
+    console.log('🔍 完整錯誤訊息:', message);
+    
+    return userMessage;
+}
+
 // ==================== Firebase 初始化檢查 ====================
 function checkFirebase() {
     // 強制啟用 Firestore
@@ -587,12 +627,12 @@ function createUser(name, className, phone, customUserId = null) {
     return user;
 }
 
-// ==================== 登入處理（完整版，含中文狀態顯示） ====================
+// ==================== 登入處理 ====================
 async function handleLogin(userId, password) {
     clearLoginError();
     let user = null;
     
-    // ===== 步驟 1：Auth 登入 + 檢查 Auth 狀態 =====
+    // ===== 步驟 1：Auth 登入 =====
     showFirestoreStatus('⏳ 步驟 1/3：正在驗證身份...', '#e9e4f5', '#2e0f5a');
     
     try {
@@ -612,10 +652,10 @@ async function handleLogin(userId, password) {
             }
         }
         
-        // ===== 檢查 Auth 狀態是否真的有效 =====
+        // ===== 檢查 Auth 狀態 =====
         const authUser = firebase.auth().currentUser;
         if (!authUser) {
-            showFirestoreStatus('❌ 步驟 1/3：Auth 狀態異常，請重新登入', '#f8d7da', '#7f1d1d');
+            showFirestoreStatus('❌ Auth 狀態異常，請重新登入', '#f8d7da', '#7f1d1d');
             showLoginError('❌ 登入異常，請重新嘗試');
             return;
         }
@@ -624,9 +664,11 @@ async function handleLogin(userId, password) {
         showFirestoreStatus('✅ 步驟 1/3：身份驗證成功', '#d4edda', '#065f46');
         
     } catch(e) {
-        console.warn('⚠️ Auth 登入失敗:', e.message);
-        showFirestoreStatus('❌ 步驟 1/3：Auth 驗證失敗 - ' + e.message, '#f8d7da', '#7f1d1d');
-        showLoginError('❌ 登入失敗：' + e.message);
+        console.warn('⚠️ Auth 登入失敗:', e.code, e.message);
+        // 用中文顯示錯誤訊息
+        const errorMsg = getAuthErrorMessage(e);
+        showFirestoreStatus('❌ ' + errorMsg, '#f8d7da', '#7f1d1d');
+        showLoginError('❌ ' + errorMsg);
         return;
     }
     
@@ -658,7 +700,6 @@ async function handleLogin(userId, password) {
         }
     } catch(e) {
         console.warn('⚠️ Firestore 讀取失敗:', e.message);
-        // ===== 判斷錯誤類型 =====
         if (e.message.includes('permission') || e.message.includes('denied')) {
             showFirestoreStatus('❌ 步驟 2/3：Security Rules 擋住了！請確認 Firebase 規則已發布', '#f8d7da', '#7f1d1d');
         } else if (e.message.includes('network') || e.message.includes('offline')) {
