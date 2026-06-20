@@ -281,14 +281,35 @@
             appId: "1:969510026630:web:5c0ff3ffc7b3bdc04c8007"
         };
         
-        // 初始化 Firebase
-        firebase.initializeApp(firebaseConfig);
-        
-        // 初始化 Firestore 和 Auth
-        const db = firebase.firestore();
-        const auth = firebase.auth();
-        
-        console.log('🔥 Firebase 已初始化！');
+        try {
+            // 初始化 Firebase
+            firebase.initializeApp(firebaseConfig);
+            
+            // 初始化 Firestore 和 Auth
+            const db = firebase.firestore();
+            const auth = firebase.auth();
+            
+            console.log('🔥 Firebase 已初始化！');
+            
+            // 在頁面上顯示成功訊息
+            document.addEventListener('DOMContentLoaded', function() {
+                const el = document.createElement('div');
+                el.id = 'firebaseInitStatus';
+                el.style.cssText = 'position:fixed; top:10px; left:10px; background:#10b981; color:white; padding:8px 16px; border-radius:8px; font-size:14px; z-index:99999; font-weight:bold;';
+                el.textContent = '✅ Firebase 已連線';
+                document.body.appendChild(el);
+            });
+        } catch(e) {
+            console.error('❌ Firebase 初始化失敗:', e.message);
+            // 在頁面上顯示錯誤訊息
+            document.addEventListener('DOMContentLoaded', function() {
+                const el = document.createElement('div');
+                el.id = 'firebaseInitStatus';
+                el.style.cssText = 'position:fixed; top:10px; left:10px; background:#dc2626; color:white; padding:8px 16px; border-radius:8px; font-size:14px; z-index:99999; font-weight:bold;';
+                el.textContent = '❌ Firebase 初始化失敗: ' + e.message;
+                document.body.appendChild(el);
+            });
+        }
     </script>
 </head>
 <body>
