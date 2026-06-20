@@ -263,6 +263,227 @@
             display: inline-block;
             margin: 4px 0;
         }
+
+        /* ===== 老師後台額外樣式 ===== */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .stat-card .number {
+            font-size: 28px;
+            font-weight: 800;
+            color: #4a1d8c;
+        }
+        .stat-card .label {
+            font-size: 13px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .filter-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .filter-row select {
+            padding: 6px 12px;
+            border-radius: 30px;
+            border: 2px solid #e0d6f5;
+            background: white;
+            font-size: 13px;
+            font-weight: 500;
+            color: #2e0f5a;
+            outline: none;
+            cursor: pointer;
+        }
+        .filter-row select:focus {
+            border-color: #4a1d8c;
+        }
+        .class-selector {
+            padding: 6px 14px;
+            border-radius: 30px;
+            border: 2px solid #4a1d8c;
+            background: white;
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a1d8c;
+            outline: none;
+            cursor: pointer;
+        }
+        .class-selector:focus {
+            border-color: #7c3aed;
+        }
+        .progress-mini {
+            width: 80px;
+            height: 6px;
+            background: #e0d6f5;
+            border-radius: 10px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .progress-mini .fill {
+            height: 100%;
+            border-radius: 10px;
+            background: #10b981;
+        }
+        .clickable {
+            cursor: pointer;
+            color: #4a1d8c;
+            font-weight: 500;
+        }
+        .clickable:hover {
+            text-decoration: underline;
+        }
+        .modal-box .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 16px;
+            margin-bottom: 16px;
+        }
+        .modal-box .info-grid .label {
+            color: #888;
+            font-size: 13px;
+        }
+        .modal-box .info-grid .value {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .modal-box .section-title {
+            font-weight: 700;
+            font-size: 14px;
+            color: #2e0f5a;
+            margin: 12px 0 8px 0;
+        }
+        .wrong-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0edf8;
+            gap: 12px;
+        }
+        .wrong-item:last-child {
+            border-bottom: none;
+        }
+        .wrong-item .q-text {
+            flex: 1;
+            font-size: 13px;
+            color: #1a1a2e;
+        }
+        .wrong-item .q-stats {
+            font-size: 13px;
+            color: #666;
+            white-space: nowrap;
+        }
+        .rank-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0edf8;
+        }
+        .rank-item:last-child {
+            border-bottom: none;
+        }
+        .rank-num {
+            font-weight: 800;
+            font-size: 16px;
+            color: #4a1d8c;
+            width: 32px;
+            text-align: center;
+        }
+        .rank-num.gold { color: #f59e0b; }
+        .rank-num.silver { color: #94a3b8; }
+        .rank-num.bronze { color: #d97706; }
+        .chapter-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+        }
+        .chapter-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 2px solid #e0d6f5;
+            transition: all 0.2s;
+            background: #f5f5f5;
+            opacity: 0.6;
+        }
+        .chapter-item.open {
+            border-color: #10b981;
+            background: #f0fdf4;
+            opacity: 1;
+        }
+        .chapter-item.closed {
+            border-color: #e0d6f5;
+            background: #f5f5f5;
+            opacity: 0.6;
+        }
+        .chapter-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #4a1d8c;
+        }
+        .chapter-item .ch-name {
+            font-size: 13px;
+            font-weight: 500;
+            flex: 1;
+        }
+        .chapter-item .ch-status {
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .chapter-item .ch-status.open {
+            color: #10b981;
+        }
+        .chapter-item .ch-status.closed {
+            color: #999;
+        }
+        .sub-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .sub-tab-btn {
+            padding: 6px 16px;
+            border: 2px solid #e0d6f5;
+            border-radius: 30px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            color: #4a1d8c;
+            transition: all 0.2s;
+        }
+        .sub-tab-btn.active {
+            background: #4a1d8c;
+            color: white;
+            border-color: #4a1d8c;
+        }
+        .sub-tab-btn:hover:not(.active) {
+            background: #f5f0ff;
+        }
+        .sub-tab-content {
+            display: none;
+        }
+        .sub-tab-content.active {
+            display: block;
+        }
     </style>
     
     <!-- ===== Firebase SDK (改用 jsdelivr CDN，提升手機相容性) ===== -->
