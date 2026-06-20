@@ -61,19 +61,22 @@ body {
     background: #4a1d8c;
     color: white;
 }
-
-#loginBtn:hover {
-    background: #3b1a6e;
-}
+#loginBtn:hover { background: #3b1a6e; }
 
 .btn-test {
     background: #f59e0b;
     color: white;
 }
+.btn-test:hover { background: #d97706; }
 
-.btn-test:hover {
-    background: #d97706;
+.btn-forgot {
+    background: none;
+    color: #4a1d8c;
+    text-decoration: underline;
+    font-size: 14px;
+    font-weight: 400;
 }
+.btn-forgot:hover { color: #3b1a6e; }
 
 #result {
     margin-top: 12px;
@@ -85,6 +88,88 @@ body {
     min-height: 50px;
     line-height: 1.6;
 }
+
+/* ===== 彈窗 ===== */
+.modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 24px;
+    padding: 32px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 {
+    color: #2e0f5a;
+    margin-bottom: 4px;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e0d6f5;
+    border-radius: 40px;
+    font-size: 16px;
+    margin-bottom: 10px;
+    outline: none;
+}
+.modal-content input:focus { border-color: #4a1d8c; }
+
+.btn-primary {
+    background: #4a1d8c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 40px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-primary:hover { background: #3b1a6e; }
+
+.btn-cancel {
+    background: white;
+    color: #666;
+    border: 1px solid #ddd;
+    padding: 10px 20px;
+    border-radius: 40px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-cancel:hover { background: #f5f5f5; }
+
+.btn-danger {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.btn-danger:hover { background: #b91c1c; }
+
+.btn-secondary {
+    padding: 8px 16px;
+    border: 2px solid #4a1d8c;
+    border-radius: 40px;
+    background: white;
+    color: #4a1d8c;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-secondary:hover { background: #f0edf8; }
 
 /* ===== 主畫面 ===== */
 #mainScreen {
@@ -130,23 +215,14 @@ body {
     color: #4a1d8c;
     transition: all 0.2s;
 }
-
-.tab:hover {
-    background: #f0edf8;
-}
-
+.tab:hover { background: #f0edf8; }
 .tab.active {
     background: #4a1d8c;
     color: white;
 }
 
-.panel {
-    display: none;
-}
-
-.panel.active {
-    display: block;
-}
+.panel { display: none; }
+.panel.active { display: block; }
 
 .card {
     background: white;
@@ -154,7 +230,6 @@ body {
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
-
 .card h3 {
     color: #2e0f5a;
     margin-bottom: 8px;
@@ -175,22 +250,62 @@ body {
     font-size: 13px;
     text-align: center;
 }
-
 .achieve-demo.unlocked {
     background: #d4edda;
     color: #065f46;
 }
-
 .achieve-demo.locked {
     background: #f5f5f5;
     color: #999;
 }
 
-/* ===== 登出按鈕 ===== */
-#logoutTab {
-    color: #dc2626;
-}
+#logoutTab { color: #dc2626; }
+#logoutTab:hover { background: #fef2f2; }
 
-#logoutTab:hover {
-    background: #fef2f2;
+/* ===== 老師後台表格 ===== */
+.teacher-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
 }
+.teacher-table th {
+    text-align: left;
+    padding: 6px 8px;
+    background: #f0edf8;
+    border-bottom: 2px solid #4a1d8c;
+}
+.teacher-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f0edf8;
+}
+.teacher-table tr:hover { background: #faf8ff; }
+
+.status-badge {
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    color: white;
+}
+.status-badge.active { background: #10b981; }
+.status-badge.first { background: #f59e0b; }
+.status-badge.need-help { background: #dc2626; }
+
+.student-actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.student-actions button {
+    padding: 2px 10px;
+    border: none;
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+}
+.student-actions .btn-pwd { background: #f59e0b; color: white; }
+.student-actions .btn-reset { background: #3b82f6; color: white; }
+.student-actions .btn-delete { background: #dc2626; color: white; }
+
+.student-actions .btn-pwd:hover { background: #d97706; }
+.student-actions .btn-reset:hover { background: #2563eb; }
+.student-actions .btn-delete:hover { background: #b91c1c; }

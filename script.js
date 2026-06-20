@@ -13,7 +13,12 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// ===== 萬用密碼（寫死在程式碼中） =====
+const MASTER_RESET_PASSWORD = 'Demo1234';
+
+// ===== 全域變數 =====
 let currentUser = null;
+let pendingAdminAction = null;
 
 // ===== 顯示狀態 =====
 function setStatus(text, color) {
@@ -32,6 +37,46 @@ function showResult(text, color) {
     }
 }
 
+function showForgotResult(text, color) {
+    const el = document.getElementById('forgotResult');
+    if (el) {
+        el.textContent = text;
+        el.style.color = color || '#2e0f5a';
+    }
+}
+
+function showChangePwdResult(text, color) {
+    const el = document.getElementById('changePwdResult');
+    if (el) {
+        el.textContent = text;
+        el.style.color = color || '#2e0f5a';
+    }
+}
+
+function showAdminVerifyResult(text, color) {
+    const el = document.getElementById('adminVerifyResult');
+    if (el) {
+        el.textContent = text;
+        el.style.color = color || '#2e0f5a';
+    }
+}
+
+function showChangePwdPanelResult(text, color) {
+    const el = document.getElementById('changePwdPanelResult');
+    if (el) {
+        el.textContent = text;
+        el.style.color = color || '#2e0f5a';
+    }
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = 'flex';
+}
+
 // ===== Auth 錯誤訊息 =====
 function getAuthErrorMessage(e) {
     const map = {
@@ -46,52 +91,6 @@ function getAuthErrorMessage(e) {
     return map[e.code] || '❌ ' + e.message;
 }
 
-// ===== 登入函數 =====
-async function handleLogin(userId, password) {
-    showResult('⏳ 登入中...', '#f59e0b');
-    
-    try {
-        const email = userId + '@mastering-science.com';
-        
-        // Step 1: Auth 登入
-        await auth.signInWithEmailAndPassword(email, password);
-        showResult('✅ Auth 登入成功！讀取資料中...', '#10b981');
-        
-        // Step 2: 讀取 Firestore
-        const doc = await db.collection('users').doc(userId).get();
-        
-        if (doc.exists) {
-            currentUser = doc.data();
-            currentUser.userId = userId;
-            
-            // 顯示成功訊息
-            const role = currentUser.isTeacher ? '🧑‍🏫 老師' : '👨‍🎓 學生';
-            showResult(`✅ 登入成功！\n👤 ${currentUser.name} (${role})\n📚 班級：${currentUser.className}`, '#10b981');
-            
-            // 進入主畫面
-            enterMainApp(currentUser);
-            
-        } else {
-            // Auth 成功但 Firestore 沒資料 → 嘗試讀 localStorage
-            showResult('⚠️ Firestore 無資料，檢查本地儲存...', '#f59e0b');
-            
-            const localUser = findUserInLocal(userId);
-            if (localUser) {
-                currentUser = localUser;
-                const role = currentUser.isTeacher ? '🧑‍🏫 老師' : '👨‍🎓 學生';
-                showResult(`✅ 從本地找到用戶！\n👤 ${currentUser.name} (${role})`, '#10b981');
-                enterMainApp(currentUser);
-            } else {
-                showResult('❌ Firestore 和本地都找不到此用戶', '#dc2626');
-            }
-        }
-        
-    } catch(e) {
-        console.error('登入錯誤:', e);
-        showResult(getAuthErrorMessage(e), '#dc2626');
-    }
-}
-
 // ===== 從 localStorage 找用戶 =====
 function findUserInLocal(userId) {
     const raw = localStorage.getItem('ms_chem_users');
@@ -104,16 +103,81 @@ function findUserInLocal(userId) {
     return null;
 }
 
+// ===== 保存用戶到 localStorage =====
+function saveUserToLocal(user) {
+    const raw = localStorage.getItem('ms_chem_users');
+    let db = raw ? JSON.parse(raw) : { users: [] };
+    const idx = db.users.findIndex(u => u.userId === user.userId);
+    if (idx >= 0) {
+        db.users[idx] = user;
+    } else {
+        db.users.push(user);
+    }
+    localStorage.setItem('ms_chem_users', JSON.stringify(db));
+}
+
+// ===== 讀取用戶（從 Firestore，失敗則從 localStorage） =====
+async function loadUser(userId) {
+    try {
+        const doc = await db.collection('users').doc(userId).get();
+        if (doc.exists) {
+            const data = doc.data();
+            data.userId = userId;
+            saveUserToLocal(data);
+            return data;
+        }
+    } catch(e) {
+        console.warn('⚠️ Firestore 讀取失敗:', e.message);
+    }
+    const local = findUserInLocal(userId);
+    if (local) return local;
+    return null;
+}
+
+// ===== 寫入用戶（先寫 Firestore，再寫 localStorage） =====
+async function saveUser(user) {
+    try {
+        await db.collection('users').doc(user.userId).set(user, { merge: true });
+        console.log('✅ Firestore 寫入成功');
+    } catch(e) {
+        console.warn('⚠️ Firestore 寫入失敗:', e.message);
+    }
+    saveUserToLocal(user);
+}
+
+// ===== 登入函數 =====
+async function handleLogin(userId, password) {
+    showResult('⏳ 登入中...', '#f59e0b');
+    
+    try {
+        const email = userId + '@mastering-science.com';
+        await auth.signInWithEmailAndPassword(email, password);
+        showResult('✅ Auth 登入成功！讀取資料中...', '#10b981');
+        
+        const user = await loadUser(userId);
+        if (user) {
+            currentUser = user;
+            const role = user.isTeacher ? '🧑‍🏫 老師' : '👨‍🎓 學生';
+            showResult(`✅ 登入成功！\n👤 ${user.name} (${role})\n📚 班級：${user.className}`, '#10b981');
+            enterMainApp(user);
+        } else {
+            showResult('❌ 找不到用戶資料', '#dc2626');
+            await auth.signOut();
+        }
+    } catch(e) {
+        console.error('登入錯誤:', e);
+        showResult(getAuthErrorMessage(e), '#dc2626');
+    }
+}
+
 // ===== 進入主畫面 =====
 function enterMainApp(user) {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainScreen').style.display = 'block';
     
-    // 更新用戶標籤
     const role = user.isTeacher ? '🧑‍🏫 老師' : '👨‍🎓 學生';
     document.getElementById('userLabel').textContent = `👋 ${user.name} (${user.className}) ${role}`;
     
-    // 顯示/隱藏老師分頁
     const teacherTab = document.getElementById('teacherTab');
     if (user.isTeacher) {
         teacherTab.style.display = 'inline-block';
@@ -121,20 +185,16 @@ function enterMainApp(user) {
         teacherTab.style.display = 'none';
     }
     
-    // 預設顯示練習頁
     switchTab('practice');
+    if (user.isTeacher) renderTeacherStudentList();
 }
 
 // ===== 切換分頁 =====
 function switchTab(tabId) {
-    // 隱藏所有 panel
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    
-    // 顯示目標 panel
     const target = document.getElementById(tabId + 'Panel');
     if (target) target.classList.add('active');
     
-    // 更新 tab 按鈕狀態
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     const tabBtn = document.querySelector(`.tab[data-tab="${tabId}"]`);
     if (tabBtn) tabBtn.classList.add('active');
@@ -152,6 +212,359 @@ function logout() {
     }
 }
 
+// ===== 修改密碼（從分頁面板） =====
+async function changePasswordFromPanel() {
+    const currentPwd = document.getElementById('changePwdCurrent').value.trim();
+    const newPwd = document.getElementById('changePwdNew').value.trim();
+    const confirmPwd = document.getElementById('changePwdConfirm').value.trim();
+    const resultEl = document.getElementById('changePwdPanelResult');
+
+    if (!currentPwd || !newPwd || !confirmPwd) {
+        resultEl.textContent = '⚠️ 請填寫所有欄位';
+        resultEl.style.color = '#f59e0b';
+        return;
+    }
+
+    if (newPwd.length < 4) {
+        resultEl.textContent = '⚠️ 新密碼至少 4 個字元';
+        resultEl.style.color = '#f59e0b';
+        return;
+    }
+
+    if (newPwd !== confirmPwd) {
+        resultEl.textContent = '❌ 兩次輸入的密碼不一致';
+        resultEl.style.color = '#dc2626';
+        return;
+    }
+
+    if (currentPwd !== currentUser.password) {
+        resultEl.textContent = '❌ 目前密碼錯誤';
+        resultEl.style.color = '#dc2626';
+        return;
+    }
+
+    resultEl.textContent = '⏳ 更新中...';
+    resultEl.style.color = '#f59e0b';
+
+    try {
+        const email = currentUser.userId + '@mastering-science.com';
+        await auth.signInWithEmailAndPassword(email, currentPwd);
+        await auth.currentUser.updatePassword(newPwd);
+        
+        currentUser.password = newPwd;
+        await saveUser(currentUser);
+        
+        resultEl.textContent = '✅ 密碼已成功修改！';
+        resultEl.style.color = '#10b981';
+        
+        document.getElementById('changePwdCurrent').value = '';
+        document.getElementById('changePwdNew').value = '';
+        document.getElementById('changePwdConfirm').value = '';
+        
+        setTimeout(() => {
+            resultEl.textContent = '';
+        }, 3000);
+    } catch(e) {
+        console.error('修改密碼錯誤:', e);
+        resultEl.textContent = '❌ ' + getAuthErrorMessage(e);
+        resultEl.style.color = '#dc2626';
+    }
+}
+
+// ===== 忘記密碼 =====
+async function handleForgotPassword() {
+    const userId = document.getElementById('forgotUserId').value.trim();
+    const inputPwd = document.getElementById('forgotPassword').value.trim();
+    
+    if (!userId || !inputPwd) {
+        showForgotResult('⚠️ 請輸入學號和驗證密碼', '#f59e0b');
+        return;
+    }
+
+    showForgotResult('⏳ 驗證中...', '#f59e0b');
+
+    try {
+        const user = await loadUser(userId);
+        if (!user) {
+            showForgotResult('❌ 學號不存在', '#dc2626');
+            return;
+        }
+
+        if (user.isTeacher) {
+            if (inputPwd === MASTER_RESET_PASSWORD) {
+                const newPwd = generatePassword();
+                user.password = newPwd;
+                user.isFirstLogin = true;
+                await saveUser(user);
+
+                try {
+                    const email = userId + '@mastering-science.com';
+                    await auth.signInWithEmailAndPassword(email, MASTER_RESET_PASSWORD);
+                    await auth.currentUser.updatePassword(newPwd);
+                    await auth.signOut();
+                } catch(e) {
+                    console.warn('⚠️ Auth 更新失敗:', e.message);
+                }
+
+                showForgotResult(`✅ 驗證成功！\n新密碼：${newPwd}\n請用此密碼登入並修改密碼`, '#10b981');
+                document.getElementById('forgotPassword').value = '';
+            } else {
+                showForgotResult('❌ 驗證密碼錯誤', '#dc2626');
+            }
+        } else {
+            showForgotResult('❌ 請聯絡老師重設密碼', '#dc2626');
+        }
+    } catch(e) {
+        console.error('忘記密碼錯誤:', e);
+        showForgotResult('❌ ' + e.message, '#dc2626');
+    }
+}
+
+function generatePassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let pwd = '';
+    for (let i = 0; i < 8; i++) {
+        pwd += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return pwd;
+}
+
+// ===== 老師後台：渲染學生列表 =====
+async function renderTeacherStudentList() {
+    const container = document.getElementById('teacherStudentList');
+    if (!container) return;
+    if (!currentUser || !currentUser.isTeacher) {
+        container.innerHTML = '⚠️ 只有老師可以查看';
+        return;
+    }
+
+    try {
+        const snapshot = await db.collection('users')
+            .where('className', '==', currentUser.className)
+            .where('isTeacher', '==', false)
+            .get();
+        
+        const students = [];
+        snapshot.forEach(doc => students.push(doc.data()));
+        
+        const raw = localStorage.getItem('ms_chem_users');
+        if (raw) {
+            const db = JSON.parse(raw);
+            for (const u of db.users) {
+                if (u.className === currentUser.className && !u.isTeacher) {
+                    if (!students.find(s => s.userId === u.userId)) {
+                        students.push(u);
+                    }
+                }
+            }
+        }
+
+        if (students.length === 0) {
+            container.innerHTML = '<div style="color:#999; padding:12px 0;">尚未建立學生帳戶</div>';
+            return;
+        }
+
+        let html = `<table class="teacher-table">
+            <thead><tr>
+                <th>姓名</th><th>學號</th><th>狀態</th><th>操作</th>
+            </tr></thead><tbody>`;
+
+        for (const s of students) {
+            const status = s.isFirstLogin ? '⏳ 首次登入' : '✅ 已啟用';
+            const statusClass = s.isFirstLogin ? 'first' : 'active';
+            html += `<tr>
+                <td>${s.name}</td>
+                <td>${s.userId}</td>
+                <td><span class="status-badge ${statusClass}">${status}</span></td>
+                <td>
+                    <div class="student-actions">
+                        <button class="btn-pwd" onclick="showStudentPassword('${s.userId}')">🔑 密碼</button>
+                        <button class="btn-reset" onclick="resetStudentPassword('${s.userId}')">🔄 重設</button>
+                        <button class="btn-delete" onclick="deleteStudentAccount('${s.userId}')">🗑️ 刪除</button>
+                    </div>
+                </td>
+            </tr>`;
+        }
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+    } catch(e) {
+        console.error('讀取學生列表失敗:', e);
+        container.innerHTML = '⚠️ 讀取失敗，請重新整理';
+    }
+}
+
+// ===== 老師後台操作 =====
+function showStudentPassword(userId) {
+    pendingAdminAction = { type: 'showPwd', userId: userId };
+    openModal('adminVerifyModal');
+    document.getElementById('adminPasswordInput').value = '';
+    showAdminVerifyResult('', '');
+}
+
+function resetStudentPassword(userId) {
+    pendingAdminAction = { type: 'resetPwd', userId: userId };
+    openModal('adminVerifyModal');
+    document.getElementById('adminPasswordInput').value = '';
+    showAdminVerifyResult('', '');
+}
+
+function deleteStudentAccount(userId) {
+    if (userId === currentUser?.userId) {
+        alert('⚠️ 無法刪除自己的帳戶');
+        return;
+    }
+    if (!confirm(`確定要刪除學生 ${userId} 的帳戶嗎？`)) return;
+    
+    pendingAdminAction = { type: 'delete', userId: userId };
+    openModal('adminVerifyModal');
+    document.getElementById('adminPasswordInput').value = '';
+    showAdminVerifyResult('', '');
+}
+
+// ===== 管理密碼驗證 =====
+async function handleAdminVerify() {
+    const inputPwd = document.getElementById('adminPasswordInput').value.trim();
+    
+    if (!inputPwd) {
+        showAdminVerifyResult('⚠️ 請輸入管理密碼', '#f59e0b');
+        return;
+    }
+
+    if (!pendingAdminAction) {
+        showAdminVerifyResult('⚠️ 無待處理操作', '#f59e0b');
+        return;
+    }
+
+    if (inputPwd !== currentUser.adminPassword) {
+        showAdminVerifyResult('❌ 管理密碼錯誤', '#dc2626');
+        console.warn('⚠️ 管理密碼驗證失敗:', currentUser.userId, new Date());
+        return;
+    }
+
+    showAdminVerifyResult('✅ 驗證成功！執行中...', '#10b981');
+
+    try {
+        const action = pendingAdminAction;
+        pendingAdminAction = null;
+        closeModal('adminVerifyModal');
+
+        if (action.type === 'showPwd') {
+            const user = await loadUser(action.userId);
+            if (user) {
+                const pwd = user.password || user.initialPassword || '（無法取得密碼）';
+                alert(`🔑 學生 ${user.name}（${user.userId}）的密碼：\n${pwd}`);
+            } else {
+                alert('❌ 找不到該學生');
+            }
+        } else if (action.type === 'resetPwd') {
+            const newPwd = generatePassword();
+            const user = await loadUser(action.userId);
+            if (user) {
+                user.password = newPwd;
+                user.isFirstLogin = true;
+                await saveUser(user);
+                
+                try {
+                    const email = user.userId + '@mastering-science.com';
+                    await auth.signInWithEmailAndPassword(email, user.password);
+                    await auth.currentUser.updatePassword(newPwd);
+                    await auth.signOut();
+                } catch(e) {
+                    console.warn('⚠️ Auth 更新失敗:', e.message);
+                }
+                
+                alert(`✅ 密碼已重設！\n學生：${user.name}\n新密碼：${newPwd}`);
+                renderTeacherStudentList();
+            } else {
+                alert('❌ 找不到該學生');
+            }
+        } else if (action.type === 'delete') {
+            await db.collection('users').doc(action.userId).delete();
+            const raw = localStorage.getItem('ms_chem_users');
+            if (raw) {
+                const db = JSON.parse(raw);
+                db.users = db.users.filter(u => u.userId !== action.userId);
+                localStorage.setItem('ms_chem_users', JSON.stringify(db));
+            }
+            alert(`✅ 已刪除學生 ${action.userId}`);
+            renderTeacherStudentList();
+        } else if (action.type === 'create') {
+            await handleCreateStudent(action.data);
+        }
+    } catch(e) {
+        console.error('管理操作失敗:', e);
+        alert('❌ 操作失敗：' + e.message);
+    }
+}
+
+// ===== 建立學生帳戶 =====
+function createStudentAccount() {
+    const customId = document.getElementById('teacherNewId').value.trim() || null;
+    const name = document.getElementById('teacherNewName').value.trim();
+    const className = document.getElementById('teacherNewClass').value.trim() || currentUser.className;
+    const phone = document.getElementById('teacherNewPhone').value.trim();
+    const resultEl = document.getElementById('teacherCreateResult');
+
+    if (!name || !phone) {
+        resultEl.innerHTML = '<span style="color:#dc2626;">⚠️ 請填寫姓名和電話號碼</span>';
+        return;
+    }
+
+    pendingAdminAction = { 
+        type: 'create', 
+        data: { customId, name, className, phone }
+    };
+    openModal('adminVerifyModal');
+    document.getElementById('adminPasswordInput').value = '';
+    showAdminVerifyResult('', '');
+}
+
+async function handleCreateStudent(data) {
+    const userId = data.customId || generateUserId(data.className);
+    const initialPassword = generatePassword();
+    const newUser = {
+        userId: userId,
+        name: data.name,
+        className: data.className,
+        phone: data.phone,
+        initialPassword: initialPassword,
+        password: initialPassword,
+        isFirstLogin: true,
+        isTeacher: false,
+        createdAt: new Date().toISOString()
+    };
+
+    await saveUser(newUser);
+
+    try {
+        const email = userId + '@mastering-science.com';
+        await auth.createUserWithEmailAndPassword(email, initialPassword);
+    } catch(e) {
+        if (e.code !== 'auth/email-already-in-use') {
+            console.warn('⚠️ Auth 建立失敗:', e.message);
+        }
+    }
+
+    const resultEl = document.getElementById('teacherCreateResult');
+    resultEl.innerHTML = `<span style="color:#10b981;">✅ 帳戶已建立！\n學號：${userId}，密碼：${initialPassword}</span>`;
+    
+    document.getElementById('teacherNewId').value = '';
+    document.getElementById('teacherNewName').value = '';
+    document.getElementById('teacherNewPhone').value = '';
+    
+    renderTeacherStudentList();
+}
+
+function generateUserId(className) {
+    const raw = localStorage.getItem('ms_chem_users');
+    const db = raw ? JSON.parse(raw) : { users: [] };
+    const classUsers = db.users.filter(u => u.className === className);
+    const num = classUsers.length + 1;
+    return String(num).padStart(6, '0');
+}
+
 // ===== 監聽 Auth 狀態 =====
 auth.onAuthStateChanged(user => {
     if (user) {
@@ -162,12 +575,10 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-// ===== Firebase 初始化完成 =====
 setStatus('✅ Firebase 已初始化', '#10b981');
 
 // ===== 事件綁定 =====
 
-// 登入按鈕
 document.getElementById('loginBtn').addEventListener('click', () => {
     const userId = document.getElementById('userId').value.trim();
     const password = document.getElementById('password').value.trim();
@@ -178,7 +589,6 @@ document.getElementById('loginBtn').addEventListener('click', () => {
     }
 });
 
-// Enter 鍵支援
 document.getElementById('password').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') document.getElementById('loginBtn').click();
 });
@@ -186,7 +596,6 @@ document.getElementById('userId').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') document.getElementById('loginBtn').click();
 });
 
-// 手動測試按鈕
 document.getElementById('testBtn').addEventListener('click', () => {
     const userId = document.getElementById('userId').value.trim();
     const password = document.getElementById('password').value.trim();
@@ -206,14 +615,73 @@ document.getElementById('testBtn').addEventListener('click', () => {
         });
 });
 
-// 分頁切換
+document.getElementById('forgotPasswordBtn').addEventListener('click', () => {
+    openModal('forgotModal');
+    document.getElementById('forgotUserId').value = '';
+    document.getElementById('forgotPassword').value = '';
+    showForgotResult('', '');
+});
+
+document.getElementById('forgotCancelBtn').addEventListener('click', () => {
+    closeModal('forgotModal');
+});
+
+document.getElementById('forgotSubmitBtn').addEventListener('click', handleForgotPassword);
+
+document.getElementById('forgotPassword').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleForgotPassword();
+});
+
+document.getElementById('changePwdFromPanelBtn').addEventListener('click', changePasswordFromPanel);
+document.getElementById('changePwdNew').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') changePasswordFromPanel();
+});
+document.getElementById('changePwdConfirm').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') changePasswordFromPanel();
+});
+
+document.getElementById('adminVerifySubmitBtn').addEventListener('click', handleAdminVerify);
+document.getElementById('adminVerifyCancelBtn').addEventListener('click', () => {
+    pendingAdminAction = null;
+    closeModal('adminVerifyModal');
+});
+document.getElementById('adminPasswordInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') document.getElementById('adminVerifySubmitBtn').click();
+});
+
 document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
         const tabId = tab.dataset.tab;
         if (tabId === 'logout') {
             logout();
+        } else if (tabId === 'changePwd') {
+            switchTab(tabId);
+            document.getElementById('changePwdPanelResult').textContent = '';
+            document.getElementById('changePwdCurrent').value = '';
+            document.getElementById('changePwdNew').value = '';
+            document.getElementById('changePwdConfirm').value = '';
         } else {
             switchTab(tabId);
+            if (tabId === 'teacher' && currentUser?.isTeacher) {
+                renderTeacherStudentList();
+            }
         }
     });
+});
+
+document.getElementById('teacherCreateStudentBtn').addEventListener('click', createStudentAccount);
+document.getElementById('teacherRefreshBtn').addEventListener('click', () => {
+    if (currentUser?.isTeacher) renderTeacherStudentList();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const saved = localStorage.getItem('ms_chem_login');
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            if (data.userId) {
+                document.getElementById('userId').value = data.userId;
+            }
+        } catch(e) {}
+    }
 });
