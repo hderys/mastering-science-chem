@@ -291,24 +291,12 @@
             
             console.log('🔥 Firebase 已初始化！');
             
-            // 在頁面上顯示成功訊息
-            document.addEventListener('DOMContentLoaded', function() {
-                const el = document.createElement('div');
-                el.id = 'firebaseInitStatus';
-                el.style.cssText = 'position:fixed; top:10px; left:10px; background:#10b981; color:white; padding:8px 16px; border-radius:8px; font-size:14px; z-index:99999; font-weight:bold;';
-                el.textContent = '✅ Firebase 已連線';
-                document.body.appendChild(el);
-            });
+            // #5: 右下角狀態指示燈 - 已改為 style.css 中的樣式，不再顯示左上角文字
+            // 狀態由 script.js 中的 updateStatusDot() 控制
+            
         } catch(e) {
             console.error('❌ Firebase 初始化失敗:', e.message);
-            // 在頁面上顯示錯誤訊息
-            document.addEventListener('DOMContentLoaded', function() {
-                const el = document.createElement('div');
-                el.id = 'firebaseInitStatus';
-                el.style.cssText = 'position:fixed; top:10px; left:10px; background:#dc2626; color:white; padding:8px 16px; border-radius:8px; font-size:14px; z-index:99999; font-weight:bold;';
-                el.textContent = '❌ Firebase 初始化失敗: ' + e.message;
-                document.body.appendChild(el);
-            });
+            // 顯示錯誤狀態（由 script.js 處理）
         }
     </script>
 </head>
@@ -336,7 +324,7 @@
     <div class="form-group-login">
         <label for="loginPassword">密碼</label>
         <div class="password-wrapper">
-            <input type="password" id="loginPassword" placeholder="請輸入密碼（至少 6 個字元）">
+            <input type="password" id="loginPassword" placeholder="請輸入密碼">
             <button type="button" class="toggle-password-btn" id="togglePasswordBtn">👁️</button>
         </div>
     </div>
@@ -378,12 +366,12 @@
     </div>
 </div>
 
-<!-- ===== 修改密碼彈窗 ===== -->
+<!-- ===== 修改密碼彈窗（含舊密碼欄位，老師專用） ===== -->
 <div class="modal-overlay" id="changePasswordModal">
     <div class="modal-box">
         <button class="close-btn" onclick="closeModal('changePasswordModal')">✕</button>
         <h2 id="changePasswordTitle">🔐 修改密碼</h2>
-        <div class="sub" id="changePasswordDesc">請輸入新的密碼（至少 6 個字元）。</div>
+        <div class="sub" id="changePasswordDesc">請輸入新的密碼。</div>
         <div id="changePasswordError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
         <!-- 舊密碼欄位（老師修改密碼時顯示） -->
         <div class="form-group" id="oldPasswordGroup" style="display:none;">
@@ -393,10 +381,11 @@
                 <button type="button" class="toggle-password-btn" id="toggleOldPasswordBtn">👁️</button>
             </div>
         </div>
+        <!-- #12: 密碼至少 6 個字元 -->
         <div class="form-group">
             <label>新密碼（至少 6 個字元）</label>
             <div class="password-wrapper">
-                <input type="password" id="newPassword" placeholder="請輸入新密碼（至少 6 個字元）">
+                <input type="password" id="newPassword" placeholder="請輸入新密碼">
                 <button type="button" class="toggle-password-btn" id="toggleNewPasswordBtn">👁️</button>
             </div>
         </div>
@@ -531,122 +520,21 @@
 <div id="resultModal" class="modal"><div class="modal-content"><h3>成績總表</h3><div id="resultContent" class="result-container"></div><button id="closeResultBtn" class="btn">關閉</button></div></div>
 <div id="imageZoomModal" class="modal"><div class="modal-content"><button onclick="closeImageZoom()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666; position:absolute; top:10px; right:16px; z-index:10;">✕</button><img id="zoomImage" src="" style="width:100%; max-height:70vh; object-fit:contain;"><button id="closeZoomBtn" class="btn" style="margin-top:0.8rem;">關閉</button></div></div>
 
+<!-- ===== #5: 右下角 Firebase 狀態指示燈 ===== -->
+<div id="statusIndicator" class="status-indicator" 
+     onmouseenter="showStatusTooltip()" onmouseleave="hideStatusTooltip()">
+    <span class="status-dot connecting" id="statusDot"></span>
+    <div class="status-tooltip" id="statusTooltip">
+        <div class="status-title">
+            <span class="dot-preview connecting" id="statusDotPreview"></span>
+            <span id="statusText">⏳ 連線中...</span>
+        </div>
+        <div class="status-detail" id="statusDetail">📡 Firestore + Auth</div>
+        <div class="status-time" id="statusTime">🕐 更新時間：--:--</div>
+    </div>
+</div>
+
 <div id="unlockCardsContainer" class="unlock-cards-container"></div>
-
-<!-- ===== 老師後台 ===== -->
-<div id="teacherPanel" style="display:none;">
-    <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <span style="font-weight:600; color:#2e0f5a;">📚 班級：</span>
-                <select id="classSelector" class="class-selector">
-                    <option value="VIP">VIP</option>
-                </select>
-            </div>
-            <span style="font-size:13px; color:#888;">👋 老師：<span id="teacherNameDisplay"></span></span>
-        </div>
-
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="number" id="statStudents">0</div>
-                <div class="label">👨‍🎓 學生人數</div>
-            </div>
-            <div class="stat-card">
-                <div class="number" id="statAccuracy">0%</div>
-                <div class="label">📊 全班平均正確率</div>
-            </div>
-            <div class="stat-card">
-                <div class="number" id="statQuestions">0</div>
-                <div class="label">📝 總答題數</div>
-            </div>
-            <div class="stat-card">
-                <div class="number" id="statWrong">0</div>
-                <div class="label">🔥 最多人錯的題目</div>
-            </div>
-        </div>
-
-        <div class="sub-tabs">
-            <button class="sub-tab-btn active" data-tab="tab-overview">📊 全班進度</button>
-            <button class="sub-tab-btn" data-tab="tab-wrong">❌ 錯題統計</button>
-            <button class="sub-tab-btn" data-tab="tab-rank">🏆 成就/積分排名</button>
-            <button class="sub-tab-btn" data-tab="tab-chapters">📖 章節管理</button>
-        </div>
-
-        <div class="sub-tab-content active" id="tab-overview">
-            <div class="card">
-                <div class="card-title">
-                    <span>📋 全班學生進度總覽</span>
-                    <span style="font-size:12px; color:#888;">點擊姓名查看詳細</span>
-                </div>
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                        <thead>
-                            <tr style="background:#f5f0ff;">
-                                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">姓名</th>
-                                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">學號</th>
-                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">總題數</th>
-                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">正確率</th>
-                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">完成度</th>
-                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">狀態</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="sub-tab-content" id="tab-wrong">
-            <div class="card">
-                <div class="card-title">
-                    <span>❌ 最多人錯的題目</span>
-                    <span style="font-size:12px; color:#888;" id="wrongTotal">共 0 人作答</span>
-                </div>
-                <div id="wrongList"></div>
-            </div>
-        </div>
-
-        <div class="sub-tab-content" id="tab-rank">
-            <div class="card">
-                <div class="card-title">🏆 全班積分排名</div>
-                <div id="rankList"></div>
-            </div>
-        </div>
-
-        <div class="sub-tab-content" id="tab-chapters">
-            <div class="card">
-                <div class="card-title">
-                    <span>📖 章節開放管理</span>
-                    <span style="font-size:12px; color:#888;">勾選 = 學生看得到</span>
-                </div>
-                <div id="chapterManagement"></div>
-                <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
-                    <button class="btn btn-success" id="saveChaptersBtn">💾 儲存章節設定</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ===== 學生詳細彈窗 ===== -->
-<div class="modal-overlay" id="studentModal">
-    <div class="modal-box">
-        <button class="close-btn" onclick="closeStudentModal()">✕</button>
-        <h2 id="modalName">學生姓名</h2>
-        <div class="sub" id="modalSub">學號：000000 · 班級</div>
-        <div class="info-grid">
-            <div><span class="label">總答題數</span><br><span class="value" id="mTotal">0</span></div>
-            <div><span class="label">正確率</span><br><span class="value" id="mAcc">0%</span></div>
-            <div><span class="label">完成度</span><br><span class="value" id="mProgress">0%</span></div>
-            <div><span class="label">總積分</span><br><span class="value" id="mPoints">0</span></div>
-            <div><span class="label">⏱️ 共花時間</span><br><span class="value" id="mTime">未記錄</span></div>
-        </div>
-        <div class="section-title">📖 各章節進度</div>
-        <div id="modalChapterProgress" style="font-size:13px; line-height:2;"></div>
-        <div class="section-title">❌ 錯題（最近 3 題）</div>
-        <div id="modalWrongQuestions" style="font-size:12px; color:#666; line-height:1.8;"></div>
-    </div>
-</div>
 
 <script>
 window.ALL_UNITS = {
@@ -2287,6 +2175,22 @@ window.ALL_UNITS = {
             "difficulty": "✅ Basic",
             "difficulty_level": 1,
             "sf": 1
+          },
+          {
+            "id": "C25C005",
+            "text": "<1997 CE 1><br>The chemical properties of an element depend on",
+            "options": [
+              "A. its relative atomic mass.",
+              "B. the number of isotopes of the element.",
+              "C. the number of electron shells in its atoms.",
+              "D. the number of outermost shell electrons in its atoms."
+            ],
+            "correct": "D",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
           }
         ]
       },
@@ -3696,6 +3600,22 @@ window.ALL_UNITS = {
             ],
             "correct": "B",
             "explanation": "4 - Be; 8 - O; 14 - Si; 20 - Ca<br>Only Be and Ca are metals.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C26C002",
+            "text": "<1996 CE 1><br>Magnesium and calcium have similar properties because",
+            "options": [
+              "A. their atoms have the same atomic structure.",
+              "B. their atoms have the same number of electron shell.",
+              "C. their atoms have the same number of electrons in their outermost shell.",
+              "D. their atoms have the same electronic arrangement."
+            ],
+            "correct": "C",
+            "explanation": "Mg: 2,8,2; Ca: 2,8,8,2. <br>Hence they do not have the same atomic structure, no. of electron shell and electronic arrangement.",
             "imageUrl": null,
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
@@ -5785,6 +5705,70 @@ window.ALL_UNITS = {
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
             "sf": 0
+          },
+          {
+            "id": "C27C010",
+            "text": "<1996 CE 2><br>Which of the following can represent the electronic structure of potassium sulphide?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "B",
+            "explanation": "Potassium ion is +1 charge.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C07C010.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C27C011",
+            "text": "<1996 CE 3><br>The mass number of atom 𝑋 is 27. 𝑋 forms a cation with a charge of +3. If the number of neutrons in the cation is 14, what is the number of electrons in the cation?",
+            "options": [
+              "A. 10",
+              "B. 13",
+              "C. 14",
+              "D. 17"
+            ],
+            "correct": "A",
+            "explanation": "Atomic number = Mass no. - No. of neutron. Hence 𝑋 has an atomic number of 27-14=13. With a +3 charge, it lost 3 electrons, hence the no. of electrons = 13-3=10.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C27C012",
+            "text": "<1997 CE 2><br>Elements 𝑋 and 𝑌 form a compound having the following electronic structure(Only outermost shell electrons are shown). Which of the following combinations is correct?",
+            "options": [
+              "A. 𝑋: Na, 𝑌: S",
+              "B. 𝑋: Mg, 𝑌: Br",
+              "C. 𝑋: Al, 𝑌: Cl",
+              "D. 𝑋: Si, 𝑌: O"
+            ],
+            "correct": "B",
+            "explanation": "Ion of 𝑋 is +2 charge hence it is a Group II element. Ion of 𝑌 is -1 charge so it is a Group VII element.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C07C012.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C27C013",
+            "text": "<1997 CE 30><br>𝑀 is an element in the third period of the Periodic Table. 𝑀 forms a sulphate which has the formula 𝑀₂(SO₄)₃. The formula of the nitrate of 𝑀 is",
+            "options": [
+              "A. 𝑀NO₃",
+              "B. 𝑀(NO₃)₂",
+              "C. 𝑀(NO₃)₃",
+              "D. 𝑀₂(NO₃)₃"
+            ],
+            "correct": "C",
+            "explanation": "Sulphate has a 2- charge, so we can deduce that ion of 𝑀 has a +3 charge. Nitrate has a -1 charge.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
           }
         ]
       },
@@ -6846,6 +6830,38 @@ window.ALL_UNITS = {
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
             "sf": 1
+          },
+          {
+            "id": "C28C005",
+            "text": "<1996 CE 44><br>Which of the following elements can react together to form a covalent compound?<br>(1) argon   (2) nitrogen   (3) oxygen   (4)\t calcium",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (4) only",
+              "C. (2) and (3) only",
+              "D. (3) and (4) only"
+            ],
+            "correct": "C",
+            "explanation": "Only non-metals form covalent compound, hence Ca will not.<br>Yet, noble gas are stable enough, Ar will not form any compound.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C28C006",
+            "text": "<1998 CE 1><br>An element 𝑋 exists as molecules. 𝑋 has an atomic number of 7 and a molecule of 𝑋 has a formula 𝑋₂. Which of the following can represent the electronic structure of 𝑋₂?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "D",
+            "explanation": "Atomic no. 7 is nitrogen. It is a Group V element.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08C006.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
           }
         ]
       },
@@ -8624,6 +8640,38 @@ window.ALL_UNITS = {
             "correct": "A",
             "explanation": "A substance can conduct electricity if it has mobile ion (like molten zinc chloride and aqueous ions) or delocalized electrons.",
             "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C29C006",
+            "text": "<1997 CE 3><br>Argon exists as a gas at room temperature and pressure because",
+            "options": [
+              "A. argon molecules are monoatomic.",
+              "B. argon is chemically inert.",
+              "C. the outermost electron shell of an argon atom has an octet structure.",
+              "D. the attractive force between argon atoms is weak."
+            ],
+            "correct": "D",
+            "explanation": "If the attractive force between particles are weak, it is easily broken and exists as a gas.<br>The other three sentences are true but not a good explanation.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C29C007",
+            "text": "<1997 CE 5><br>Which of the following diagrams best represents a part of the giant lattice of sodium chloride crystal? (In the diagram, the black dot represents Na⁺ and the white dot represents Cl⁻ ion)",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "B",
+            "explanation": "Same charges repel. ",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C09C007.webp",
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
             "sf": 0
