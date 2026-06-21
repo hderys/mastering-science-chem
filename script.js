@@ -1239,7 +1239,20 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     }
 
     let totalQ = userData.stats.totalQuestionsAnswered;
-    let clearedMistakes = userData.allAttempts.filter(a => a.isCorrect === true && userData.latestStatus[a.qid] === true).length;
+    let clearedMistakes = 0;
+    // #G: 修正錯題剋星邏輯 - 只計算曾經錯過、後來答對的題目
+    for (let u in window.ALL_UNITS) {
+        for (let c in window.ALL_UNITS[u].chapters) {
+            for (let q of window.ALL_UNITS[u].chapters[c].questions) {
+                const qid = q.id;
+                const hasWrong = userData.allAttempts.some(a => a.qid === qid && !a.isCorrect);
+                const isNowCorrect = userData.latestStatus[qid] === true;
+                if (hasWrong && isNowCorrect) {
+                    clearedMistakes++;
+                }
+            }
+        }
+    }
 
     if (!userData.achievements.firstPractice && userData.practiceHistory.length === 1) {
         userData.achievements.firstPractice = { unlocked: true, date: today, progress: 1, target: 1 };
@@ -1294,7 +1307,7 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     }
 
     if (clearedMistakes >= 50 && !userData.achievements.mistakeEraser) {
-        userData.achievements.mistakeEraser = { unlocked: true, date: today };
+        userData.achievements.mistakeEraser = { unlocked: true, date: today, progress: clearedMistakes, target: 50 };
         newUnlocks.push({ title: "🎉 成就解鎖！", message: "🗑️ 錯題剋星 - 從錯題本清除50道錯題", date: today, points: ACHIEVEMENT_POINTS.mistakeEraser });
     }
 
@@ -1374,19 +1387,35 @@ function calculateTotalPoints(achievements) {
     return total;
 }
 
-function calculateClassRank(userId, userPoints) {
-    let classmates = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        let key = localStorage.key(i);
-        if (key && key.startsWith('ms_chem_') && key.includes(currentUser.class)) {
-            let data = JSON.parse(localStorage.getItem(key));
-            let points = calculateTotalPoints(data.achievements || {});
-            let uid = key.replace('ms_chem_', '');
-            classmates.push({ id: uid, points: points });
-        }
+// #A: 修正積分榜班級定位 - 從 Firebase 讀取同班同學
+async function calculateClassRank(userId, userPoints) {
+    // 確保有當前用戶和班級
+    if (!currentUser || !currentUser.className) {
+        return { rank: 0, total: 0 };
     }
+    
+    const className = currentUser.className;
+    
+    // 從 Firebase/localStorage 讀取同班同學
+    const allStudents = await loadAllStudentsFromFirebase(className);
+    
+    if (allStudents.length === 0) {
+        return { rank: 0, total: 0 };
+    }
+    
+    // 計算每位同學的積分
+    const classmates = [];
+    for (const s of allStudents) {
+        const points = calculateTotalPoints(s.achievements || {});
+        classmates.push({ id: s.userId, points: points });
+    }
+    
+    // 排序（積分降序）
     classmates.sort((a, b) => b.points - a.points);
-    let rank = classmates.findIndex(c => c.id === userId) + 1;
+    
+    // 找出當前用戶的排名
+    const rank = classmates.findIndex(c => c.id === userId) + 1;
+    
     return { rank: rank, total: classmates.length };
 }
 
@@ -1563,15 +1592,32 @@ function showSettingsModal() {
     document.getElementById('settingsModal').style.display = 'flex';
 }
 
-// ==================== renderPractice 修改（#8 一鍵解鎖） ====================
-function renderPractice() {
+// ==================== renderPractice 修改（#8 一鍵解鎖 + #F 學生端章節過濾） ====================
+async function renderPractice() {
     const container = document.getElementById('practicePanel');
     if (!container) return;
     if (!window.ALL_UNITS) { container.innerHTML = '<div class="card">題庫未載入</div>'; return; }
+    
+    // #F: 讀取班級章節設定
+    const className = currentUser.className;
+    const classSettings = await loadClassSettings(className) || {};
+    const openChapters = classSettings.openChapters || [];
+    
     let html = '';
     for (let unit in window.ALL_UNITS) {
         let unitObj = window.ALL_UNITS[unit], chapters = unitObj.chapters;
         if (Object.keys(chapters).length === 0) continue;
+        
+        // #F: 過濾章節 - 只顯示該班級開放的章節
+        let filteredChapters = {};
+        for (let ch in chapters) {
+            const chNum = parseInt(ch);
+            if (openChapters.length === 0 || openChapters.includes(chNum)) {
+                filteredChapters[ch] = chapters[ch];
+            }
+        }
+        if (Object.keys(filteredChapters).length === 0) continue;
+        
         let mastery = getUnitMastery(unit);
         let unitNameForDisplay = isMobile() ? unitObj.name.replace(/（[^）]*）/, '') : unitObj.name;
         
@@ -1586,9 +1632,9 @@ function renderPractice() {
                 <button class="btn btn-small unit-test-btn" data-unit="${unit}" style="background:var(--deep-purple-light); padding:0.15rem 0.5rem; font-size:0.7rem;">📝 單元測驗</button>
             </div>
         </div><div class="chapters-container" id="chapters-${unit}">`;
-        for (let ch in chapters) {
+        for (let ch in filteredChapters) {
             let chMastery = getChapterMastery(unit, ch), chTotal = getChapterTotalQuestions(unit, ch);
-            let chNameDisplay = chapters[ch].name;
+            let chNameDisplay = filteredChapters[ch].name;
             if (isMobile()) {
                 html += `<div class="chapter-item">
                     <span class="chapter-name">${chNameDisplay} (${chTotal} 題)</span>
@@ -2132,10 +2178,52 @@ function renderHistory() {
     });
 }
 
-// ==================== 學生成就頁面 - 積分榜（#5） ====================
-function renderAchievements() {
+// ==================== 學生成就頁面 - 積分榜（#5 + #B 移到頂部） ====================
+async function renderAchievements() {
     let container = document.getElementById('achievementsPanel');
     
+    // #A: 計算排名（使用修正後的 async 函數）
+    let totalPoints = calculateTotalPoints(userData.achievements);
+    let rankInfo = await calculateClassRank(currentUser.id, totalPoints);
+    
+    // #B: 積分榜移到頂部 - 先計算全班排名列表
+    let rankListHtml = '';
+    try {
+        const className = currentUser.className;
+        const allStudents = await loadAllStudentsFromFirebase(className);
+        const rankedStudents = [...allStudents].sort((a, b) => {
+            const aPoints = calculateTotalPoints(a.achievements || {});
+            const bPoints = calculateTotalPoints(b.achievements || {});
+            return bPoints - aPoints;
+        });
+        
+        if (rankedStudents.length > 0) {
+            rankListHtml = `<div class="rank-list-container">
+                <h3 style="margin-bottom:0.5rem;">🏆 班級積分榜</h3>
+                <div style="font-size:0.7rem; color:#666; margin-bottom:0.5rem;">👥 ${className} 班級</div>
+                <div style="overflow-x:auto;">`;
+            
+            const medals = ['🥇', '🥈', '🥉'];
+            rankedStudents.forEach((s, index) => {
+                const points = calculateTotalPoints(s.achievements || {});
+                const medal = index < 3 ? medals[index] : `${index + 1}`;
+                const isCurrentUser = s.userId === currentUser.id;
+                const rowStyle = isCurrentUser ? 'background:#ede9fe; font-weight:bold; border-radius:8px;' : '';
+                rankListHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-bottom:1px solid #f0edf8; ${rowStyle} border-radius:8px;">
+                        <span style="font-size:0.85rem;">${medal} ${s.name}</span>
+                        <span style="font-size:0.85rem; font-weight:600; color:${isCurrentUser ? '#4a1d8c' : '#2e0f5a'};">${points} 分</span>
+                    </div>
+                `;
+            });
+            
+            rankListHtml += `</div></div>`;
+        }
+    } catch(e) {
+        console.warn('⚠️ 載入積分榜失敗:', e);
+    }
+    
+    // 計算其他成就數據
     let chapterList = [];
     for (let u in window.ALL_UNITS) {
         for (let ch in window.ALL_UNITS[u].chapters) {
@@ -2221,48 +2309,18 @@ function renderAchievements() {
     let totalUnlocked = unlockedSpecials.length + unlockedPenalties.length + unlockedChapters.length;
     let totalPossible = specials.length + (chapterList.length * 4);
     let percent = totalPossible > 0 ? Math.round(totalUnlocked / totalPossible * 100) : 0;
-    let totalPoints = calculateTotalPoints(userData.achievements);
-    let rankInfo = calculateClassRank(currentUser.id, totalPoints);
     
-    // #5: 積分榜 - 顯示全班排名列表
-    let rankListHtml = '';
-    try {
-        const className = currentUser.className;
-        const allStudents = loadAllStudentsFromFirebase(className);
-        const rankedStudents = allStudents.sort((a, b) => {
-            const aPoints = calculateTotalPoints(a.achievements || {});
-            const bPoints = calculateTotalPoints(b.achievements || {});
-            return bPoints - aPoints;
-        });
-        
-        if (rankedStudents.length > 0) {
-            rankListHtml = `<div class="rank-list-container">
-                <h3 style="margin-top:0.8rem;">🏆 班級積分榜</h3>
-                <div style="font-size:0.7rem; color:#666; margin-bottom:0.5rem;">👥 ${className} 班級</div>
-                <div style="overflow-x:auto;">`;
-            
-            const medals = ['🥇', '🥈', '🥉'];
-            rankedStudents.forEach((s, index) => {
-                const points = calculateTotalPoints(s.achievements || {});
-                const medal = index < 3 ? medals[index] : `${index + 1}`;
-                const isCurrentUser = s.userId === currentUser.id;
-                const rowStyle = isCurrentUser ? 'background:#ede9fe; font-weight:bold;' : '';
-                rankListHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-bottom:1px solid #f0edf8; ${rowStyle} border-radius:8px;">
-                        <span style="font-size:0.85rem;">${medal} ${s.name}</span>
-                        <span style="font-size:0.85rem; font-weight:600; color:${isCurrentUser ? '#4a1d8c' : '#2e0f5a'};">${points} 分</span>
-                    </div>
-                `;
-            });
-            
-            rankListHtml += `</div></div>`;
-        }
-    } catch(e) {
-        console.warn('⚠️ 載入積分榜失敗:', e);
+    // #B: 建構 HTML - 積分榜在最頂部
+    let html = `<div class="card">`;
+    
+    // 1. 積分榜（最頂部）
+    if (rankListHtml) {
+        html += rankListHtml;
     }
     
-    let html = `<div class="card">
-        <div class="points-rank-bar">
+    // 2. 個人狀態卡
+    html += `
+        <div class="points-rank-bar" style="margin-top: ${rankListHtml ? '12px' : '0'};">
             <div class="points-box">
                 <div class="points-number">${totalPoints}</div>
                 <div class="points-label">總積分</div>
@@ -2282,6 +2340,7 @@ function renderAchievements() {
             </div>
         </div>`;
     
+    // 3. 特殊成就
     if (unlockedSpecials.length > 0 || unlockedPenalties.length > 0 || lockedSpecials.length > 0) {
         html += `<h3 style="margin-top:0.5rem;">🎯 特殊成就</h3>`;
         
@@ -2310,6 +2369,7 @@ function renderAchievements() {
         }
     }
     
+    // 4. 章節成就
     if (unlockedChapters.length > 0) {
         html += `<h3 style="margin-top:0.8rem;">📖 已獲得章節成就</h3>`;
         let currentUnit = '';
@@ -2338,9 +2398,6 @@ function renderAchievements() {
         }
         html += `</div>`;
     }
-    
-    // #5: 積分榜
-    html += rankListHtml;
     
     html += `</div>`;
     container.innerHTML = html;
@@ -3702,7 +3759,7 @@ async function renderSubtabChapters(className) {
     let html = `
         <h3 style="margin-bottom:8px;">📖 章節開放管理（${className}）</h3>
         <div style="font-size:13px; color:#666; margin-bottom:10px;">
-            🟢 已開放　　🔴 已隱藏
+            🟢 已開放　　　🔴 已隱藏
         </div>
         <div id="chapterManagement">
     `;
@@ -3828,7 +3885,8 @@ async function renderTeacherPanel() {
                     <select id="teacherClassSelector" style="padding:4px 10px; border-radius:16px; border:2px solid #e0d6f5; font-size:13px; background:white;">
                         ${managedClasses.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>`).join('')}
                     </select>
-                    <button class="btn btn-small" id="manageClassesBtn" style="font-size:11px; padding:2px 10px;">管理</button>
+                    <!-- #E: 管理 → 切換班級 -->
+                    <button class="btn btn-small" id="manageClassesBtn" style="font-size:11px; padding:2px 10px;">切換班級</button>
                 </div>
                 <!-- #6: 刪除修改密碼按鈕（已移除） -->
             </div>
@@ -3983,7 +4041,7 @@ function bindTeacherEvents() {
         renderTeacherPanel();
     });
     
-    // 管理班級
+    // 切換班級
     document.getElementById('manageClassesBtn')?.addEventListener('click', function() {
         const currentClasses = currentUser.managedClasses || [currentUser.className];
         const input = prompt('請輸入您要管理的班級（用逗號分隔）：\n例如：3A,3B,3C', currentClasses.join(','));
