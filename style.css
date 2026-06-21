@@ -1202,6 +1202,105 @@ body {
     .quiz-layout-mobile.no-image .image-area-mobile {
         display: none !important;
     }
+    
+    /* ============================================================
+       手機版老師後台（子分頁下拉選單 + 卡片式樣式）
+       ============================================================ */
+    .teacher-settings {
+        padding: 0.8rem 0.6rem;
+    }
+    .teacher-settings > div {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 6px !important;
+    }
+    .teacher-settings select {
+        width: 100%;
+        padding: 6px 10px;
+    }
+    
+    /* 子分頁下拉選單（手機版） */
+    .subtab-select-wrapper {
+        margin: 8px 0;
+    }
+    .subtab-select {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 2px solid #e0d6f5;
+        font-size: 0.95rem;
+        font-weight: 500;
+        background: white;
+        color: #2e0f5a;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a1d8c' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        cursor: pointer;
+    }
+    .subtab-select:focus {
+        outline: 2px solid #7c3aed;
+    }
+    
+    /* 手機版隱藏桌面版 Tab */
+    .desktop-tabs {
+        display: none !important;
+    }
+    .mobile-select {
+        display: block !important;
+    }
+    
+    /* 手機版統計卡片 2x2 */
+    .stats-row {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+    .stat-card {
+        padding: 10px 8px !important;
+    }
+    .stat-number {
+        font-size: 1.2rem !important;
+    }
+    .stat-label {
+        font-size: 0.6rem !important;
+    }
+    
+    /* 手機版學生列表卡片式 */
+    .student-table {
+        font-size: 0.7rem !important;
+    }
+    .student-table th,
+    .student-table td {
+        padding: 6px 4px !important;
+        font-size: 0.65rem !important;
+    }
+    .student-table .btn-small {
+        font-size: 0.5rem !important;
+        padding: 1px 6px !important;
+    }
+    
+    /* 手機版章節管理 */
+    .chapter-unit-header {
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    .chapter-item {
+        padding: 4px 6px !important;
+        font-size: 0.7rem !important;
+        flex-wrap: wrap !important;
+        gap: 4px !important;
+    }
+    .chapter-label {
+        font-size: 0.7rem !important;
+        flex: 1 !important;
+        min-width: 80px !important;
+    }
+    .chapter-status-text {
+        font-size: 0.6rem !important;
+        padding: 1px 8px !important;
+    }
 }
 
 /* ============================================================
@@ -1242,6 +1341,14 @@ body {
     .dev-btn-full, .action-btn-full, .cancel-btn-full {
         padding: 0.2rem 0.4rem;
         margin-bottom: 0.15rem;
+    }
+    
+    /* 手機版下拉選單隱藏 */
+    .mobile-select {
+        display: none !important;
+    }
+    .desktop-tabs {
+        display: flex !important;
     }
 
     /* ===== 桌面版獨立彈窗（完全照 Demo） ===== */
@@ -1909,15 +2016,355 @@ body {
     color: #059669;
 }
 
+/* ============================================================
+   老師後台子分頁（桌面版 + 手機版共用）
+   ============================================================ */
+/* 子分頁 Tab（桌面版） */
+.teacher-subtabs {
+    margin-bottom: 12px;
+}
+.subtab-tabs {
+    display: flex;
+    gap: 4px;
+    background: #f5f0ff;
+    border-radius: 16px;
+    padding: 4px;
+}
+.sub-tab {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: #4a1d8c;
+    transition: all 0.2s;
+    text-align: center;
+}
+.sub-tab:hover {
+    background: rgba(74, 29, 140, 0.08);
+}
+.sub-tab.active {
+    background: white;
+    color: #4a1d8c;
+    box-shadow: 0 2px 8px rgba(74, 29, 140, 0.15);
+}
+
+/* ============================================================
+   統計卡片
+   ============================================================ */
+.stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.stat-card {
+    background: #f9f7ff;
+    border-radius: 16px;
+    padding: 14px 12px;
+    text-align: center;
+    border: 1px solid #e9e4f5;
+}
+.stat-number {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #4a1d8c;
+}
+.stat-label {
+    font-size: 0.7rem;
+    color: #888;
+    margin-top: 2px;
+}
+
+/* ============================================================
+   學生表格
+   ============================================================ */
+.student-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+.student-table th {
+    background: #f5f0ff;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 2px solid #4a1d8c;
+    font-weight: 600;
+    color: #2e0f5a;
+}
+.student-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0edf8;
+    vertical-align: middle;
+}
+.student-table tr:hover {
+    background: #faf8ff;
+}
+
+/* ============================================================
+   錯題表格
+   ============================================================ */
+.wrong-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+.wrong-table th {
+    background: #f5f0ff;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 2px solid #dc2626;
+    font-weight: 600;
+    color: #2e0f5a;
+}
+.wrong-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0edf8;
+}
+.wrong-table tr:hover {
+    background: #faf8ff;
+}
+
+/* ============================================================
+   排名表格
+   ============================================================ */
+.rank-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.rank-table th {
+    background: #f5f0ff;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 2px solid #fbbf24;
+    font-weight: 600;
+    color: #2e0f5a;
+}
+.rank-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0edf8;
+}
+.rank-table tr:hover {
+    background: #faf8ff;
+}
+.rank-stats {
+    display: flex;
+    gap: 20px;
+    padding: 10px 0;
+    font-size: 0.8rem;
+    color: #666;
+    border-bottom: 1px solid #e9e4f5;
+    margin-bottom: 8px;
+}
+.rank-stats span {
+    background: #f5f0ff;
+    padding: 4px 14px;
+    border-radius: 20px;
+}
+
+/* ============================================================
+   章節管理 - 方案 C（純色塊標記）
+   ============================================================ */
+.chapter-unit-group {
+    margin-bottom: 4px;
+}
+.chapter-unit-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f5f0ff;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #2e0f5a;
+    user-select: none;
+}
+.chapter-unit-header:hover {
+    background: #ede9fe;
+}
+.chapter-unit-content {
+    margin-left: 12px;
+    padding-left: 8px;
+    border-left: 2px solid #e9e4f5;
+    overflow: hidden;
+    max-height: 2000px;
+    transition: max-height 0.3s ease;
+}
+.chapter-unit-content.collapsed {
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    border-left: none;
+}
+.unit-toggle {
+    font-size: 0.7rem;
+    color: #4a1d8c;
+}
+
+/* 章節項目 - 方案 C */
+.chapter-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-bottom: 1px solid #f0edf8;
+}
+.chapter-item:last-child {
+    border-bottom: none;
+}
+.chapter-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.chapter-status-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+.chapter-status-dot.open {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+.chapter-status-dot.locked {
+    background: #dc2626;
+    box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
+}
+.chapter-label {
+    flex: 1;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: #2e0f5a;
+}
+.chapter-status-text {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 2px 12px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+.chapter-status-text.open {
+    color: #065f46;
+    background: #ecfdf5;
+}
+.chapter-status-text.locked {
+    color: #9ca3af;
+    background: #f3f4f6;
+}
+
 @media (max-width: 640px) {
-    .star3-progress-container {
-        margin-top: 10px;
-        padding: 8px;
+    .chapter-unit-header {
+        padding: 6px 10px;
+        font-size: 0.75rem;
     }
-    .star3-progress-bar {
+    .chapter-item {
+        padding: 4px 8px;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .chapter-label {
+        font-size: 0.7rem;
+        flex: 1;
+        min-width: 80px;
+    }
+    .chapter-status-text {
+        font-size: 0.6rem;
+        padding: 1px 8px;
+    }
+    .chapter-status-dot {
+        width: 10px;
         height: 10px;
     }
-    .star3-progress-text {
-        font-size: 0.65rem;
-    }
+}
+
+/* ============================================================
+   摺疊面板（建立學生）
+   ============================================================ */
+.collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+}
+.collapsible-header:hover {
+    opacity: 0.8;
+}
+.collapse-arrow {
+    font-size: 0.8rem;
+    transition: transform 0.3s;
+    color: #4a1d8c;
+}
+.collapsible-content {
+    overflow: hidden;
+    max-height: 2000px;
+    transition: max-height 0.3s ease;
+    padding-top: 8px;
+}
+.collapsible-content.collapsed {
+    max-height: 0;
+    padding: 0;
+}
+
+/* ============================================================
+   積分榜（學生成就頁面）
+   ============================================================ */
+.rank-list-container {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px solid #e9e4f5;
+}
+.rank-list-container h3 {
+    color: #4a1d8c;
+}
+.rank-list-container .rank-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    border-bottom: 1px solid #f0edf8;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+.rank-list-container .rank-item:hover {
+    background: #faf8ff;
+}
+.rank-list-container .rank-item.current-user {
+    background: #ede9fe;
+    font-weight: bold;
+    border-left: 3px solid #4a1d8c;
+}
+.rank-list-container .rank-name {
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.rank-list-container .rank-points {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #4a1d8c;
+}
+.rank-list-container .rank-medal {
+    font-size: 1.1rem;
+}
+.rank-list-container .rank-current-badge {
+    font-size: 0.6rem;
+    background: #4a1d8c;
+    color: white;
+    padding: 1px 8px;
+    border-radius: 12px;
+    margin-left: 6px;
 }
