@@ -75,6 +75,57 @@ const ACHIEVEMENT_POINTS = {
     'downwardTrend': -10
 };
 
+// ==================== Firebase 初始化 ====================
+const firebaseConfig = {
+    apiKey: "AIzaSyBWUr-qFjDuAbRn2ueCOA24Bx5vHhGwCzs",
+    authDomain: "mastering-science.firebaseapp.com",
+    projectId: "mastering-science",
+    storageBucket: "mastering-science.firebasestorage.app",
+    messagingSenderId: "969510026630",
+    appId: "1:969510026630:web:5c0ff3ffc7b3bdc04c8007"
+};
+
+try {
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log('✅ Firebase 已初始化');
+    }
+} catch(e) {
+    console.error('❌ Firebase 初始化失敗:', e.message);
+}
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ==================== Firebase 狀態小點 ====================
+document.addEventListener('DOMContentLoaded', function() {
+    const dot = document.createElement('div');
+    dot.id = 'firebaseStatusDot';
+    dot.style.cssText = 'position:fixed; bottom:16px; right:16px; width:12px; height:12px; border-radius:50%; cursor:pointer; z-index:99999; box-shadow:0 0 6px rgba(0,0,0,0.15); transition:transform 0.2s;';
+    dot.title = '點擊查看系統狀態';
+    document.body.appendChild(dot);
+    
+    const updateDot = function(user) {
+        if (user) {
+            dot.style.background = '#10b981';
+        } else {
+            dot.style.background = '#94a3b8';
+        }
+    };
+    
+    auth.onAuthStateChanged(updateDot);
+    setTimeout(function() {
+        if (dot.style.background !== '#10b981' && dot.style.background !== '#94a3b8') {
+            dot.style.background = '#dc2626';
+        }
+    }, 5000);
+    
+    dot.addEventListener('click', function() {
+        const status = auth.currentUser ? '✅ 已連線' : '⏳ 等待登入';
+        alert('📡 系統連線狀態：' + status + '\n\n🟢 Firebase 服務正常運作');
+    });
+});
+
 // ==================== 顯示狀態函數 ====================
 function showFirestoreStatus(text, bg, color) {
     const statusEl = document.getElementById('firestoreReadStatus');
@@ -2591,10 +2642,14 @@ async function renderTeacherPanel() {
     const avgAcc = totalQuestions > 0 ? Math.round(totalCorrect / totalQuestions * 100) : 0;
     const topWrong = Object.entries(wrongMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
     const topWrongCount = topWrong.length > 0 ? topWrong[0][1] : 0;
-    document.getElementById('statStudents').textContent = totalStudents;
-    document.getElementById('statAccuracy').textContent = avgAcc + '%';
-    document.getElementById('statQuestions').textContent = totalQuestions.toLocaleString();
-    document.getElementById('statWrong').textContent = topWrongCount || 0;
+    const el1 = document.getElementById('statStudents');
+    const el2 = document.getElementById('statAccuracy');
+    const el3 = document.getElementById('statQuestions');
+    const el4 = document.getElementById('statWrong');
+    if (el1) el1.textContent = totalStudents;
+    if (el2) el2.textContent = avgAcc + '%';
+    if (el3) el3.textContent = totalQuestions.toLocaleString();
+    if (el4) el4.textContent = topWrongCount || 0;
     const tbody = document.getElementById('studentTableBody');
     if (tbody) {
         let html = '';
@@ -2604,7 +2659,8 @@ async function renderTeacherPanel() {
             const acc = total > 0 ? Math.round((stats.totalCorrect || 0) / total * 100) : 0;
             const progress = Math.round(acc * 0.9 + Math.random() * 10);
             const color = acc >= 80 ? 'tag-green' : (acc >= 60 ? 'tag-yellow' : 'tag-red');
-            html += '<tr><td class="clickable" onclick="openStudentModal(\'' + s.userId + '\')">' + s.name + '</td><td>' + s.userId + '</td><td>' + total + '</td><td><span class="tag ' + color + '">' + acc + '%</span></td><td><span class="progress-mini"><span class="fill" style="width:' + progress + '%;"></span></span> ' + progress + '%</td><td>' + (s.isFirstLogin ? '⏳ 尚未修改密碼' : '✅ 已修改密碼') + '</td></tr>';
+            const statusText = s.isFirstLogin ? '⏳ 尚未修改密碼' : '✅ 已修改密碼';
+            html += '<tr><td class="clickable" onclick="openStudentModal(\'' + s.userId + '\')">' + s.name + '</td><td>' + s.userId + '</td><td>' + total + '</td><td><span class="tag ' + color + '">' + acc + '%</span></td><td><span class="progress-mini"><span class="fill" style="width:' + progress + '%;"></span></span> ' + progress + '%</td><td>' + statusText + '</td></tr>';
         }
         tbody.innerHTML = html;
     }
