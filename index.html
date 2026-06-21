@@ -336,7 +336,7 @@
     <div class="form-group-login">
         <label for="loginPassword">密碼</label>
         <div class="password-wrapper">
-            <input type="password" id="loginPassword" placeholder="請輸入密碼">
+            <input type="password" id="loginPassword" placeholder="請輸入密碼（至少 6 個字元）">
             <button type="button" class="toggle-password-btn" id="togglePasswordBtn">👁️</button>
         </div>
     </div>
@@ -378,12 +378,12 @@
     </div>
 </div>
 
-<!-- ===== 修改密碼彈窗（含舊密碼欄位，老師專用） ===== -->
+<!-- ===== 修改密碼彈窗 ===== -->
 <div class="modal-overlay" id="changePasswordModal">
     <div class="modal-box">
         <button class="close-btn" onclick="closeModal('changePasswordModal')">✕</button>
         <h2 id="changePasswordTitle">🔐 修改密碼</h2>
-        <div class="sub" id="changePasswordDesc">請輸入新的密碼。</div>
+        <div class="sub" id="changePasswordDesc">請輸入新的密碼（至少 6 個字元）。</div>
         <div id="changePasswordError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
         <!-- 舊密碼欄位（老師修改密碼時顯示） -->
         <div class="form-group" id="oldPasswordGroup" style="display:none;">
@@ -394,9 +394,9 @@
             </div>
         </div>
         <div class="form-group">
-            <label>新密碼（至少 4 個字元）</label>
+            <label>新密碼（至少 6 個字元）</label>
             <div class="password-wrapper">
-                <input type="password" id="newPassword" placeholder="請輸入新密碼">
+                <input type="password" id="newPassword" placeholder="請輸入新密碼（至少 6 個字元）">
                 <button type="button" class="toggle-password-btn" id="toggleNewPasswordBtn">👁️</button>
             </div>
         </div>
@@ -532,6 +532,121 @@
 <div id="imageZoomModal" class="modal"><div class="modal-content"><button onclick="closeImageZoom()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666; position:absolute; top:10px; right:16px; z-index:10;">✕</button><img id="zoomImage" src="" style="width:100%; max-height:70vh; object-fit:contain;"><button id="closeZoomBtn" class="btn" style="margin-top:0.8rem;">關閉</button></div></div>
 
 <div id="unlockCardsContainer" class="unlock-cards-container"></div>
+
+<!-- ===== 老師後台 ===== -->
+<div id="teacherPanel" style="display:none;">
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-weight:600; color:#2e0f5a;">📚 班級：</span>
+                <select id="classSelector" class="class-selector">
+                    <option value="VIP">VIP</option>
+                </select>
+            </div>
+            <span style="font-size:13px; color:#888;">👋 老師：<span id="teacherNameDisplay"></span></span>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="number" id="statStudents">0</div>
+                <div class="label">👨‍🎓 學生人數</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="statAccuracy">0%</div>
+                <div class="label">📊 全班平均正確率</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="statQuestions">0</div>
+                <div class="label">📝 總答題數</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="statWrong">0</div>
+                <div class="label">🔥 最多人錯的題目</div>
+            </div>
+        </div>
+
+        <div class="sub-tabs">
+            <button class="sub-tab-btn active" data-tab="tab-overview">📊 全班進度</button>
+            <button class="sub-tab-btn" data-tab="tab-wrong">❌ 錯題統計</button>
+            <button class="sub-tab-btn" data-tab="tab-rank">🏆 成就/積分排名</button>
+            <button class="sub-tab-btn" data-tab="tab-chapters">📖 章節管理</button>
+        </div>
+
+        <div class="sub-tab-content active" id="tab-overview">
+            <div class="card">
+                <div class="card-title">
+                    <span>📋 全班學生進度總覽</span>
+                    <span style="font-size:12px; color:#888;">點擊姓名查看詳細</span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead>
+                            <tr style="background:#f5f0ff;">
+                                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">姓名</th>
+                                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">學號</th>
+                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">總題數</th>
+                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">正確率</th>
+                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">完成度</th>
+                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="sub-tab-content" id="tab-wrong">
+            <div class="card">
+                <div class="card-title">
+                    <span>❌ 最多人錯的題目</span>
+                    <span style="font-size:12px; color:#888;" id="wrongTotal">共 0 人作答</span>
+                </div>
+                <div id="wrongList"></div>
+            </div>
+        </div>
+
+        <div class="sub-tab-content" id="tab-rank">
+            <div class="card">
+                <div class="card-title">🏆 全班積分排名</div>
+                <div id="rankList"></div>
+            </div>
+        </div>
+
+        <div class="sub-tab-content" id="tab-chapters">
+            <div class="card">
+                <div class="card-title">
+                    <span>📖 章節開放管理</span>
+                    <span style="font-size:12px; color:#888;">勾選 = 學生看得到</span>
+                </div>
+                <div id="chapterManagement"></div>
+                <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-success" id="saveChaptersBtn">💾 儲存章節設定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 學生詳細彈窗 ===== -->
+<div class="modal-overlay" id="studentModal">
+    <div class="modal-box">
+        <button class="close-btn" onclick="closeStudentModal()">✕</button>
+        <h2 id="modalName">學生姓名</h2>
+        <div class="sub" id="modalSub">學號：000000 · 班級</div>
+        <div class="info-grid">
+            <div><span class="label">總答題數</span><br><span class="value" id="mTotal">0</span></div>
+            <div><span class="label">正確率</span><br><span class="value" id="mAcc">0%</span></div>
+            <div><span class="label">完成度</span><br><span class="value" id="mProgress">0%</span></div>
+            <div><span class="label">總積分</span><br><span class="value" id="mPoints">0</span></div>
+            <div><span class="label">⏱️ 共花時間</span><br><span class="value" id="mTime">未記錄</span></div>
+        </div>
+        <div class="section-title">📖 各章節進度</div>
+        <div id="modalChapterProgress" style="font-size:13px; line-height:2;"></div>
+        <div class="section-title">❌ 錯題（最近 3 題）</div>
+        <div id="modalWrongQuestions" style="font-size:12px; color:#666; line-height:1.8;"></div>
+    </div>
+</div>
 
 <script>
 window.ALL_UNITS = {

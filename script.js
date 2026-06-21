@@ -47,6 +47,10 @@ const MAX_LOGIN_ATTEMPTS = 5;
 // Firebase 同步狀態
 let firestoreEnabled = false;
 
+// 老師後台相關
+let currentClass = '';
+let teacherStudents = [];
+
 // 成就積分對應表
 const ACHIEVEMENT_POINTS = {
     'firstPractice': 10,
@@ -822,13 +826,41 @@ function checkAutoLogin() {
     return false;
 }
 
+// ==================== 更新用戶標籤（下拉選單） ====================
 function updateUserLabel() {
     if (!currentUser) return;
-    document.getElementById('userLabel').innerHTML = `
-        👋 ${currentUser.name} (${currentUser.className})
-        <button id="logoutBtn" class="btn btn-small" style="background:#dc2626; margin-left:8px; padding:0.15rem 0.5rem; font-size:0.6rem;">登出</button>
+    const label = document.getElementById('userLabel');
+    label.innerHTML = `
+        <div style="position:relative; display:inline-block;">
+            <button id="userMenuBtn" style="background:none; border:none; font-size: clamp(0.7rem, 4vw, 0.85rem); cursor:pointer; color:#2e0f5a; font-weight:600; display:flex; align-items:center; gap:4px;">
+                👋 ${currentUser.name} (${currentUser.className}) ▼
+            </button>
+            <div id="userMenuDropdown" style="display:none; position:absolute; right:0; top:100%; background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); min-width:150px; padding:8px 0; z-index:999; margin-top:4px; border:1px solid #e0d6f5;">
+                <button onclick="openChangePasswordModal(false)" style="display:block; width:100%; padding:10px 16px; border:none; background:none; text-align:left; font-size:14px; cursor:pointer; color:#2e0f5a; font-weight:500;">
+                    🔑 修改密碼
+                </button>
+                <button onclick="logout()" style="display:block; width:100%; padding:10px 16px; border:none; background:none; text-align:left; font-size:14px; cursor:pointer; color:#dc2626; font-weight:500; border-top:1px solid #f0edf8;">
+                    🚪 登出
+                </button>
+            </div>
+        </div>
     `;
-    setupLogout();
+    
+    // 點擊切換下拉選單
+    const menuBtn = document.getElementById('userMenuBtn');
+    const dropdown = document.getElementById('userMenuDropdown');
+    if (menuBtn && dropdown) {
+        menuBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        });
+        document.addEventListener('click', function() {
+            dropdown.style.display = 'none';
+        });
+        dropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
 }
 
 // ==================== 忘記密碼 ====================
@@ -882,7 +914,7 @@ document.getElementById('forgotSubmitBtn')?.addEventListener('click', function()
     }, 3000);
 });
 
-// ==================== 修改密碼（支援 Enter 送出） ====================
+// ==================== 修改密碼（支援 Enter 送出 + 密碼長度 6 字元） ====================
 function openChangePasswordModal(isFirstLogin = false) {
     const modal = document.getElementById('changePasswordModal');
     const title = document.getElementById('changePasswordTitle');
@@ -892,12 +924,12 @@ function openChangePasswordModal(isFirstLogin = false) {
 
     if (isFirstLogin) {
         title.textContent = '🔐 首次登入 - 設定密碼';
-        desc.textContent = '這是您第一次登入，請設定自己的密碼。';
+        desc.textContent = '這是您第一次登入，請設定自己的密碼（至少 6 個字元）。';
         cancelBtn.style.display = 'none';
         if (oldPwdGroup) oldPwdGroup.style.display = 'none';
     } else {
         title.textContent = '🔑 修改密碼';
-        desc.textContent = '請輸入舊密碼和新密碼。';
+        desc.textContent = '請輸入舊密碼和新密碼（至少 6 個字元）。';
         cancelBtn.style.display = 'block';
         if (oldPwdGroup) oldPwdGroup.style.display = 'block';
     }
@@ -921,8 +953,9 @@ document.getElementById('changePasswordBtn')?.addEventListener('click', function
     const errEl = document.getElementById('changePasswordError');
     const msgEl = document.getElementById('changePasswordMessage');
 
-    if (newPwd.length < 4) {
-        errEl.textContent = '⚠️ 密碼至少 4 個字元';
+    // ✅ 修改：密碼至少 6 個字元（Firebase 要求）
+    if (newPwd.length < 6) {
+        errEl.textContent = '⚠️ 密碼至少 6 個字元（Firebase 要求）';
         errEl.style.display = 'block';
         return;
     }
@@ -1284,20 +1317,39 @@ function calculateTotalPoints(achievements) {
     return total;
 }
 
-function calculateClassRank(userId, userPoints) {
-    let classmates = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        let key = localStorage.key(i);
-        if (key && key.startsWith('ms_chem_') && key.includes(currentUser.class)) {
-            let data = JSON.parse(localStorage.getItem(key));
-            let points = calculateTotalPoints(data.achievements || {});
-            let uid = key.replace('ms_chem_', '');
-            classmates.push({ id: uid, points: points });
-        }
+// ==================== 計算班級排名（從 Firestore 讀取） ====================
+async function calculateClassRankFromFirebase(userId, userPoints) {
+    if (!currentUser || !currentUser.className) {
+        return { rank: 0, total: 0 };
     }
-    classmates.sort((a, b) => b.points - a.points);
-    let rank = classmates.findIndex(c => c.id === userId) + 1;
-    return { rank: rank, total: classmates.length };
+    
+    try {
+        const snapshot = await firebase.firestore()
+            .collection('users')
+            .where('className', '==', currentUser.className)
+            .where('isTeacher', '==', false)
+            .get();
+        
+        const students = [];
+        snapshot.forEach(doc => {
+            students.push(doc.data());
+        });
+        
+        if (students.length === 0) {
+            return { rank: 0, total: 0 };
+        }
+        
+        const classmates = students.map(s => {
+            const points = calculateTotalPoints(s.achievements || {});
+            return { id: s.userId, points: points };
+        });
+        classmates.sort((a, b) => b.points - a.points);
+        const rank = classmates.findIndex(c => c.id === userId) + 1;
+        return { rank: rank, total: classmates.length };
+    } catch(e) {
+        console.warn('⚠️ 計算排名失敗:', e.message);
+        return { rank: 0, total: 0 };
+    }
 }
 
 // ==================== 挑題邏輯 ====================
@@ -2027,8 +2079,28 @@ function renderHistory() {
     });
 }
 
-function renderAchievements() {
-    let container = document.getElementById('achievementsPanel');
+// ==================== renderAchievements（含即時排名） ====================
+async function renderAchievements() {
+    const container = document.getElementById('achievementsPanel');
+    if (!container) return;
+    
+    // ✅ 從 Firestore 讀取全班學生數據（即時排名）
+    let students = [];
+    if (currentUser && currentUser.className && firestoreEnabled) {
+        try {
+            const snapshot = await firebase.firestore()
+                .collection('users')
+                .where('className', '==', currentUser.className)
+                .where('isTeacher', '==', false)
+                .get();
+            snapshot.forEach(doc => {
+                students.push(doc.data());
+            });
+            console.log('📊 成就頁面載入學生數據:', students.length, '位');
+        } catch(e) {
+            console.warn('⚠️ 讀取學生數據失敗:', e.message);
+        }
+    }
     
     let chapterList = [];
     for (let u in window.ALL_UNITS) {
@@ -2116,7 +2188,19 @@ function renderAchievements() {
     let totalPossible = specials.length + (chapterList.length * 4);
     let percent = totalPossible > 0 ? Math.round(totalUnlocked / totalPossible * 100) : 0;
     let totalPoints = calculateTotalPoints(userData.achievements);
-    let rankInfo = calculateClassRank(currentUser.id, totalPoints);
+    
+    // ✅ 使用從 Firestore 讀取的學生數據計算排名
+    let rank = 0;
+    let totalStudents = 0;
+    if (students.length > 0) {
+        const classmates = students.map(s => {
+            const points = calculateTotalPoints(s.achievements || {});
+            return { id: s.userId, points: points };
+        });
+        classmates.sort((a, b) => b.points - a.points);
+        rank = classmates.findIndex(c => c.id === currentUser.id) + 1;
+        totalStudents = classmates.length;
+    }
     
     let html = `<div class="card">
         <div class="points-rank-bar">
@@ -2125,7 +2209,7 @@ function renderAchievements() {
                 <div class="points-label">總積分</div>
             </div>
             <div class="rank-box">
-                <div class="rank-number">#${rankInfo.rank} / ${rankInfo.total}</div>
+                <div class="rank-number">#${rank > 0 ? rank : '-'} / ${totalStudents > 0 ? totalStudents : '-'}</div>
                 <div class="rank-label">班級排名</div>
             </div>
         </div>
@@ -3162,7 +3246,7 @@ async function renderTeacherPanel() {
     let html = `
         <div class="card">
             <div class="card-title">👤 教師設定</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; align-items:end;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:end;">
                 <div>
                     <label style="font-size:12px; font-weight:500; color:#2e0f5a;">教師姓名</label>
                     <div style="display:flex; gap:6px; align-items:center;">
@@ -3175,10 +3259,6 @@ async function renderTeacherPanel() {
                     <select id="teacherClassSelector" style="width:100%; padding:8px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:13px; outline:none; background:white;">
                         ${managedClasses.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>`).join('')}
                     </select>
-                </div>
-                <div>
-                    <label style="font-size:12px; font-weight:500; color:#2e0f5a;">修改密碼</label>
-                    <button class="btn btn-primary" id="teacherChangePasswordBtn" style="width:100%; padding:8px 16px; font-size:13px;">🔐 修改密碼</button>
                 </div>
             </div>
             <div style="margin-top:8px; font-size:12px; color:#888;">
@@ -3237,7 +3317,7 @@ async function renderTeacherPanel() {
             const stats = s.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 };
             const total = stats.totalQuestionsAnswered || 0;
             const acc = total > 0 ? Math.round((stats.totalCorrect || 0) / total * 100) : 0;
-            // 狀態文字修改：根據 isFirstLogin 判斷
+            // ✅ 狀態文字修改
             const status = s.isFirstLogin ? '⏳ 尚未修改密碼' : '✅ 已修改密碼';
             const statusColor = s.isFirstLogin ? '#f59e0b' : '#10b981';
             html += `
@@ -3395,8 +3475,6 @@ async function renderTeacherPanel() {
         </div>
     `;
     
-    // 舊用戶轉移功能已移除，不再顯示
-    
     html += `
         <div class="card" style="background:#f0fdf4; border:1px solid #10b981;">
             <div class="card-title">💡 老師後台功能</div>
@@ -3489,11 +3567,6 @@ function bindTeacherEvents() {
         }
     });
     
-    // 老師修改密碼按鈕
-    document.getElementById('teacherChangePasswordBtn')?.addEventListener('click', function() {
-        openChangePasswordModal(false);
-    });
-    
     // 建立學生（包含獨立彈窗顯示密碼）
     document.getElementById('teacherCreateStudentBtn')?.addEventListener('click', function() {
         const customId = document.getElementById('teacherNewId').value.trim() || null;
@@ -3578,6 +3651,7 @@ function bindTeacherEvents() {
             return;
         }
         
+        // ✅ 匯出 CSV 狀態文字同步
         let csv = [["姓名", "學號", "總題數", "正確率", "總積分", "狀態"]];
         for (const s of students) {
             const stats = s.stats || { totalQuestionsAnswered: 0, totalCorrect: 0 };
