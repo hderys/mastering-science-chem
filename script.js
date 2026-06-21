@@ -616,11 +616,14 @@ async function handleLogin(userId, password) {
     showFirestoreStatus('✅ 登入成功！歡迎回來 ' + user.name, '#d4edda', '#065f46');
     loginAttempts = 0;
     currentUser = user;
+    
+    // ✅ 記住我功能（簡化版）：只儲存 userId，不儲存密碼
     if (document.getElementById('rememberMeCheckbox').checked) {
-        localStorage.setItem('ms_chem_login', JSON.stringify({ userId: userId, password: password }));
+        localStorage.setItem('ms_chem_login', JSON.stringify({ userId: userId }));
     } else {
         localStorage.removeItem('ms_chem_login');
     }
+    
     if (user.isFirstLogin === true) {
         showFirestoreStatus('🔐 首次登入，請設定您的密碼', '#f59e0b', '#7c5a00');
         isFirstLoginFlow = true;
@@ -639,11 +642,20 @@ async function handleLogin(userId, password) {
 }
 
 function enterMainApp(user) {
+    // ✅ 強制 VIP001 為老師（確保權限）
+    if (user.userId === 'VIP001' || user.userId === 'VIP001') {
+        user.isTeacher = true;
+        updateUser(user.userId, { isTeacher: true });
+    }
+    
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
     const teacherTab = document.getElementById('teacherTab');
     if (user.isTeacher) {
         teacherTab.style.display = 'inline-block';
+        // 🔓 顯示一鍵解鎖按鈕（僅老師）
+        const devBtn = document.getElementById('devUnlockBtn');
+        if (devBtn) devBtn.style.display = 'block';
     } else {
         teacherTab.style.display = 'none';
     }
@@ -679,14 +691,13 @@ function checkAutoLogin() {
     if (saved) {
         try {
             const data = JSON.parse(saved);
-            if (data.userId && data.password) {
+            if (data.userId) {
                 document.getElementById('loginUserId').value = data.userId;
-                document.getElementById('loginPassword').value = data.password;
+                // ✅ 不再自動填入密碼，讓用戶手動輸入
+                document.getElementById('loginPassword').value = '';
+                document.getElementById('loginPassword').placeholder = '請輸入密碼';
                 const rememberMe = document.getElementById('rememberMeCheckbox');
                 if (rememberMe) rememberMe.checked = true;
-                setTimeout(async () => {
-                    await handleLogin(data.userId, data.password);
-                }, 300);
                 return true;
             }
         } catch(e) {}
@@ -2606,7 +2617,7 @@ function initTabs() {
     }));
 }
 
-// ==================== 老師後台 ====================
+// ==================== 老師後台（完整版） ====================
 async function renderTeacherPanel() {
     const container = document.getElementById('teacherPanel');
     if (!container) return;
@@ -2614,6 +2625,46 @@ async function renderTeacherPanel() {
         container.innerHTML = '<div class="card">⚠️ 只有老師可以查看此頁面</div>';
         return;
     }
+    
+    // ✅ 如果 container 是空的，填入完整的 HTML 結構
+    if (!container.innerHTML || container.innerHTML.trim() === '') {
+        container.innerHTML = `
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span style="font-weight:600; color:#2e0f5a;">📚 班級：</span>
+                        <select id="classSelector" class="class-selector">
+                            <option value="VIP">VIP</option>
+                        </select>
+                    </div>
+                    <span style="font-size:13px; color:#888;">👋 老師：<span id="teacherNameDisplay"></span></span>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-card"><div class="number" id="statStudents">0</div><div class="label">👨‍🎓 學生人數</div></div>
+                    <div class="stat-card"><div class="number" id="statAccuracy">0%</div><div class="label">📊 全班平均正確率</div></div>
+                    <div class="stat-card"><div class="number" id="statQuestions">0</div><div class="label">📝 總答題數</div></div>
+                    <div class="stat-card"><div class="number" id="statWrong">0</div><div class="label">🔥 最多人錯的題目</div></div>
+                </div>
+                <div class="sub-tabs">
+                    <button class="sub-tab-btn active" data-tab="tab-overview">📊 全班進度</button>
+                    <button class="sub-tab-btn" data-tab="tab-wrong">❌ 錯題統計</button>
+                    <button class="sub-tab-btn" data-tab="tab-rank">🏆 成就/積分排名</button>
+                    <button class="sub-tab-btn" data-tab="tab-chapters">📖 章節管理</button>
+                </div>
+                <div class="sub-tab-content active" id="tab-overview">
+                    <div class="card"><div class="card-title"><span>📋 全班學生進度總覽</span><span style="font-size:12px; color:#888;">點擊姓名查看詳細</span></div>
+                    <div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead><tr style="background:#f5f0ff;"><th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">姓名</th><th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">學號</th><th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">總題數</th><th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">正確率</th><th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">完成度</th><th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">狀態</th></tr></thead>
+                        <tbody id="studentTableBody"></tbody>
+                    </table></div></div>
+                </div>
+                <div class="sub-tab-content" id="tab-wrong"><div class="card"><div class="card-title"><span>❌ 最多人錯的題目</span><span style="font-size:12px; color:#888;" id="wrongTotal">共 0 人作答</span></div><div id="wrongList"></div></div></div>
+                <div class="sub-tab-content" id="tab-rank"><div class="card"><div class="card-title">🏆 全班積分排名</div><div id="rankList"></div></div></div>
+                <div class="sub-tab-content" id="tab-chapters"><div class="card"><div class="card-title"><span>📖 章節開放管理</span><span style="font-size:12px; color:#888;">勾選 = 學生看得到</span></div><div id="chapterManagement"></div><div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;"><button class="btn btn-success" id="saveChaptersBtn">💾 儲存章節設定</button></div></div></div>
+            </div>
+        `;
+    }
+    
     if (!currentClass) {
         currentClass = currentUser.className || '';
     }

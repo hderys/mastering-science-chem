@@ -19,20 +19,24 @@ body {
 }
 
 /* ============================================================
-   現代化登入頁面
+   登入頁面 - 無捲軸 + 響應式
    ============================================================ */
 #loginScreen {
-    max-width: 400px;
+    max-width: 420px;
     width: 92%;
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    padding: 40px 32px 32px 32px;
+    padding: 32px 28px 28px 28px;
     border-radius: 32px;
     box-shadow: 0 20px 60px rgba(74, 29, 140, 0.15), 0 8px 24px rgba(74, 29, 140, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    max-height: 95vh;
-    overflow-y: auto;
+    /* ✅ 強制內容在單一畫面內，無捲軸 */
+    max-height: 98vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 #loginScreen h2 {
     color: #2e0f5a;
@@ -46,7 +50,7 @@ body {
     text-align: center;
     color: #888;
     font-size: 0.9rem;
-    margin-bottom: 28px;
+    margin-bottom: 24px;
     line-height: 1.5;
 }
 #loginScreen .subtitle div:first-child {
@@ -55,7 +59,7 @@ body {
 }
 
 #loginScreen .form-group-login {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 #loginScreen .form-group-login label {
     display: block;
@@ -112,7 +116,7 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 16px 0 20px 0;
+    margin: 12px 0 18px 0;
 }
 .remember-row input[type="checkbox"] {
     width: 18px;
@@ -157,7 +161,7 @@ body {
     transform: none;
 }
 .login-footer {
-    margin-top: 20px;
+    margin-top: 16px;
     text-align: center;
     font-size: 0.8rem;
     color: #999;
@@ -177,26 +181,39 @@ body {
     color: #2e0f5a;
 }
 
+/* ===== 手機版登入 - 佔比 80% 以上 ===== */
 @media (max-width: 640px) {
     #loginScreen {
         padding: 28px 20px 24px 20px;
         width: 94%;
         border-radius: 28px;
+        max-height: 96vh;
+        min-height: 60vh;
     }
     #loginScreen h2 {
-        font-size: 1.4rem;
+        font-size: 1.5rem;
     }
     #loginScreen .subtitle {
-        font-size: 0.75rem;
-        margin-bottom: 20px;
+        font-size: 0.8rem;
+        margin-bottom: 18px;
     }
     #loginScreen .form-group-login input {
         padding: 12px 16px;
-        font-size: 15px;
+        font-size: 16px;
     }
     #loginBtn {
         padding: 12px;
         font-size: 1rem;
+    }
+    .remember-row {
+        margin: 8px 0 14px 0;
+    }
+    .remember-row label {
+        font-size: 0.8rem;
+    }
+    .login-footer {
+        margin-top: 12px;
+        font-size: 0.7rem;
     }
 }
 
@@ -644,9 +661,20 @@ body {
 }
 .tab.active { background: var(--deep-purple); color: white; }
 
-#practicePanel, #myMistakesPanel, #pastMistakesPanel, #pinnedPanel, #historyPanel, #achievementsPanel {
+/* ===== 分頁面板 - 強制內容從頂部開始 ===== */
+#practicePanel,
+#myMistakesPanel,
+#pastMistakesPanel,
+#pinnedPanel,
+#historyPanel,
+#achievementsPanel {
     max-height: calc(100vh - 80px);
     overflow-y: auto;
+    /* ✅ 強制內容從頂部開始 */
+    display: block;
+    align-items: flex-start;
+    padding-top: 0;
+    margin-top: 0;
 }
 
 .mistake-chapter-group { margin-bottom: 0.5rem; }
@@ -1485,9 +1513,17 @@ body {
    桌面版
    ============================================================ */
 @media (min-width: 641px) {
-    #practicePanel, #myMistakesPanel, #pastMistakesPanel, #pinnedPanel, #historyPanel, #achievementsPanel {
+    #practicePanel,
+    #myMistakesPanel,
+    #pastMistakesPanel,
+    #pinnedPanel,
+    #historyPanel,
+    #achievementsPanel {
         max-height: calc(100vh - 80px);
         overflow-y: auto;
+        display: block;
+        padding-top: 0;
+        margin-top: 0;
     }
     .modal-content { padding: 0.7rem; max-height: 85vh; }
     .settings-two-columns { gap: 0.6rem; margin: 0.3rem 0 0.5rem 0; }
