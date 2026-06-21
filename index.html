@@ -5,11 +5,312 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Mastering Science - Chemistry</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* 強制手機版圖片高度 130px（避免被 style.css 舊版覆蓋） */
+        @media (max-width: 640px) {
+            .image-area-mobile img,
+            #quizModal .image-area-mobile img,
+            .quiz-layout-mobile .image-area-mobile img {
+                max-height: 130px !important;
+            }
+        }
+
+        /* ===== 登入畫面樣式 ===== */
+        .form-group-login {
+            margin-bottom: 14px;
+        }
+        .form-group-login label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #2e0f5a;
+            margin-bottom: 4px;
+        }
+        .form-group-login input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 40px;
+            border: 2px solid #e0d6f5;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group-login input:focus {
+            border-color: #4a1d8c;
+        }
+        .password-wrapper {
+            position: relative;
+        }
+        .password-wrapper input {
+            padding-right: 48px;
+        }
+        .toggle-password-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #888;
+        }
+        .toggle-password-btn:hover {
+            color: #4a1d8c;
+        }
+
+        /* ===== 彈窗 ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 24px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 24px 28px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .modal-box .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .modal-box .close-btn:hover {
+            color: #333;
+        }
+        .modal-box h2 {
+            color: #2e0f5a;
+            margin-bottom: 4px;
+            font-size: 20px;
+        }
+        .modal-box .sub {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        .modal-box .form-group {
+            margin-bottom: 12px;
+        }
+        .modal-box .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #2e0f5a;
+            margin-bottom: 3px;
+        }
+        .modal-box .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 2px solid #e0d6f5;
+            font-size: 14px;
+            outline: none;
+        }
+        .modal-box .form-group input:focus {
+            border-color: #4a1d8c;
+        }
+        .modal-box .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin-top: 4px;
+        }
+        .modal-box .btn-primary {
+            background: #4a1d8c;
+            color: white;
+        }
+        .modal-box .btn-primary:hover {
+            background: #3b1a6e;
+        }
+        .modal-box .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .modal-box .btn-success:hover {
+            background: #059669;
+        }
+        .modal-box .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+        .modal-box .btn-danger:hover {
+            background: #b91c1c;
+        }
+        .modal-box .btn-outline {
+            background: white;
+            color: #4a1d8c;
+            border: 2px solid #4a1d8c;
+        }
+        .modal-box .btn-outline:hover {
+            background: #f5f0ff;
+        }
+        .modal-box .inline-flex {
+            display: flex;
+            gap: 8px;
+        }
+        .modal-box .inline-flex .btn {
+            flex: 1;
+        }
+        .modal-box .mt-8 {
+            margin-top: 8px;
+        }
+        .modal-box .mt-12 {
+            margin-top: 12px;
+        }
+        .modal-box .text-center {
+            text-align: center;
+        }
+        .modal-box .text-sm {
+            font-size: 13px;
+        }
+        .modal-box .text-danger {
+            color: #dc2626;
+        }
+        .modal-box .text-success {
+            color: #10b981;
+        }
+        .modal-box .divider {
+            height: 1px;
+            background: #e0d6f5;
+            margin: 12px 0;
+        }
+        .modal-box .alert {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .modal-box .alert-success {
+            background: #d4edda;
+            color: #065f46;
+        }
+        .modal-box .alert-danger {
+            background: #f8d7da;
+            color: #7f1d1d;
+        }
+        .modal-box .alert-warning {
+            background: #fef3c7;
+            color: #7c5a00;
+        }
+
+        .verify-code {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 8px;
+            color: #4a1d8c;
+            text-align: center;
+            padding: 16px;
+            background: white;
+            border-radius: 12px;
+            border: 2px dashed #4a1d8c;
+            margin: 8px 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ===== 複製按鈕 ===== */
+        .copy-btn {
+            background: #f0f0f0;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #4a1d8c;
+            margin-left: 8px;
+        }
+        .copy-btn:hover {
+            background: #e0d6f5;
+        }
+
+        /* ===== 密碼顯示 ===== */
+        .password-display {
+            font-family: monospace;
+            font-size: 20px;
+            background: #f0f0f0;
+            padding: 4px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 4px 0;
+        }
+    </style>
     
-    <!-- ===== Firebase SDK ===== -->
+    <!-- ===== Firebase SDK (改用 jsdelivr CDN，提升手機相容性) ===== -->
     <script src="https://cdn.jsdelivr.net/npm/firebase@12.15.0/firebase-app-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/firebase@12.15.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/firebase@12.15.0/firebase-auth-compat.js"></script>
+    
+    <script>
+        // 您的 Firebase 配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyBWUr-qFjDuAbRn2ueCOA24Bx5vHhGwCzs",
+            authDomain: "mastering-science.firebaseapp.com",
+            projectId: "mastering-science",
+            storageBucket: "mastering-science.firebasestorage.app",
+            messagingSenderId: "969510026630",
+            appId: "1:969510026630:web:5c0ff3ffc7b3bdc04c8007"
+        };
+        
+        try {
+            // 初始化 Firebase
+            firebase.initializeApp(firebaseConfig);
+            
+            // 初始化 Firestore 和 Auth
+            const db = firebase.firestore();
+            const auth = firebase.auth();
+            
+            console.log('🔥 Firebase 已初始化！');
+            
+            // 在頁面上顯示成功訊息
+            document.addEventListener('DOMContentLoaded', function() {
+                const el = document.createElement('div');
+                el.id = 'firebaseInitStatus';
+                el.style.cssText = 'position:fixed; top:10px; left:10px; background:#10b981; color:white; padding:8px 16px; border-radius:8px; font-size:14px; z-index:99999; font-weight:bold;';
+                el.textContent = '✅ Firebase 已連線';
+                document.body.appendChild(el);
+            });
+        } catch(e) {
+            console.error('❌ Firebase 初始化失敗:', e.message);
+            // 在頁面上顯示錯誤訊息
+            document.addEventListener('DOMContentLoaded', function() {
+                const el = document.createElement('div');
+                el.id = 'firebaseInitStatus';
+                el.style.cssText = 'position:fixed; top:10px; left:10px; background:#dc2626; color:white; padding:8px 16px; border-radius:8px; font-size:14px; z-index:99999; font-weight:bold;';
+                el.textContent = '❌ Firebase 初始化失敗: ' + e.message;
+                document.body.appendChild(el);
+            });
+        }
+    </script>
 </head>
 <body>
 
@@ -21,12 +322,9 @@
 </div>
 
 <!-- ===== 登入畫面 ===== -->
-<div id="loginScreen">
-    <h2>🧪 Mastering Science</h2>
-    <div class="subtitle">
-        <div>一步步掌握科學概念</div>
-        <div>Master science, one step at a time</div>
-    </div>
+<div id="loginScreen" style="max-width: 400px; margin: 80px auto;" class="card">
+    <h2 style="color: var(--deep-purple); font-size: clamp(1.2rem, 6vw, 1.6rem);">🧪 Mastering Science</h2>
+    <div style="margin: 8px 0 16px;"><div>一步步掌握科學概念</div><div>Master science, one step at a time</div></div>
 
     <div id="loginError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
 
@@ -43,16 +341,17 @@
         </div>
     </div>
 
-    <div class="remember-row">
-        <input type="checkbox" id="rememberMeCheckbox">
-        <label for="rememberMeCheckbox">🔒 記住我（下次自動登入）</label>
+    <div style="display:flex; align-items:center; gap:8px; margin:12px 0 16px 0;">
+        <input type="checkbox" id="rememberMeCheckbox" style="width:16px; height:16px; cursor:pointer;">
+        <label for="rememberMeCheckbox" style="font-size:0.85rem; color:#2e0f5a; cursor:pointer;">🔒 記住我（下次自動登入）</label>
     </div>
 
-    <button id="loginBtn">🔒 登入</button>
+    <button class="btn" id="loginBtn" style="width:100%; padding:12px; font-size:1rem;">🔒 登入</button>
 
-    <div class="login-footer">
-        <div>第一次登入？請向老師索取初始密碼</div>
-        <button id="forgotPasswordLink" class="forgot-link">🔑 忘記密碼？</button>
+    <div style="margin-top:14px; text-align:center; font-size:0.8rem; color:#999;">
+        <span>第一次登入？請向老師索取初始密碼</span>
+        <br>
+        <button id="forgotPasswordLink" style="background:none; border:none; color:#4a1d8c; cursor:pointer; text-decoration:underline; font-size:0.8rem; margin-top:4px;">🔑 忘記密碼？</button>
     </div>
 </div>
 
@@ -79,13 +378,21 @@
     </div>
 </div>
 
-<!-- ===== 修改密碼彈窗 ===== -->
+<!-- ===== 修改密碼彈窗（含舊密碼欄位，老師專用） ===== -->
 <div class="modal-overlay" id="changePasswordModal">
     <div class="modal-box">
         <button class="close-btn" onclick="closeModal('changePasswordModal')">✕</button>
         <h2 id="changePasswordTitle">🔐 修改密碼</h2>
         <div class="sub" id="changePasswordDesc">請輸入新的密碼。</div>
         <div id="changePasswordError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
+        <!-- 舊密碼欄位（老師修改密碼時顯示） -->
+        <div class="form-group" id="oldPasswordGroup" style="display:none;">
+            <label>舊密碼</label>
+            <div class="password-wrapper">
+                <input type="password" id="oldPassword" placeholder="請輸入舊密碼">
+                <button type="button" class="toggle-password-btn" id="toggleOldPasswordBtn">👁️</button>
+            </div>
+        </div>
         <div class="form-group">
             <label>新密碼（至少 4 個字元）</label>
             <div class="password-wrapper">
@@ -118,6 +425,7 @@
         <button class="tab" data-tab="pinned">⭐ 收藏</button>
         <button class="tab" data-tab="history">📋 做題紀錄</button>
         <button class="tab" data-tab="achievements">🏆 我的成就</button>
+        <!-- 老師專用分頁（僅老師帳號顯示） -->
         <button class="tab" data-tab="teacher" id="teacherTab" style="display:none;">🧑‍🏫 老師後台</button>
     </div>
     <div id="practicePanel"></div>
@@ -129,7 +437,6 @@
     <div id="teacherPanel" style="display:none;"></div>
 </div>
 
-<!-- ===== 練習設定彈窗 ===== -->
 <div id="settingsModal" class="modal">
     <div class="modal-content">
         <h3 style="margin-bottom: 0.8rem;">⚙️ 練習設定</h3>
@@ -174,7 +481,7 @@
                     <div class="setting-hint" id="countHint">🔒 36題及自訂題數需Basic正確率達80%解鎖</div>
                 </div>
                 <div>
-                    <button id="devUnlockBtn" class="dev-btn-full" style="display:none;">🔓 一鍵解鎖 (僅測試)</button>
+                    <button id="devUnlockBtn" class="dev-btn-full">🔓 一鍵解鎖 (僅測試)</button>
                     <button id="startPracticeBtn" class="action-btn-full">開始練習</button>
                     <button id="cancelSettingsBtn" class="cancel-btn-full">取消</button>
                 </div>
@@ -193,9 +500,13 @@
     <div class="modal-content">
         <div class="main-panel" id="desktopMainPanel">
             <div class="question-area">
-                <div class="question-text" id="desktopQuestionText">載入中...</div>
-                <div class="image-area" id="desktopImageArea"></div>
-                <div class="options-grid" id="desktopOptions"></div>
+                <div class="question-text" id="desktopQuestionText">
+                    載入中...
+                </div>
+                <div class="image-area" id="desktopImageArea">
+                </div>
+                <div class="options-grid" id="desktopOptions">
+                </div>
             </div>
         </div>
         <div class="sidebar" id="desktopSidebar">
@@ -218,125 +529,9 @@
 </div>
 
 <div id="resultModal" class="modal"><div class="modal-content"><h3>成績總表</h3><div id="resultContent" class="result-container"></div><button id="closeResultBtn" class="btn">關閉</button></div></div>
-
 <div id="imageZoomModal" class="modal"><div class="modal-content"><button onclick="closeImageZoom()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666; position:absolute; top:10px; right:16px; z-index:10;">✕</button><img id="zoomImage" src="" style="width:100%; max-height:70vh; object-fit:contain;"><button id="closeZoomBtn" class="btn" style="margin-top:0.8rem;">關閉</button></div></div>
 
 <div id="unlockCardsContainer" class="unlock-cards-container"></div>
-
-<!-- ===== 老師後台 ===== -->
-<div id="teacherPanel" style="display:none;">
-    <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <span style="font-weight:600; color:#2e0f5a;">📚 班級：</span>
-                <select id="classSelector" class="class-selector">
-                    <option value="VIP">VIP</option>
-                </select>
-            </div>
-            <span style="font-size:13px; color:#888;">👋 老師：<span id="teacherNameDisplay"></span></span>
-        </div>
-
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="number" id="statStudents">0</div>
-                <div class="label">👨‍🎓 學生人數</div>
-            </div>
-            <div class="stat-card">
-                <div class="number" id="statAccuracy">0%</div>
-                <div class="label">📊 全班平均正確率</div>
-            </div>
-            <div class="stat-card">
-                <div class="number" id="statQuestions">0</div>
-                <div class="label">📝 總答題數</div>
-            </div>
-            <div class="stat-card">
-                <div class="number" id="statWrong">0</div>
-                <div class="label">🔥 最多人錯的題目</div>
-            </div>
-        </div>
-
-        <div class="sub-tabs">
-            <button class="sub-tab-btn active" data-tab="tab-overview">📊 全班進度</button>
-            <button class="sub-tab-btn" data-tab="tab-wrong">❌ 錯題統計</button>
-            <button class="sub-tab-btn" data-tab="tab-rank">🏆 成就/積分排名</button>
-            <button class="sub-tab-btn" data-tab="tab-chapters">📖 章節管理</button>
-        </div>
-
-        <div class="sub-tab-content active" id="tab-overview">
-            <div class="card">
-                <div class="card-title">
-                    <span>📋 全班學生進度總覽</span>
-                    <span style="font-size:12px; color:#888;">點擊姓名查看詳細</span>
-                </div>
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                        <thead>
-                            <tr style="background:#f5f0ff;">
-                                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">姓名</th>
-                                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid #4a1d8c;">學號</th>
-                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">總題數</th>
-                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">正確率</th>
-                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">完成度</th>
-                                <th style="padding:8px 10px; text-align:center; border-bottom:2px solid #4a1d8c;">狀態</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="sub-tab-content" id="tab-wrong">
-            <div class="card">
-                <div class="card-title">
-                    <span>❌ 最多人錯的題目</span>
-                    <span style="font-size:12px; color:#888;" id="wrongTotal">共 0 人作答</span>
-                </div>
-                <div id="wrongList"></div>
-            </div>
-        </div>
-
-        <div class="sub-tab-content" id="tab-rank">
-            <div class="card">
-                <div class="card-title">🏆 全班積分排名</div>
-                <div id="rankList"></div>
-            </div>
-        </div>
-
-        <div class="sub-tab-content" id="tab-chapters">
-            <div class="card">
-                <div class="card-title">
-                    <span>📖 章節開放管理</span>
-                    <span style="font-size:12px; color:#888;">勾選 = 學生看得到</span>
-                </div>
-                <div id="chapterManagement"></div>
-                <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
-                    <button class="btn btn-success" id="saveChaptersBtn">💾 儲存章節設定</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ===== 學生詳細彈窗 ===== -->
-<div class="modal-overlay" id="studentModal">
-    <div class="modal-box">
-        <button class="close-btn" onclick="closeStudentModal()">✕</button>
-        <h2 id="modalName">學生姓名</h2>
-        <div class="sub" id="modalSub">學號：000000 · 班級</div>
-        <div class="info-grid">
-            <div><span class="label">總答題數</span><br><span class="value" id="mTotal">0</span></div>
-            <div><span class="label">正確率</span><br><span class="value" id="mAcc">0%</span></div>
-            <div><span class="label">完成度</span><br><span class="value" id="mProgress">0%</span></div>
-            <div><span class="label">總積分</span><br><span class="value" id="mPoints">0</span></div>
-            <div><span class="label">⏱️ 共花時間</span><br><span class="value" id="mTime">未記錄</span></div>
-        </div>
-        <div class="section-title">📖 各章節進度</div>
-        <div id="modalChapterProgress" style="font-size:13px; line-height:2;"></div>
-        <div class="section-title">❌ 錯題（最近 3 題）</div>
-        <div id="modalWrongQuestions" style="font-size:12px; color:#666; line-height:1.8;"></div>
-    </div>
-</div>
 
 <script>
 window.ALL_UNITS = {
@@ -1944,6 +2139,38 @@ window.ALL_UNITS = {
             "imageUrl": null,
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C25C004",
+            "text": "<1995 CE 4><br>Boron consists of two isotopes. The table below lists the relative abundance of these two isotopes. The relative atomic mass of boron (correct to 1 decimal place) is",
+            "options": [
+              "A. 10.4",
+              "B. 10.6",
+              "C. 10.8",
+              "D. 11.0"
+            ],
+            "correct": "C",
+            "explanation": "10x19.7% + 11x80.3% = 10.803",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C05C004.webp",
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C25C004",
+            "text": "<1995 CE 26><br>Which of the following elements is a semi-metal?",
+            "options": [
+              "A. Hg",
+              "B. Si",
+              "C. C",
+              "D. Be"
+            ],
+            "correct": "B",
+            "explanation": "For first 20 elements, only B and Si are semi-metals.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
             "sf": 1
           }
         ]
@@ -5427,6 +5654,22 @@ window.ALL_UNITS = {
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
             "sf": 1
+          },
+          {
+            "id": "C27C009",
+            "text": "<1995 CE 34><br>Which of the following particles is/are present in a hydrogen ion?<br>(1) proton   (2) neutron   (3) electron",
+            "options": [
+              "A. (1) only",
+              "B. (2) only",
+              "C. (1) and (2) only",
+              "D. (2) and (3) only"
+            ],
+            "correct": "A",
+            "explanation": "Hydrogen atom has 1 proton and 1 electron only. (~99% H atom has no neutron)<br>After losing an electron to form a hydrogen ion, it only has one proton left.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
           }
         ]
       },
@@ -6472,6 +6715,22 @@ window.ALL_UNITS = {
             "difficulty": "🔥 Challenge",
             "difficulty_level": 3,
             "sf": 0
+          },
+          {
+            "id": "C28C004",
+            "text": "<1995 CE 2><br>The electronic structure of a compound formed between an element 𝑋 and chlorine is shown on the right. (Only electrons in the outermost shells are shown) What would be the formula of the compound formed between 𝑋 and magnesium?",
+            "options": [
+              "A. Mg𝑋",
+              "B. Mg𝑋₂",
+              "C. Mg₂𝑋₃",
+              "D. Mg₃𝑋₂"
+            ],
+            "correct": "D",
+            "explanation": "From the diagram, 𝑋 is a Group V element. Hence it will form an anion of -3 charge.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C08C004.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
           }
         ]
       },
@@ -8221,6 +8480,38 @@ window.ALL_UNITS = {
             "difficulty": "🔥 Challenge",
             "difficulty_level": 3,
             "sf": 1
+          },
+          {
+            "id": "C29C004",
+            "text": "<1995 CE 3><br>Which of the following correctly describes the structure of quartz?",
+            "options": [
+              "A. giant covalent structure",
+              "B. giant ionic structure",
+              "C. giant metallic structure",
+              "D. simple molecular structure"
+            ],
+            "correct": "A",
+            "explanation": "Quartz, diamond and graphite are examples of giant covalent structure.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C29C005",
+            "text": "<1995 CE 39><br>Which of the following substances can conduct electricity?<br>(1) molten zinc chloride\t\t<br>(2) an aqueous solution of magnesium sulphate<br>(3) a mixture of ethanol and water",
+            "options": [
+              "A. (1) and (2) only",
+              "B. (1) and (3) only",
+              "C. (2) and (3) only",
+              "D. (1), (2) and (3) "
+            ],
+            "correct": "A",
+            "explanation": "A substance can conduct electricity if it has mobile ion (like molten zinc chloride and aqueous ions) or delocalized electrons.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
           }
         ]
       }
@@ -9324,6 +9615,32 @@ window.ALL_UNITS = {
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
             "sf": 1
+          }
+        ]
+      }
+    }
+  },
+  "4": {
+    "name": "🧪 Acids and Bases（酸和鹽基）",
+    "chapters": {
+      "18": {
+        "name": "18. Salts and Neutralisation（鹽及中和反應）",
+        "questions": [
+          {
+            "id": "C418C001",
+            "text": "<1995 CE 24><br>Consider the following equation.<br>2 FeSO₄‧7H₂O(x)  Fe₂O₃(y) + SO₃(z) + SO₂(g) + 14H₂O(l)<br>\tWhich of the following combinations is correct?",
+            "options": [
+              "A. A",
+              "B. B",
+              "C. C",
+              "D. D"
+            ],
+            "correct": "D",
+            "explanation": "Hydrated salt must be solid.<br>Iron(III) oxide is an insoluble ionic compound so it is a solid.<br>Sulphur trixoide is a molecule hence it is a gas.",
+            "imageUrl": "https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/C18C001.webp",
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
           }
         ]
       }
