@@ -1806,3 +1806,17 @@ body {
         font-size: 0.65rem;
     }
 }
+
+/* ===== 強制隱藏彈窗（防止一直顯示） ===== */
+.modal-overlay {
+    display: none !important;
+}
+.modal-overlay.show {
+    display: flex !important;
+}
+
+/* ===== 禁止縮放 ===== */
+body {
+    overscroll-behavior: none;
+    touch-action: pan-y pinch-zoom;
+}
