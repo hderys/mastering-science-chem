@@ -5,77 +5,204 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background: #f5f0ff;
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-/* ========== 登入畫面 - 完美置中，不滾動 ========== */
+body {
+    background: linear-gradient(145deg, #f5f0ff 0%, #e8e0f5 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overscroll-behavior: none;
+    touch-action: pan-y pinch-zoom;
+}
+
+/* ============================================================
+   現代化登入頁面
+   ============================================================ */
 #loginScreen {
     max-width: 400px;
-    width: 90%;
-    background: white;
-    padding: 32px 28px;
-    border-radius: 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    width: 92%;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 40px 32px 32px 32px;
+    border-radius: 32px;
+    box-shadow: 0 20px 60px rgba(74, 29, 140, 0.15), 0 8px 24px rgba(74, 29, 140, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     max-height: 95vh;
     overflow-y: auto;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
 }
 #loginScreen h2 {
-    color: #4a1d8c;
-    font-size: 1.6rem;
+    color: #2e0f5a;
+    font-size: 1.8rem;
     margin-bottom: 4px;
     text-align: center;
+    font-weight: 800;
+    letter-spacing: -0.5px;
 }
 #loginScreen .subtitle {
     text-align: center;
     color: #888;
     font-size: 0.9rem;
-    margin-bottom: 20px;
-    line-height: 1.4;
+    margin-bottom: 28px;
+    line-height: 1.5;
 }
 #loginScreen .subtitle div:first-child {
+    color: #4a1d8c;
+    font-weight: 600;
+}
+
+#loginScreen .form-group-login {
+    margin-bottom: 16px;
+}
+#loginScreen .form-group-login label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.8rem;
     color: #2e0f5a;
+    margin-bottom: 4px;
+    letter-spacing: 0.3px;
+}
+#loginScreen .form-group-login input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #e8e0f5;
+    border-radius: 60px;
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.25s ease;
+    box-sizing: border-box;
+    background: white;
+    color: #1a1a2e;
+    box-shadow: 0 2px 8px rgba(74, 29, 140, 0.04);
+}
+#loginScreen .form-group-login input:focus {
+    border-color: #4a1d8c;
+    box-shadow: 0 0 0 4px rgba(74, 29, 140, 0.12), 0 2px 12px rgba(74, 29, 140, 0.06);
+}
+#loginScreen .form-group-login input::placeholder {
+    color: #b0a8c8;
+    font-weight: 400;
+}
+#loginScreen .form-group-login input:hover {
+    border-color: #b8a8d8;
+}
+#loginScreen .password-wrapper {
+    position: relative;
+}
+#loginScreen .toggle-password-btn {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #b0a8c8;
+    padding: 4px 6px;
+    transition: color 0.2s;
+}
+#loginScreen .toggle-password-btn:hover {
+    color: #4a1d8c;
+}
+.remember-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0 20px 0;
+}
+.remember-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #4a1d8c;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 2px solid #d0c8e0;
+}
+.remember-row label {
+    font-size: 0.85rem;
+    color: #4a1d8c;
+    cursor: pointer;
     font-weight: 500;
+}
+#loginBtn {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    background: linear-gradient(145deg, #4a1d8c, #3b1a6e);
+    color: white;
+    border: none;
+    border-radius: 60px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(74, 29, 140, 0.3);
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+#loginBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(74, 29, 140, 0.35);
+}
+#loginBtn:active {
+    transform: translateY(0px);
+    box-shadow: 0 4px 12px rgba(74, 29, 140, 0.2);
+}
+#loginBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+.login-footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #999;
+    line-height: 1.8;
+}
+.forgot-link {
+    background: none;
+    border: none;
+    color: #4a1d8c;
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+.forgot-link:hover {
+    color: #2e0f5a;
 }
 
 @media (max-width: 640px) {
     #loginScreen {
-        padding: 20px 16px;
-        width: 92%;
-        max-height: 92vh;
+        padding: 28px 20px 24px 20px;
+        width: 94%;
+        border-radius: 28px;
     }
     #loginScreen h2 {
-        font-size: 1.2rem;
+        font-size: 1.4rem;
     }
     #loginScreen .subtitle {
         font-size: 0.75rem;
-        margin-bottom: 12px;
+        margin-bottom: 20px;
     }
-    #loginScreen input {
+    #loginScreen .form-group-login input {
+        padding: 12px 16px;
         font-size: 15px;
-        padding: 10px 12px;
     }
-    #loginScreen .btn {
-        font-size: 15px;
-        padding: 10px;
-    }
-    #loginScreen .form-group-login label {
-        font-size: 0.75rem;
+    #loginBtn {
+        padding: 12px;
+        font-size: 1rem;
     }
 }
 
-body {
-    background: #f5f0ff;
-    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-    padding: 12px;
-    min-height: 100vh;
-}
-
-/* ========== 橫向提示 ========== */
+/* ============================================================
+   橫向提示
+   ============================================================ */
 .orientation-warning {
     display: none;
     position: fixed;
@@ -109,7 +236,9 @@ body {
     cursor: pointer;
 }
 
-/* ========== 基礎樣式 ========== */
+/* ============================================================
+   基礎樣式
+   ============================================================ */
 :root { --deep-purple: #4a1d8c; --deep-purple-light: #7c3aed; --red: #dc2626; --success-bg: #d4edda; --locked-bg: #f5f5f5; }
 .card {
     background: white;
@@ -134,7 +263,23 @@ body {
 .btn-icon { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 4px 6px; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ========== 設定彈窗 ========== */
+/* ============================================================
+   彈窗（Modal）
+   ============================================================ */
+.modal-overlay {
+    display: none !important;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    padding: 20px;
+}
+.modal-overlay.show {
+    display: flex !important;
+}
 .modal {
     display: none;
     position: fixed;
@@ -156,6 +301,120 @@ body {
     flex-direction: column;
     overflow: hidden;
 }
+.modal-box {
+    background: white;
+    border-radius: 24px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 24px 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    position: relative;
+}
+.modal-box .close-btn {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+.modal-box .close-btn:hover { color: #333; }
+.modal-box h2 {
+    color: #2e0f5a;
+    margin-bottom: 4px;
+    font-size: 20px;
+}
+.modal-box .sub {
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+.modal-box .form-group {
+    margin-bottom: 12px;
+}
+.modal-box .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #2e0f5a;
+    margin-bottom: 3px;
+}
+.modal-box .form-group input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 2px solid #e0d6f5;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+}
+.modal-box .form-group input:focus {
+    border-color: #4a1d8c;
+}
+.modal-box .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 40px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    margin-top: 4px;
+}
+.modal-box .btn-primary { background: #4a1d8c; color: white; }
+.modal-box .btn-primary:hover { background: #3b1a6e; }
+.modal-box .btn-success { background: #10b981; color: white; }
+.modal-box .btn-success:hover { background: #059669; }
+.modal-box .btn-danger { background: #dc2626; color: white; }
+.modal-box .btn-danger:hover { background: #b91c1c; }
+.modal-box .btn-outline { background: white; color: #4a1d8c; border: 2px solid #4a1d8c; }
+.modal-box .btn-outline:hover { background: #f5f0ff; }
+.modal-box .inline-flex { display: flex; gap: 8px; }
+.modal-box .inline-flex .btn { flex: 1; }
+.modal-box .mt-8 { margin-top: 8px; }
+.modal-box .mt-12 { margin-top: 12px; }
+.modal-box .text-center { text-align: center; }
+.modal-box .text-sm { font-size: 13px; }
+.modal-box .text-danger { color: #dc2626; }
+.modal-box .text-success { color: #10b981; }
+.modal-box .divider {
+    height: 1px;
+    background: #e0d6f5;
+    margin: 12px 0;
+}
+.modal-box .alert {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+.modal-box .alert-success { background: #d4edda; color: #065f46; }
+.modal-box .alert-danger { background: #f8d7da; color: #7f1d1d; }
+.modal-box .alert-warning { background: #fef3c7; color: #7c5a00; }
+
+.modal-box .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+    margin-bottom: 16px;
+}
+.modal-box .info-grid .label { color: #888; font-size: 13px; }
+.modal-box .info-grid .value { font-weight: 600; font-size: 14px; }
+.modal-box .section-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #2e0f5a;
+    margin: 12px 0 8px 0;
+}
+
+/* ============================================================
+   設定彈窗
+   ============================================================ */
 .settings-two-columns {
     display: flex;
     gap: 1rem;
@@ -186,10 +445,7 @@ body {
     gap: 0.5rem;
     margin-bottom: 0.2rem;
 }
-.btn-row .setting-btn {
-    flex: 1;
-    text-align: center;
-}
+.btn-row .setting-btn { flex: 1; text-align: center; }
 .setting-btn {
     background: white;
     border: 2px solid #e0d6f5;
@@ -274,7 +530,55 @@ body {
     width: 100%;
 }
 
-/* ========== 主介面 ========== */
+.count-buttons-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.count-buttons-row .setting-btn { width: 100%; text-align: center; }
+.count-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 16px;
+}
+.count-row .setting-btn { width: 100%; text-align: center; }
+.custom-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f5f0ff;
+    padding: 4px 12px;
+    border-radius: 40px;
+    border: 1px solid #e0d6f5;
+    white-space: nowrap;
+}
+.custom-input-wrapper span {
+    font-size: 0.75rem;
+    color: #4a1d8c;
+    font-weight: 500;
+}
+.custom-input-wrapper input {
+    width: 60px;
+    padding: 6px 4px;
+    border: none;
+    background: white;
+    border-radius: 40px;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #4a1d8c;
+}
+.custom-input-wrapper input:focus { outline: 2px solid #7c3aed; }
+.custom-input-wrapper input:disabled {
+    background: #f0f0f0;
+    color: #999;
+}
+
+/* ============================================================
+   主介面 - 練習、錯題、成就
+   ============================================================ */
 .unit-group { margin-bottom: 0.5rem; }
 .unit-header {
     background: #f9f7ff;
@@ -307,7 +611,6 @@ body {
 .chapter-name { font-size: clamp(0.65rem, 3.5vw, 0.8rem); font-weight: 500; flex: 2; min-width: 100px; }
 .chapter-actions { display: flex; gap: 0.3rem; align-items: center; }
 
-/* 進度條 */
 .mastery-wrapper {
     display: flex;
     align-items: center;
@@ -442,28 +745,12 @@ body {
     border-radius: 20px;
     margin-bottom: 16px;
 }
-.points-box {
-    text-align: center;
-}
-.points-number {
-    font-size: 1.8rem;
-    font-weight: bold;
-}
-.points-label {
-    font-size: 0.7rem;
-    opacity: 0.8;
-}
-.rank-box {
-    text-align: center;
-}
-.rank-number {
-    font-size: 1.4rem;
-    font-weight: bold;
-}
-.rank-label {
-    font-size: 0.7rem;
-    opacity: 0.8;
-}
+.points-box { text-align: center; }
+.points-number { font-size: 1.8rem; font-weight: bold; }
+.points-label { font-size: 0.7rem; opacity: 0.8; }
+.rank-box { text-align: center; }
+.rank-number { font-size: 1.4rem; font-weight: bold; }
+.rank-label { font-size: 0.7rem; opacity: 0.8; }
 
 .unlock-cards-container {
     position: fixed;
@@ -518,79 +805,255 @@ body {
     100% { opacity: 0; visibility: hidden; }
 }
 
-/* ========== 題目數量區域 - 兩行等寬佈局 ========== */
-.count-buttons-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 12px;
+/* ============================================================
+   老師後台專屬樣式
+   ============================================================ */
+.stats-row {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
 }
-
-.count-buttons-row .setting-btn {
-    width: 100%;
+.stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
     text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.stat-card .number {
+    font-size: 28px;
+    font-weight: 800;
+    color: #4a1d8c;
+}
+.stat-card .label {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
 }
 
-.count-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 16px;
-}
-
-.count-row .setting-btn {
-    width: 100%;
-    text-align: center;
-}
-
-.custom-input-wrapper {
+.sub-tabs {
     display: flex;
-    align-items: center;
     gap: 6px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.sub-tab-btn {
+    padding: 6px 16px;
+    border: 2px solid #e0d6f5;
+    border-radius: 30px;
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    color: #4a1d8c;
+    transition: all 0.2s;
+}
+.sub-tab-btn.active {
+    background: #4a1d8c;
+    color: white;
+    border-color: #4a1d8c;
+}
+.sub-tab-btn:hover:not(.active) {
     background: #f5f0ff;
-    padding: 4px 12px;
-    border-radius: 40px;
-    border: 1px solid #e0d6f5;
+}
+.sub-tab-content {
+    display: none;
+}
+.sub-tab-content.active {
+    display: block;
+}
+
+.class-selector {
+    padding: 6px 14px;
+    border-radius: 30px;
+    border: 2px solid #4a1d8c;
+    background: white;
+    font-size: 14px;
+    font-weight: 600;
+    color: #4a1d8c;
+    outline: none;
+    cursor: pointer;
+}
+.class-selector:focus {
+    border-color: #7c3aed;
+}
+
+.progress-mini {
+    width: 80px;
+    height: 6px;
+    background: #e0d6f5;
+    border-radius: 10px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+}
+.progress-mini .fill {
+    height: 100%;
+    border-radius: 10px;
+    background: #10b981;
+}
+
+.clickable {
+    cursor: pointer;
+    color: #4a1d8c;
+    font-weight: 500;
+}
+.clickable:hover {
+    text-decoration: underline;
+}
+
+.tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.tag-green { background: #d4edda; color: #065f46; }
+.tag-yellow { background: #fef3c7; color: #7c5a00; }
+.tag-red { background: #f8d7da; color: #7f1d1d; }
+.tag-purple { background: #ede9fe; color: #4c1d95; }
+
+.wrong-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0edf8;
+    gap: 12px;
+}
+.wrong-item:last-child {
+    border-bottom: none;
+}
+.wrong-item .q-text {
+    flex: 1;
+    font-size: 13px;
+    color: #1a1a2e;
+}
+.wrong-item .q-stats {
+    font-size: 13px;
+    color: #666;
     white-space: nowrap;
 }
 
-.custom-input-wrapper span {
-    font-size: 0.75rem;
-    color: #4a1d8c;
-    font-weight: 500;
+.rank-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0edf8;
 }
-
-.custom-input-wrapper input {
-    width: 60px;
-    padding: 6px 4px;
-    border: none;
-    background: white;
-    border-radius: 40px;
+.rank-item:last-child {
+    border-bottom: none;
+}
+.rank-num {
+    font-weight: 800;
+    font-size: 16px;
+    color: #4a1d8c;
+    width: 32px;
     text-align: center;
-    font-size: 0.8rem;
+}
+.rank-num.gold { color: #f59e0b; }
+.rank-num.silver { color: #94a3b8; }
+.rank-num.bronze { color: #d97706; }
+
+.chapter-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+}
+.chapter-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 2px solid #e0d6f5;
+    transition: all 0.2s;
+    background: #f5f5f5;
+    opacity: 0.6;
+}
+.chapter-item.open {
+    border-color: #10b981;
+    background: #f0fdf4;
+    opacity: 1;
+}
+.chapter-item.closed {
+    border-color: #e0d6f5;
+    background: #f5f5f5;
+    opacity: 0.6;
+}
+.chapter-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #4a1d8c;
+}
+.chapter-item .ch-name {
+    font-size: 13px;
     font-weight: 500;
+    flex: 1;
+}
+.chapter-item .ch-status {
+    font-size: 11px;
+    font-weight: 600;
+}
+.chapter-item .ch-status.open { color: #10b981; }
+.chapter-item .ch-status.closed { color: #999; }
+
+/* ============================================================
+   解鎖三星進度條
+   ============================================================ */
+.star3-progress-container {
+    margin-top: 12px;
+    padding: 10px;
+    background: #f0edf8;
+    border-radius: 16px;
+}
+.star3-progress-bar {
+    width: 100%;
+    height: 12px;
+    background: #e0e0e0;
+    border-radius: 20px;
+    overflow: hidden;
+}
+.star3-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    width: 0%;
+    border-radius: 20px;
+    transition: width 0.3s ease;
+}
+.star3-progress-fill.unlocked {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+.star3-progress-text {
+    font-size: 0.7rem;
     color: #4a1d8c;
+    margin-top: 8px;
+    text-align: center;
+    font-weight: 500;
+}
+.star3-progress-text.unlocked {
+    color: #059669;
 }
 
-.custom-input-wrapper input:focus {
-    outline: 2px solid #7c3aed;
-}
-
-.custom-input-wrapper input:disabled {
-    background: #f0f0f0;
-    color: #999;
+@media (max-width: 640px) {
+    .star3-progress-container { margin-top: 10px; padding: 8px; }
+    .star3-progress-bar { height: 10px; }
+    .star3-progress-text { font-size: 0.65rem; }
 }
 
 /* ============================================================
-   手機版（完全獨立，不受桌面版影響）
+   手機版
    ============================================================ */
 @media (max-width: 640px) {
-    body { 
-        padding: 6px; 
-        overflow-x: hidden; 
+    body {
+        padding: 6px;
+        overflow-x: hidden;
         touch-action: pan-y pinch-zoom;
     }
-    
     .nav-tabs {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
@@ -615,32 +1078,17 @@ body {
         color: white;
         border-color: var(--deep-purple);
     }
-    
     .unit-header {
         padding: 0.25rem 0.4rem;
         font-size: clamp(0.7rem, 3.5vw, 0.8rem);
         flex-wrap: wrap;
         gap: 4px;
     }
-    .unit-header-left span {
-        font-size: 0.7rem;
-    }
-    .unit-header .mastery-wrapper .progress-bar-container {
-        width: 70px;
-        height: 8px;
-    }
-    .unit-header .mastery-wrapper .mastery-text {
-        font-size: 0.55rem;
-        min-width: 30px;
-    }
-    .unit-header .unit-test-btn {
-        font-size: 0.55rem;
-        padding: 0.1rem 0.4rem;
-    }
-    .unit-toggle {
-        font-size: 0.7rem;
-    }
-    
+    .unit-header-left span { font-size: 0.7rem; }
+    .unit-header .mastery-wrapper .progress-bar-container { width: 70px; height: 8px; }
+    .unit-header .mastery-wrapper .mastery-text { font-size: 0.55rem; min-width: 30px; }
+    .unit-header .unit-test-btn { font-size: 0.55rem; padding: 0.1rem 0.4rem; }
+    .unit-toggle { font-size: 0.7rem; }
     .chapter-item {
         padding: 0.2rem 0.4rem;
         margin-bottom: 0.1rem;
@@ -688,33 +1136,21 @@ body {
         font-size: 0.5rem;
         min-height: 22px;
     }
-    
-    .modal-content { 
-        width: 96%; 
-        padding: 0.4rem; 
+    .modal-content {
+        width: 96%;
+        padding: 0.4rem;
         max-height: 95vh;
         border-radius: 20px;
     }
-    .settings-two-columns { 
-        flex-direction: column; 
-        gap: 0.3rem; 
+    .settings-two-columns {
+        flex-direction: column;
+        gap: 0.3rem;
         margin: 0.2rem 0 0.3rem 0;
     }
-    .settings-left, .settings-right {
-        gap: 0.3rem;
-    }
-    .setting-group {
-        padding: 0.3rem;
-        border-radius: 12px;
-    }
-    .setting-title {
-        font-size: clamp(0.6rem, 2.5vw, 0.7rem);
-        margin-bottom: 0.15rem;
-    }
-    .btn-row {
-        gap: 0.3rem;
-        margin-bottom: 0.1rem;
-    }
+    .settings-left, .settings-right { gap: 0.3rem; }
+    .setting-group { padding: 0.3rem; border-radius: 12px; }
+    .setting-title { font-size: clamp(0.6rem, 2.5vw, 0.7rem); margin-bottom: 0.15rem; }
+    .btn-row { gap: 0.3rem; margin-bottom: 0.1rem; }
     .setting-btn {
         padding: 0.15rem 0.1rem;
         font-size: clamp(0.75rem, 3vw, 0.9rem) !important;
@@ -725,12 +1161,8 @@ body {
         justify-content: center;
         line-height: 1;
     }
-    .setting-btn .stars {
-        font-size: clamp(0.8rem, 3.5vw, 1rem) !important;
-    }
-    .setting-btn .label {
-        font-size: clamp(0.65rem, 2.5vw, 0.75rem) !important;
-    }
+    .setting-btn .stars { font-size: clamp(0.8rem, 3.5vw, 1rem) !important; }
+    .setting-btn .label { font-size: clamp(0.65rem, 2.5vw, 0.75rem) !important; }
     .special-btn {
         padding: 0.15rem;
         font-size: clamp(0.75rem, 3vw, 0.9rem) !important;
@@ -740,11 +1172,7 @@ body {
         justify-content: center;
         line-height: 1;
     }
-    .setting-hint {
-        font-size: clamp(0.65rem, 2.5vw, 0.75rem) !important;
-        margin-top: 0.1rem;
-    }
-    
+    .setting-hint { font-size: clamp(0.65rem, 2.5vw, 0.75rem) !important; margin-top: 0.1rem; }
     .settings-right > div:last-child {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
@@ -780,11 +1208,7 @@ body {
         color: #666;
         border: 1px solid #ddd;
     }
-    
-    .count-buttons-row {
-        gap: 6px;
-        margin-bottom: 6px;
-    }
+    .count-buttons-row { gap: 6px; margin-bottom: 6px; }
     .count-buttons-row .setting-btn {
         min-height: 32px;
         display: flex;
@@ -819,15 +1243,12 @@ body {
         width: 100%;
         min-height: 32px;
     }
-    .custom-input-wrapper span {
-        font-size: clamp(0.7rem, 2.5vw, 0.8rem) !important;
-    }
+    .custom-input-wrapper span { font-size: clamp(0.7rem, 2.5vw, 0.8rem) !important; }
     .custom-input-wrapper input {
         width: 40px;
         padding: 3px 2px;
         font-size: clamp(0.7rem, 2.5vw, 0.8rem) !important;
     }
-    
     .mastery-wrapper { min-width: 80px; }
     .progress-bar-container { width: 60px; height: 8px; }
     .unlock-card { min-width: 180px; padding: 8px 12px; font-size: 0.7rem; }
@@ -844,10 +1265,8 @@ body {
     .result-card-icon { font-size: 1.1rem; }
     .result-card-details span { font-size: 0.6rem; padding: 3px 8px; }
     .result-card-actions button { font-size: 0.7rem; padding: 4px 12px; }
-    
-    /* ============================================================
-       手機版問題頁面（100分，完全獨立，鎖死）
-       ============================================================ */
+
+    /* 手機版問題頁面 */
     #quizModal .modal-content {
         min-height: 60vh;
         max-height: 95vh;
@@ -857,23 +1276,15 @@ body {
         overflow: hidden;
         border-radius: 16px;
     }
-    
     .quiz-header {
         margin-bottom: 0.15rem;
         gap: 0.15rem;
         flex-shrink: 0;
         min-height: 28px;
     }
-    .quiz-header #quizDifficulty {
-        font-size: 0.7rem;
-    }
-    .quiz-header #quizCounter {
-        font-size: 0.7rem;
-    }
-    .quiz-header .quiz-timer {
-        font-size: 0.75rem;
-    }
-    
+    .quiz-header #quizDifficulty { font-size: 0.7rem; }
+    .quiz-header #quizCounter { font-size: 0.7rem; }
+    .quiz-header .quiz-timer { font-size: 0.75rem; }
     .question-nav {
         gap: 2px !important;
         margin-bottom: 0.1rem !important;
@@ -903,7 +1314,6 @@ body {
     .q-nav-btn.answered { background: #10b981; color: white; }
     .q-nav-btn.unanswered { background: #fbbf24; }
     .q-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    
     .quiz-body {
         flex: 1;
         display: flex;
@@ -913,7 +1323,6 @@ body {
         min-height: 0;
         overflow: hidden;
     }
-    
     .question-text {
         font-size: clamp(1.1rem, 4vw, 1.25rem) !important;
         margin-bottom: 0.1rem;
@@ -924,13 +1333,10 @@ body {
         word-break: break-word;
         font-weight: 500;
     }
-    
     .quiz-layout-mobile.no-image .question-text {
         font-size: clamp(1.3rem, 5vw, 1.5rem) !important;
         max-height: 35vh;
     }
-    
-    /* 手機版圖片區（完全獨立） */
     .image-area-mobile {
         max-width: 100%;
         margin: 0.1rem auto !important;
@@ -968,11 +1374,7 @@ body {
         pointer-events: none;
         line-height: 1;
     }
-    .image-area-mobile:not(:has(img)) {
-        display: none !important;
-    }
-    
-    /* 手機版選項區 */
+    .image-area-mobile:not(:has(img)) { display: none !important; }
     .options-area-mobile {
         flex: 1 1 auto;
         width: 100%;
@@ -982,7 +1384,6 @@ body {
         justify-content: flex-start;
         padding-top: 0.1rem;
     }
-    
     .quiz-layout-mobile:not(.no-image) .options-area-mobile .options-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -990,7 +1391,6 @@ body {
         flex: 1;
         align-content: flex-start;
     }
-    
     .quiz-layout-mobile.no-image .options-area-mobile .options-grid {
         display: flex;
         flex-direction: column;
@@ -998,7 +1398,6 @@ body {
         flex: 1;
         justify-content: flex-start;
     }
-    
     .options-area-mobile .option-btn {
         padding: 0.4rem 0.5rem;
         font-size: clamp(0.95rem, 3.5vw, 1.1rem) !important;
@@ -1015,14 +1414,11 @@ body {
         margin-right: 0.2rem;
         flex-shrink: 0;
     }
-    
     .quiz-layout-mobile.no-image .options-area-mobile .option-btn {
         padding: 0.4rem 0.7rem;
         min-height: 48px;
         font-size: clamp(1rem, 3.8vw, 1.15rem) !important;
     }
-    
-    /* 手機版底部按鈕 */
     .quiz-footer-mobile {
         flex-shrink: 0;
         padding: 0.1rem 0 0.05rem 0;
@@ -1065,8 +1461,6 @@ body {
         flex: 1.2;
         background: #10b981;
     }
-    
-    /* 手機版佈局容器 */
     .quiz-layout-mobile {
         flex-direction: column;
         align-items: stretch;
@@ -1084,52 +1478,27 @@ body {
         flex: 1 1 auto;
         width: 100%;
     }
-    .quiz-layout-mobile.no-image .image-area-mobile {
-        display: none !important;
-    }
+    .quiz-layout-mobile.no-image .image-area-mobile { display: none !important; }
 }
 
 /* ============================================================
-   桌面版（全新獨立彈窗 #desktopQuizModal）
-   完全照 Demo 設計，高度固定 620px
-   僅在 min-width: 641px 生效
+   桌面版
    ============================================================ */
 @media (min-width: 641px) {
     #practicePanel, #myMistakesPanel, #pastMistakesPanel, #pinnedPanel, #historyPanel, #achievementsPanel {
         max-height: calc(100vh - 80px);
         overflow-y: auto;
     }
-    
-    .modal-content { 
-        padding: 0.7rem; 
-        max-height: 85vh;
-    }
-    .settings-two-columns { 
-        gap: 0.6rem; 
-        margin: 0.3rem 0 0.5rem 0;
-    }
-    .settings-left, .settings-right {
-        gap: 0.4rem;
-    }
-    .setting-group {
-        padding: 0.4rem;
-    }
-    .setting-title {
-        margin-bottom: 0.2rem;
-    }
-    .btn-row {
-        gap: 0.4rem;
-        margin-bottom: 0.1rem;
-    }
-    .setting-btn {
-        padding: 0.2rem 0.15rem;
-    }
-    .dev-btn-full, .action-btn-full, .cancel-btn-full {
-        padding: 0.2rem 0.4rem;
-        margin-bottom: 0.15rem;
-    }
+    .modal-content { padding: 0.7rem; max-height: 85vh; }
+    .settings-two-columns { gap: 0.6rem; margin: 0.3rem 0 0.5rem 0; }
+    .settings-left, .settings-right { gap: 0.4rem; }
+    .setting-group { padding: 0.4rem; }
+    .setting-title { margin-bottom: 0.2rem; }
+    .btn-row { gap: 0.4rem; margin-bottom: 0.1rem; }
+    .setting-btn { padding: 0.2rem 0.15rem; }
+    .dev-btn-full, .action-btn-full, .cancel-btn-full { padding: 0.2rem 0.4rem; margin-bottom: 0.15rem; }
 
-    /* ===== 桌面版獨立彈窗（完全照 Demo） ===== */
+    /* 桌面版問題彈窗 */
     #desktopQuizModal .modal-content {
         width: 1000px;
         max-width: 98%;
@@ -1143,8 +1512,6 @@ body {
         flex-direction: row;
         box-shadow: 0 20px 60px rgba(74, 29, 140, 0.15);
     }
-
-    /* ===== 左側主面板（白色） ===== */
     #desktopQuizModal .main-panel {
         flex: 1;
         padding: 24px 28px 20px 28px;
@@ -1153,14 +1520,12 @@ body {
         min-width: 0;
         background: #ffffff;
     }
-
     #desktopQuizModal .question-area {
         flex: 1;
         display: flex;
         flex-direction: column;
         min-height: 0;
     }
-
     #desktopQuizModal .question-text {
         font-size: 18px;
         font-weight: 600;
@@ -1170,8 +1535,6 @@ body {
         flex-shrink: 0;
         word-break: break-word;
     }
-
-    /* 桌面版圖片區 */
     #desktopQuizModal .image-area {
         text-align: center;
         margin-bottom: 10px;
@@ -1191,11 +1554,7 @@ body {
         transform: scale(1.02);
         box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     }
-    #desktopQuizModal .image-area:not(:has(img)) {
-        display: none !important;
-    }
-
-    /* 桌面版選項 2x2 網格 */
+    #desktopQuizModal .image-area:not(:has(img)) { display: none !important; }
     #desktopQuizModal .options-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1204,7 +1563,6 @@ body {
         align-content: center;
         min-height: 0;
     }
-
     #desktopQuizModal .option-btn {
         background: #faf8ff;
         border: 2px solid #e0d6f5;
@@ -1245,16 +1603,12 @@ body {
         content: "●";
         color: white;
     }
-
-    /* 無圖片時，選項區佔更多空間 */
     #desktopQuizModal .main-panel.no-image .options-grid {
         align-content: center;
     }
     #desktopQuizModal .main-panel.no-image .question-text {
         font-size: 20px;
     }
-
-    /* ===== 右側邊欄（深紫色） ===== */
     #desktopQuizModal .sidebar {
         width: 210px;
         min-width: 170px;
@@ -1266,14 +1620,10 @@ body {
         flex-shrink: 0;
         transition: background 0.4s ease;
     }
-
-    /* 邊欄顏色 - 按難度變化 */
     #desktopQuizModal .sidebar.difficulty-translate { background: linear-gradient(145deg, #065f46, #047857); }
     #desktopQuizModal .sidebar.difficulty-basic { background: linear-gradient(145deg, #1e40af, #1d4ed8); }
     #desktopQuizModal .sidebar.difficulty-advanced { background: linear-gradient(145deg, #4c1d95, #6d28d9); }
     #desktopQuizModal .sidebar.difficulty-challenge { background: linear-gradient(145deg, #78350f, #b45309); }
-
-    /* 邊欄第一行：難度 + 計時器 */
     #desktopQuizModal .sidebar-row-1 {
         display: flex;
         justify-content: space-between;
@@ -1292,8 +1642,6 @@ body {
         font-weight: 600;
         color: #fca5a5;
     }
-
-    /* 邊欄第二行：周期表 + 題號 */
     #desktopQuizModal .sidebar-row-2 {
         display: flex;
         justify-content: space-between;
@@ -1316,16 +1664,12 @@ body {
     #desktopQuizModal .sidebar-row-2 .table-btn:hover {
         background: rgba(255,255,255,0.25);
     }
-    #desktopQuizModal .sidebar-row-2 .table-btn.hidden {
-        display: none;
-    }
+    #desktopQuizModal .sidebar-row-2 .table-btn.hidden { display: none; }
     #desktopQuizModal .sidebar-row-2 .counter {
         font-size: 15px;
         font-weight: 700;
         color: #ffffff;
     }
-
-    /* 題號導航網格 */
     #desktopQuizModal .nav-grid {
         display: flex;
         flex-wrap: wrap;
@@ -1338,18 +1682,9 @@ body {
         border-bottom: 1px solid rgba(255,255,255,0.12);
         margin-bottom: 8px;
     }
-    #desktopQuizModal .nav-grid::-webkit-scrollbar {
-        width: 2px;
-    }
-    #desktopQuizModal .nav-grid::-webkit-scrollbar-track {
-        background: rgba(255,255,255,0.05);
-        border-radius: 10px;
-    }
-    #desktopQuizModal .nav-grid::-webkit-scrollbar-thumb {
-        background: rgba(255,255,255,0.2);
-        border-radius: 10px;
-    }
-
+    #desktopQuizModal .nav-grid::-webkit-scrollbar { width: 2px; }
+    #desktopQuizModal .nav-grid::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+    #desktopQuizModal .nav-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
     #desktopQuizModal .nav-dot {
         border-radius: 50%;
         background: rgba(255,255,255,0.15);
@@ -1366,34 +1701,16 @@ body {
         height: 24px;
         font-size: 9px;
     }
-    #desktopQuizModal .nav-dot.small {
-        width: 20px;
-        height: 20px;
-        font-size: 8px;
-    }
-    #desktopQuizModal .nav-dot.tiny {
-        width: 17px;
-        height: 17px;
-        font-size: 7px;
-    }
+    #desktopQuizModal .nav-dot.small { width: 20px; height: 20px; font-size: 8px; }
+    #desktopQuizModal .nav-dot.tiny { width: 17px; height: 17px; font-size: 7px; }
     #desktopQuizModal .nav-dot.current {
         background: #8b5cf6;
         color: white;
         box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
     }
-    #desktopQuizModal .nav-dot.answered {
-        background: #34d399;
-        color: white;
-    }
-    #desktopQuizModal .nav-dot.unanswered {
-        background: #fbbf24;
-        color: #7c5a00;
-    }
-    #desktopQuizModal .nav-dot:hover {
-        transform: scale(1.1);
-    }
-
-    /* 三個按鈕（◀ / ▶ / 提交） */
+    #desktopQuizModal .nav-dot.answered { background: #34d399; color: white; }
+    #desktopQuizModal .nav-dot.unanswered { background: #fbbf24; color: #7c5a00; }
+    #desktopQuizModal .nav-dot:hover { transform: scale(1.1); }
     #desktopQuizModal .sidebar-actions {
         display: flex;
         gap: 4px;
@@ -1451,7 +1768,7 @@ body {
 }
 
 /* ============================================================
-   共用（桌面版 + 手機版）— 只保留真正共用的
+   共用
    ============================================================ */
 #quizModal .modal-content {
     transition: background-color 0.4s ease;
@@ -1487,8 +1804,6 @@ body {
     font-weight: 500;
     word-break: break-word;
 }
-
-/* ===== 選項按鈕（共用的基本樣式） ===== */
 .option-btn {
     display: block;
     width: 100%;
@@ -1529,10 +1844,7 @@ body {
     content: "●";
     color: #ffffff;
 }
-
-.options-grid {
-    gap: 10px;
-}
+.options-grid { gap: 10px; }
 
 .image-area {
     position: relative;
@@ -1564,9 +1876,7 @@ body {
     pointer-events: none;
     transition: opacity 0.2s;
 }
-.image-area:hover::after {
-    opacity: 1;
-}
+.image-area:hover::after { opacity: 1; }
 
 .quiz-footer {
     display: flex;
@@ -1577,7 +1887,6 @@ body {
 }
 
 .result-container { overflow-y: auto; max-height: 60vh; }
-
 .result-summary-bar {
     display: flex;
     flex-wrap: wrap;
@@ -1615,22 +1924,22 @@ body {
     border-radius: 30px;
     transition: width 0.3s ease;
 }
-.result-buttons {
-    display: flex;
-    gap: 10px;
+.result-buttons { display: flex; gap: 10px; }
+.result-buttons .btn { padding: 6px 14px; font-size: 0.8rem; }
+.result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: clamp(0.6rem, 3vw, 0.7rem);
 }
-.result-buttons .btn {
-    padding: 6px 14px;
-    font-size: 0.8rem;
+.result-table th, .result-table td {
+    border: 1px solid #ddd;
+    padding: 4px;
+    text-align: center;
 }
-.result-table { width: 100%; border-collapse: collapse; font-size: clamp(0.6rem, 3vw, 0.7rem); }
-.result-table th, .result-table td { border: 1px solid #ddd; padding: 4px; text-align: center; }
 .result-row-correct { background-color: #d4edda; }
 .result-row-wrong { background-color: #f8d7da; }
 
-#resultModal .modal-content {
-    text-align: center;
-}
+#resultModal .modal-content { text-align: center; }
 #resultModal .modal-content h3 {
     text-align: center;
     width: 100%;
@@ -1672,9 +1981,7 @@ body {
     50% { background: #f59e0b; transform: scale(1.05); }
     100% { background: #10b981; transform: scale(1); }
 }
-#submitAllBtn {
-    transition: all 0.2s;
-}
+#submitAllBtn { transition: all 0.2s; }
 
 .results-card-list {
     display: flex;
@@ -1757,66 +2064,4 @@ body {
 .result-card-actions button:hover {
     background: #e9e4f5;
     transform: scale(1.02);
-}
-
-/* ========== 解鎖三星進度條 ========== */
-.star3-progress-container {
-    margin-top: 12px;
-    padding: 10px;
-    background: #f0edf8;
-    border-radius: 16px;
-}
-.star3-progress-bar {
-    width: 100%;
-    height: 12px;
-    background: #e0e0e0;
-    border-radius: 20px;
-    overflow: hidden;
-}
-.star3-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #10b981, #34d399);
-    width: 0%;
-    border-radius: 20px;
-    transition: width 0.3s ease;
-}
-.star3-progress-fill.unlocked {
-    background: linear-gradient(90deg, #10b981, #059669);
-}
-.star3-progress-text {
-    font-size: 0.7rem;
-    color: #4a1d8c;
-    margin-top: 8px;
-    text-align: center;
-    font-weight: 500;
-}
-.star3-progress-text.unlocked {
-    color: #059669;
-}
-
-@media (max-width: 640px) {
-    .star3-progress-container {
-        margin-top: 10px;
-        padding: 8px;
-    }
-    .star3-progress-bar {
-        height: 10px;
-    }
-    .star3-progress-text {
-        font-size: 0.65rem;
-    }
-}
-
-/* ===== 強制隱藏彈窗（防止一直顯示） ===== */
-.modal-overlay {
-    display: none !important;
-}
-.modal-overlay.show {
-    display: flex !important;
-}
-
-/* ===== 禁止縮放 ===== */
-body {
-    overscroll-behavior: none;
-    touch-action: pan-y pinch-zoom;
 }
