@@ -527,19 +527,22 @@ function findUser(userId) {
     return db.users.find(u => u.userId === userId);
 }
 
-function updateUser(userId, data) {
+async function updateUser(userId, data) {
     const db = getUsers();
     const index = db.users.findIndex(u => u.userId === userId);
     if (index !== -1) {
         db.users[index] = { ...db.users[index], ...data };
         saveUsers(db);
         if (firestoreEnabled) {
-            firebase.firestore()
-                .collection('users')
-                .doc(userId)
-                .set(db.users[index], { merge: true })
-                .then(() => console.log('✅ 用戶資料已同步到 Firebase:', userId))
-                .catch(e => console.warn('⚠️ Firebase 更新失敗:', e.message));
+            try {
+                await firebase.firestore()
+                    .collection('users')
+                    .doc(userId)
+                    .set(db.users[index], { merge: true });
+                console.log('✅ 用戶資料已同步到 Firebase:', userId);
+            } catch (e) {
+                console.warn('⚠️ Firebase 更新失敗:', e.message);
+            }
         }
         return db.users[index];
     }
