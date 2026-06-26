@@ -64,8 +64,22 @@ body {
 .btn-small { padding: 0.2rem 0.6rem; font-size: clamp(0.55rem, 3vw, 0.7rem); }
 .btn-icon { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 4px 6px; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--deep-purple);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.btn-link:hover {
+    color: var(--deep-purple-light);
+}
 
-/* ========== 用戶下拉選單（#2） ========== */
+/* ========== 用戶下拉選單 ========== */
 .user-menu-wrapper {
     position: relative;
     display: inline-block;
@@ -110,17 +124,6 @@ body {
     animation: slideDown 0.2s ease;
 }
 
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 .user-menu-item {
     padding: 10px 18px;
     font-size: 0.85rem;
@@ -150,7 +153,7 @@ body {
     margin: 4px 12px;
 }
 
-/* ========== 右下角 Firebase 狀態指示燈（#5） ========== */
+/* ========== 右下角 Firebase 狀態指示燈 ========== */
 .status-indicator {
     position: fixed;
     bottom: 20px;
@@ -390,8 +393,10 @@ body {
 
 /* ========== 主介面 ========== */
 .unit-group { margin-bottom: 0.5rem; }
+
+/* #7: 單元列底色加深 */
 .unit-header {
-    background: #f9f7ff;
+    background: #ede9fe;
     border-radius: 20px;
     padding: 0.5rem 0.7rem;
     cursor: pointer;
@@ -401,13 +406,19 @@ body {
     font-weight: bold;
     font-size: clamp(0.85rem, 4vw, 1rem);
     color: #2e0f5a;
+    transition: background 0.2s;
+}
+.unit-header:hover {
+    background: #e2daf5;
 }
 .unit-header-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .unit-toggle { font-size: 0.9rem; }
 .chapters-container { margin-left: 1rem; margin-top: 0.3rem; display: none; }
 .chapters-container.open { display: block; }
+
+/* 章節列保持白色 */
 .chapter-item {
-    background: #fefcff;
+    background: #ffffff;
     border-radius: 12px;
     padding: 0.35rem 0.6rem;
     margin-bottom: 0.25rem;
@@ -632,7 +643,7 @@ body {
     100% { opacity: 0; visibility: hidden; }
 }
 
-/* ========== 題目數量區域 - 兩行等寬佈局 ========== */
+/* ========== 題目數量區域 ========== */
 .count-buttons-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -711,7 +722,6 @@ body {
         gap: 4px;
         margin-bottom: 0.5rem;
     }
-    /* #3: 手機版導航按鈕字體放大 */
     .tab {
         padding: 0.25rem 0.2rem;
         font-size: 0.75rem !important;
@@ -736,6 +746,7 @@ body {
         font-size: clamp(0.7rem, 3.5vw, 0.8rem);
         flex-wrap: wrap;
         gap: 4px;
+        background: #ede9fe;
     }
     .unit-header-left span {
         font-size: 0.7rem;
@@ -761,6 +772,7 @@ body {
         margin-bottom: 0.1rem;
         gap: 0.15rem;
         border-left-width: 2px;
+        background: #ffffff;
     }
     .chapter-item .chapter-name {
         font-size: 0.65rem;
@@ -961,7 +973,7 @@ body {
     .result-card-actions button { font-size: 0.7rem; padding: 4px 12px; }
     
     /* ============================================================
-       手機版問題頁面（100分，完全獨立，鎖死）
+       手機版問題頁面
        ============================================================ */
     #quizModal .modal-content {
         min-height: 60vh;
@@ -1045,7 +1057,6 @@ body {
         max-height: 35vh;
     }
     
-    /* 手機版圖片區（完全獨立） */
     .image-area-mobile {
         max-width: 100%;
         margin: 0.1rem auto !important;
@@ -1087,7 +1098,6 @@ body {
         display: none !important;
     }
     
-    /* 手機版選項區 */
     .options-area-mobile {
         flex: 1 1 auto;
         width: 100%;
@@ -1137,7 +1147,7 @@ body {
         font-size: clamp(1rem, 3.8vw, 1.15rem) !important;
     }
     
-    /* 手機版底部按鈕 */
+    /* ===== 手機版底部按鈕（#8 縮小上下頁 + #V6 全屏按鈕） ===== */
     .quiz-footer-mobile {
         flex-shrink: 0;
         padding: 0.1rem 0 0.05rem 0;
@@ -1170,18 +1180,45 @@ body {
         background: white;
         border: 1.5px solid var(--deep-purple);
         color: var(--deep-purple);
+        flex: 0.5;
+        font-size: clamp(0.45rem, 1.6vw, 0.6rem) !important;
+        padding: 0.05rem 0.1rem;
+        min-height: 28px;
+    }
+    .quiz-footer-mobile #fullscreenBtn {
+        flex: 0.5;
+        font-size: clamp(0.4rem, 1.5vw, 0.55rem) !important;
+        padding: 0.05rem 0.1rem;
+        min-height: 28px;
+        background: rgba(74, 29, 140, 0.15);
+        color: #4a1d8c;
+        border: 1.5px solid #4a1d8c;
+        border-radius: 30px;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .quiz-footer-mobile #fullscreenBtn:hover {
+        background: rgba(74, 29, 140, 0.25);
+    }
+    .quiz-footer-mobile #fullscreenBtn.active {
+        background: #4a1d8c;
+        color: white;
     }
     .quiz-footer-mobile #periodicTableBtn {
         flex: 0.6;
-        font-size: clamp(0.5rem, 1.8vw, 0.65rem) !important;
+        font-size: clamp(0.45rem, 1.6vw, 0.6rem) !important;
         padding: 0.05rem 0.1rem;
+        min-height: 28px;
     }
     .quiz-footer-mobile #submitAllBtn {
-        flex: 1.2;
+        flex: 1;
         background: #10b981;
+        font-size: clamp(0.6rem, 2.2vw, 0.75rem) !important;
+        min-height: 32px;
+        padding: 0.1rem 0.2rem;
     }
     
-    /* 手機版佈局容器 */
     .quiz-layout-mobile {
         flex-direction: column;
         align-items: stretch;
@@ -1204,7 +1241,7 @@ body {
     }
     
     /* ============================================================
-       手機版老師後台（子分頁下拉選單 + 卡片式樣式）
+       手機版老師後台
        ============================================================ */
     .teacher-settings {
         padding: 0.8rem 0.6rem;
@@ -1219,7 +1256,6 @@ body {
         padding: 6px 10px;
     }
     
-    /* 子分頁下拉選單（手機版） */
     .subtab-select-wrapper {
         margin: 8px 0;
     }
@@ -1243,7 +1279,6 @@ body {
         outline: 2px solid #7c3aed;
     }
     
-    /* 手機版隱藏桌面版 Tab */
     .desktop-tabs {
         display: none !important;
     }
@@ -1251,7 +1286,6 @@ body {
         display: block !important;
     }
     
-    /* 手機版統計卡片 2x2 */
     .stats-row {
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
@@ -1267,7 +1301,6 @@ body {
         font-size: 0.6rem !important;
     }
     
-    /* 手機版學生列表卡片式 */
     .student-table {
         font-size: 0.7rem !important;
     }
@@ -1281,7 +1314,6 @@ body {
         padding: 1px 6px !important;
     }
     
-    /* 手機版章節管理 */
     .chapter-unit-header {
         padding: 6px 8px !important;
         font-size: 0.75rem !important;
@@ -1305,8 +1337,6 @@ body {
 
 /* ============================================================
    桌面版（全新獨立彈窗 #desktopQuizModal）
-   完全照 Demo 設計，高度固定 620px
-   僅在 min-width: 641px 生效
    ============================================================ */
 @media (min-width: 641px) {
     #practicePanel, #myMistakesPanel, #pastMistakesPanel, #pinnedPanel, #historyPanel, #achievementsPanel {
@@ -1343,7 +1373,6 @@ body {
         margin-bottom: 0.15rem;
     }
     
-    /* 手機版下拉選單隱藏 */
     .mobile-select {
         display: none !important;
     }
@@ -1351,7 +1380,7 @@ body {
         display: flex !important;
     }
 
-    /* ===== 桌面版獨立彈窗（完全照 Demo） ===== */
+    /* ===== 桌面版獨立彈窗 ===== */
     #desktopQuizModal .modal-content {
         width: 1000px;
         max-width: 98%;
@@ -1366,7 +1395,6 @@ body {
         box-shadow: 0 20px 60px rgba(74, 29, 140, 0.15);
     }
 
-    /* ===== 左側主面板（白色） ===== */
     #desktopQuizModal .main-panel {
         flex: 1;
         padding: 24px 28px 20px 28px;
@@ -1374,6 +1402,8 @@ body {
         flex-direction: column;
         min-width: 0;
         background: #ffffff;
+        overflow: hidden;
+        width: 100%;
     }
 
     #desktopQuizModal .question-area {
@@ -1393,7 +1423,6 @@ body {
         word-break: break-word;
     }
 
-    /* 桌面版圖片區 */
     #desktopQuizModal .image-area {
         text-align: center;
         margin-bottom: 10px;
@@ -1417,7 +1446,6 @@ body {
         display: none !important;
     }
 
-    /* 桌面版選項 2x2 網格 */
     #desktopQuizModal .options-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1468,7 +1496,6 @@ body {
         color: white;
     }
 
-    /* 無圖片時，選項區佔更多空間 */
     #desktopQuizModal .main-panel.no-image .options-grid {
         align-content: center;
     }
@@ -1476,7 +1503,6 @@ body {
         font-size: 20px;
     }
 
-    /* ===== 右側邊欄（深紫色） ===== */
     #desktopQuizModal .sidebar {
         width: 210px;
         min-width: 170px;
@@ -1489,13 +1515,11 @@ body {
         transition: background 0.4s ease;
     }
 
-    /* 邊欄顏色 - 按難度變化 */
     #desktopQuizModal .sidebar.difficulty-translate { background: linear-gradient(145deg, #065f46, #047857); }
     #desktopQuizModal .sidebar.difficulty-basic { background: linear-gradient(145deg, #1e40af, #1d4ed8); }
     #desktopQuizModal .sidebar.difficulty-advanced { background: linear-gradient(145deg, #4c1d95, #6d28d9); }
     #desktopQuizModal .sidebar.difficulty-challenge { background: linear-gradient(145deg, #78350f, #b45309); }
 
-    /* 邊欄第一行：難度 + 計時器 */
     #desktopQuizModal .sidebar-row-1 {
         display: flex;
         justify-content: space-between;
@@ -1515,7 +1539,6 @@ body {
         color: #fca5a5;
     }
 
-    /* 邊欄第二行：周期表 + 題號 */
     #desktopQuizModal .sidebar-row-2 {
         display: flex;
         justify-content: space-between;
@@ -1547,7 +1570,6 @@ body {
         color: #ffffff;
     }
 
-    /* 題號導航網格 */
     #desktopQuizModal .nav-grid {
         display: flex;
         flex-wrap: wrap;
@@ -1615,7 +1637,6 @@ body {
         transform: scale(1.1);
     }
 
-    /* 三個按鈕（◀ / ▶ / 提交） */
     #desktopQuizModal .sidebar-actions {
         display: flex;
         gap: 4px;
@@ -1670,10 +1691,98 @@ body {
         opacity: 0.4;
         cursor: not-allowed;
     }
+    
+    /* ===== V4: 桌面版上下頁按鈕大幅縮小 ===== */
+    #desktopQuizModal .sidebar-actions .btn-prev,
+    #desktopQuizModal .sidebar-actions .btn-next {
+        flex: 0.35 !important;
+        font-size: 10px !important;
+        padding: 4px 0 !important;
+        min-height: 24px !important;
+        max-width: 44px !important;
+        letter-spacing: 0 !important;
+    }
 }
 
 /* ============================================================
-   共用（桌面版 + 手機版）— 只保留真正共用的
+   V6: 手機橫置時自動全屏（撐滿畫面，網址列自動隱藏）
+   ============================================================ */
+@media (max-width: 900px) and (orientation: landscape) {
+    /* 整個彈窗容器撐滿全屏 */
+    #desktopQuizModal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        background: rgba(0,0,0,0.7) !important;
+        z-index: 99999 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+    
+    #desktopQuizModal .modal-content {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 0 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    /* 隱藏手機版元素（確保乾淨切換） */
+    #quizModal .quiz-header { display: none !important; }
+    #quizModal .question-nav { display: none !important; }
+    #quizModal .quiz-footer { display: none !important; }
+    
+    /* 側邊欄強制顯示 */
+    #desktopQuizModal .sidebar {
+        display: flex !important;
+        width: 200px !important;
+        min-width: 160px !important;
+    }
+}
+
+/* ============================================================
+   全屏模式（瀏覽器全屏 API 觸發時）
+   ============================================================ */
+#desktopQuizModal:-webkit-full-screen .modal-content,
+#desktopQuizModal:fullscreen .modal-content {
+    border-radius: 0 !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+#desktopQuizModal:-webkit-full-screen .sidebar,
+#desktopQuizModal:fullscreen .sidebar {
+    display: flex !important;
+}
+
+/* ============================================================
+   V6: 手機版全屏（Fullscreen API）
+   ============================================================ */
+#quizModal:-webkit-full-screen .modal-content,
+#quizModal:fullscreen .modal-content {
+    border-radius: 0 !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* ============================================================
+   共用（桌面版 + 手機版）
    ============================================================ */
 #quizModal .modal-content {
     transition: background-color 0.4s ease;
@@ -1710,7 +1819,6 @@ body {
     word-break: break-word;
 }
 
-/* ===== 選項按鈕（共用的基本樣式） ===== */
 .option-btn {
     display: block;
     width: 100%;
@@ -1981,7 +2089,6 @@ body {
     transform: scale(1.02);
 }
 
-/* ========== 解鎖三星進度條 ========== */
 .star3-progress-container {
     margin-top: 12px;
     padding: 10px;
@@ -2016,10 +2123,6 @@ body {
     color: #059669;
 }
 
-/* ============================================================
-   老師後台子分頁（桌面版 + 手機版共用）
-   ============================================================ */
-/* 子分頁 Tab（桌面版） */
 .teacher-subtabs {
     margin-bottom: 12px;
 }
@@ -2030,7 +2133,6 @@ body {
     border-radius: 16px;
     padding: 4px;
 }
-/* #D: 子分頁按鈕不明顯 - 增強視覺對比 */
 .sub-tab {
     flex: 1;
     padding: 10px 16px;
@@ -2055,9 +2157,6 @@ body {
     box-shadow: 0 4px 12px rgba(74, 29, 140, 0.3);
 }
 
-/* ============================================================
-   統計卡片
-   ============================================================ */
 .stats-row {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -2082,9 +2181,6 @@ body {
     margin-top: 2px;
 }
 
-/* ============================================================
-   學生表格
-   ============================================================ */
 .student-table {
     width: 100%;
     border-collapse: collapse;
@@ -2107,9 +2203,6 @@ body {
     background: #faf8ff;
 }
 
-/* ============================================================
-   錯題表格
-   ============================================================ */
 .wrong-table {
     width: 100%;
     border-collapse: collapse;
@@ -2131,9 +2224,6 @@ body {
     background: #faf8ff;
 }
 
-/* ============================================================
-   排名表格
-   ============================================================ */
 .rank-table {
     width: 100%;
     border-collapse: collapse;
@@ -2169,9 +2259,6 @@ body {
     border-radius: 20px;
 }
 
-/* ============================================================
-   章節管理 - 方案 C（純色塊標記）
-   ============================================================ */
 .chapter-unit-group {
     margin-bottom: 4px;
 }
@@ -2210,7 +2297,6 @@ body {
     color: #4a1d8c;
 }
 
-/* 章節項目 - 方案 C */
 .chapter-item {
     display: flex;
     align-items: center;
@@ -2291,9 +2377,6 @@ body {
     }
 }
 
-/* ============================================================
-   摺疊面板（建立學生）
-   ============================================================ */
 .collapsible-header {
     display: flex;
     justify-content: space-between;
@@ -2321,9 +2404,6 @@ body {
     padding: 0;
 }
 
-/* ============================================================
-   積分榜（學生成就頁面）
-   ============================================================ */
 .rank-list-container {
     margin-bottom: 12px;
     padding-bottom: 12px;
@@ -2373,9 +2453,6 @@ body {
     margin-left: 6px;
 }
 
-/* ============================================================
-   登入畫面垂直置中（#C）
-   ============================================================ */
 #loginScreen {
     position: fixed;
     top: 50%;
@@ -2388,7 +2465,6 @@ body {
     overflow-y: auto;
 }
 
-/* 確保登入畫面在手機上也正常 */
 @media (max-width: 640px) {
     #loginScreen {
         position: fixed;
@@ -2402,4 +2478,244 @@ body {
         overflow-y: auto;
         padding: 1.2rem;
     }
+}
+
+#studentDetailModal {
+    animation: fadeIn 0.3s ease;
+}
+#studentDetailModal > div {
+    scrollbar-width: thin;
+}
+#studentDetailModal > div::-webkit-scrollbar {
+    width: 4px;
+}
+#studentDetailModal > div::-webkit-scrollbar-track {
+    background: #f0edf8;
+    border-radius: 10px;
+}
+#studentDetailModal > div::-webkit-scrollbar-thumb {
+    background: #c4b5d4;
+    border-radius: 10px;
+}
+
+#studentDetailModal .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+#studentDetailModal .stat-item {
+    background: #f9f7ff;
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #e9e4f5;
+}
+#studentDetailModal .stat-number {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #4a1d8c;
+}
+#studentDetailModal .stat-label {
+    font-size: 0.6rem;
+    color: #888;
+    margin-top: 2px;
+}
+
+#studentDetailModal .chapter-progress-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+}
+#studentDetailModal .chapter-progress-item .ch-num {
+    font-size: 0.7rem;
+    color: #888;
+    min-width: 40px;
+}
+#studentDetailModal .chapter-progress-item .ch-name {
+    font-size: 0.7rem;
+    flex: 1;
+}
+#studentDetailModal .chapter-progress-item .progress-track {
+    width: 80px;
+    height: 6px;
+    background: #ddd;
+    border-radius: 10px;
+    overflow: hidden;
+}
+#studentDetailModal .chapter-progress-item .progress-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+#studentDetailModal .chapter-progress-item .progress-label {
+    font-size: 0.6rem;
+    color: #888;
+    min-width: 35px;
+    text-align: right;
+}
+
+#studentDetailModal .achievement-tag {
+    font-size: 0.7rem;
+    padding: 2px 10px;
+    border-radius: 20px;
+    display: inline-block;
+    margin: 2px;
+}
+#studentDetailModal .achievement-tag.unlocked {
+    background: #d4edda;
+    color: #065f46;
+}
+#studentDetailModal .achievement-tag.locked {
+    background: #f5f5f5;
+    color: #999;
+}
+
+#studentDetailModal .wrong-question-item {
+    padding: 2px 0;
+    border-bottom: 1px solid #f0edf8;
+    font-size: 0.7rem;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================================
+   桌面版彈窗 - 現代風格（同手機版一致）
+   ============================================================ */
+
+/* 桌面版彈窗容器 */
+#desktopQuizModal .modal-content {
+    background: white !important;
+    border-radius: 28px !important;
+    box-shadow: 0 20px 60px rgba(74, 29, 140, 0.15) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+}
+
+/* 主面板（題目區域） */
+#desktopQuizModal .main-panel {
+    background: #ffffff !important;
+    padding: 24px 28px !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+/* 題目文字 */
+#desktopQuizModal .question-text {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: #1a1a2e !important;
+    line-height: 1.5 !important;
+    margin-bottom: 12px !important;
+    word-break: break-word !important;
+}
+
+/* 選項按鈕 */
+#desktopQuizModal .option-btn {
+    background: #faf8ff !important;
+    border: 2px solid #e0d6f5 !important;
+    border-radius: 12px !important;
+    color: #1e1b4b !important;
+    font-weight: 500 !important;
+    padding: 14px 18px !important;
+    font-size: 15px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    text-align: left !important;
+    display: flex !important;
+    align-items: center !important;
+    min-height: 44px !important;
+    word-break: break-word !important;
+    line-height: 1.3 !important;
+    width: 100% !important;
+}
+
+#desktopQuizModal .option-btn::before {
+    content: "○" !important;
+    display: inline-block !important;
+    width: 22px !important;
+    font-size: 16px !important;
+    color: #a78bbf !important;
+    margin-right: 10px !important;
+    flex-shrink: 0 !important;
+}
+
+#desktopQuizModal .option-btn:hover:not(.selected) {
+    border-color: #4a1d8c !important;
+    background: #f5f0ff !important;
+    transform: translateY(-1px) !important;
+}
+
+#desktopQuizModal .option-btn.selected {
+    background: #4a1d8c !important;
+    border-color: #4a1d8c !important;
+    color: white !important;
+}
+
+#desktopQuizModal .option-btn.selected::before {
+    content: "●" !important;
+    color: white !important;
+}
+
+/* 側邊欄 */
+#desktopQuizModal .sidebar {
+    background: linear-gradient(145deg, #3b1a6e, #2d0f54) !important;
+    border-left: 1px solid rgba(255,255,255,0.08) !important;
+    padding: 18px 14px 14px 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex-shrink: 0 !important;
+    width: 210px !important;
+    min-width: 170px !important;
+}
+
+/* 側邊欄文字顏色 */
+#desktopQuizModal .sidebar .difficulty {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+}
+
+#desktopQuizModal .sidebar .timer {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #fca5a5 !important;
+}
+
+#desktopQuizModal .sidebar .counter {
+    font-size: 15px !important;
+}
+
+/* ============================================================
+   桌面版全屏按鈕樣式
+   ============================================================ */
+
+#desktopQuizModal .sidebar-actions .btn-fullscreen {
+    flex: 0.5 !important;
+    font-size: 10px !important;
+    padding: 4px 0 !important;
+    min-height: 24px !important;
+    background: rgba(255,255,255,0.15) !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    border-radius: 30px !important;
+    cursor: pointer !important;
+}
+
+#desktopQuizModal .sidebar-actions .btn-fullscreen:hover {
+    background: rgba(255,255,255,0.25) !important;
+}
+
+#desktopQuizModal .sidebar-actions .btn-fullscreen.active {
+    background: rgba(239, 68, 68, 0.3) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
 }
