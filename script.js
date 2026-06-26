@@ -840,6 +840,13 @@ function enterMainApp(user) {
     });
 }
 
+// ==================== 初始化分頁 ====================
+function initTabs() {
+    // 分頁切換功能已經在 DOMContentLoaded 和 renderPractice 中處理
+    // 這個函數只是為了避免錯誤，實際切換邏輯已存在
+    console.log('✅ 分頁已初始化');
+}
+
 // ==================== 用戶下拉選單 ====================
 function toggleUserMenu() {
     const menu = document.getElementById('userMenu');
