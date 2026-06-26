@@ -834,16 +834,58 @@ function enterMainApp(user) {
     
     loadUserData().then(() => {
         renderPractice();
-        initTabs();
-        document.querySelector('.tab[data-tab="practice"]').click();
+        // 分頁切換獨立綁定
+        setupTabs();
+        // 預設點擊練習分頁
+        document.querySelector('.tab[data-tab="practice"]')?.click();
         setupLogout();
     });
 }
 
-// ==================== 初始化分頁 ====================
-function initTabs() {
-    // 分頁切換功能已經在 DOMContentLoaded 和 renderPractice 中處理
-    // 這個函數只是為了避免錯誤，實際切換邏輯已存在
+// ==================== 分頁切換 ====================
+function setupTabs() {
+    const tabs = document.querySelectorAll('.tab');
+    const panels = {
+        practice: document.getElementById('practicePanel'),
+        myMistakes: document.getElementById('myMistakesPanel'),
+        pastMistakes: document.getElementById('pastMistakesPanel'),
+        pinned: document.getElementById('pinnedPanel'),
+        history: document.getElementById('historyPanel'),
+        achievements: document.getElementById('achievementsPanel'),
+        teacher: document.getElementById('teacherPanel')
+    };
+    
+    tabs.forEach(tab => {
+        // 移除舊的監聽器（避免重複綁定）
+        tab.removeEventListener('click', tab._clickHandler);
+        
+        tab._clickHandler = function() {
+            const target = this.dataset.tab;
+            
+            // 隱藏所有面板
+            Object.keys(panels).forEach(key => {
+                if (panels[key]) panels[key].style.display = 'none';
+            });
+            
+            // 顯示目標面板
+            if (panels[target]) panels[target].style.display = 'block';
+            
+            // 更新 Tab 樣式
+            tabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // 渲染對應內容
+            if (target === 'myMistakes') renderMyMistakes();
+            if (target === 'pastMistakes') renderPastMistakes();
+            if (target === 'pinned') renderPinned();
+            if (target === 'history') renderHistory();
+            if (target === 'achievements') renderAchievements();
+            if (target === 'teacher') renderTeacherPanel();
+        };
+        
+        tab.addEventListener('click', tab._clickHandler);
+    });
+    
     console.log('✅ 分頁已初始化');
 }
 
@@ -4705,4 +4747,4 @@ function handleScreenRotation() {
 }
 
 console.log('✅ Mastering Science 已載入（全屏橫置 + 桌面版統一）');
-console.log('🔧 計時器、元素表、提交確認已修正');
+console.log('🔧 計時器、元素表、提交確認、分頁已修正');
