@@ -309,6 +309,15 @@
     <button id="dismissOrientationBtn" class="dismiss-btn">我知道了 / Got it</button>
 </div>
 
+<!-- ===== iPhone 橫置引導畫面（新增） ===== -->
+<div id="iphoneOrientationOverlay" class="iphone-orientation-overlay" style="display:none;">
+    <div class="rotate-icon-big">🔄</div>
+    <h2>請將手機橫置</h2>
+    <p>為了獲得最佳做題體驗，請將 iPhone 旋轉為橫向模式。</p>
+    <p style="font-size:0.8rem; color:#64748b; margin-top:4px;">旋轉後會自動進入練習</p>
+    <button class="btn-continue" id="iphoneContinueBtn">📱 繼續（不旋轉）</button>
+</div>
+
 <!-- ===== 登入畫面 ===== -->
 <div id="loginScreen" style="max-width: 400px; margin: 80px auto;" class="card">
     <h2 style="color: var(--deep-purple); font-size: clamp(1.2rem, 6vw, 1.6rem);">🧪 Mastering Science</h2>
@@ -498,20 +507,33 @@
                 </div>
             </div>
         </div>
+        <!-- ===== 右側邊欄（工具列獨立一行） ===== -->
         <div class="sidebar" id="desktopSidebar">
+            <!-- 第 1 行：難度 + 計時器 -->
             <div class="sidebar-row-1">
                 <span class="difficulty" id="desktopDifficulty">📈 Advanced</span>
                 <span class="timer" id="desktopTimer">⏱️ 00:00</span>
             </div>
+
+            <!-- 第 2 行：計數器 + 上一頁（小）+ 下一頁（大） -->
             <div class="sidebar-row-2">
-                <button class="table-btn" id="desktopPeriodicBtn">📊 周期表</button>
                 <span class="counter" id="desktopCounter">1 / 10</span>
+                <button class="btn-prev-sm" id="desktopPrevBtn">◀</button>
+                <button class="btn-next-lg" id="desktopNextBtn">下一題 ▶</button>
             </div>
+
+            <!-- 第 2.5 行：工具列（獨立一行） -->
+            <div class="sidebar-tools">
+                <button class="tool-btn" id="desktopPeriodicBtn">周期表</button>
+                <button class="tool-btn" id="desktopCalculatorBtn">計算機</button>
+            </div>
+
+            <!-- 第 3 行：題號導航 -->
             <div class="nav-grid" id="desktopNav"></div>
+
+            <!-- 第 4 行：提交按鈕（獨立置中） -->
             <div class="sidebar-actions">
-                <button class="btn btn-prev" id="desktopPrevBtn">◀</button>
-                <button class="btn btn-next" id="desktopNextBtn">▶</button>
-                <button class="btn btn-submit" id="desktopSubmitBtn">提交並離開</button>
+                <button class="btn-submit" id="desktopSubmitBtn">✅ 提交並離開</button>
             </div>
         </div>
     </div>
@@ -17632,7 +17654,7 @@ window.ALL_UNITS = {
               "C. (1) and (3) only",
               "D. (2) and (3) only"
             ],
-            "correct": "C",
+            "correct": "A",
             "explanation": "Iron is extracted from haematite by heating haematite with carbon.",
             "imageUrl": null,
             "difficulty": "📈 Advanced",
@@ -17766,6 +17788,86 @@ window.ALL_UNITS = {
             "difficulty": "✅ Basic",
             "difficulty_level": 1,
             "sf": 0
+          },
+          {
+            "id": "C310G028",
+            "text": "Coke is added during the extraction of iron. Coke is…",
+            "options": [
+              "A. carbon monoxide",
+              "B. carbon",
+              "C. carbon dioxide",
+              "D. calcium carbonate"
+            ],
+            "correct": "B",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C310G029",
+            "text": "The formula of iron(II, III) oxide is…",
+            "options": [
+              "A. FeO.",
+              "B. Fe₂O₃.",
+              "C. Fe₃O₂.",
+              "D. Fe₃O₄."
+            ],
+            "correct": "D",
+            "explanation": "Iron(II, III) oxide refers to iron(II) oxide and iron(III) oxide, that is FeO and Fe₂O₃. Adding the two formula will get Fe₃O₄.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C310G030",
+            "text": "Which metal can be extracted from calcite?",
+            "options": [
+              "A. calcium",
+              "B. potassium",
+              "C. sodium",
+              "D. mercury"
+            ],
+            "correct": "B",
+            "explanation": "Calcite (CaO) is the ore of calcium.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C310G031",
+            "text": "Which metal can be extracted from rock salt?",
+            "options": [
+              "A. calcium",
+              "B. potassium",
+              "C. sodium",
+              "D. mercury"
+            ],
+            "correct": "C",
+            "explanation": "Rock salt (mainly NaCl) is the ore of sodium.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C310G032",
+            "text": "Which metal can be extracted from cinnabar?",
+            "options": [
+              "A. calcium",
+              "B. potassium",
+              "C. sodium",
+              "D. mercury"
+            ],
+            "correct": "D",
+            "explanation": "Cinnabar is the ore of mercury.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
           }
         ]
       },
@@ -19183,6 +19285,150 @@ window.ALL_UNITS = {
             "imageUrl": null,
             "difficulty": "📈 Advanced",
             "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C312A002",
+            "text": "Which of the following substances contains the greatest number of atoms?",
+            "options": [
+              "A. 2.0 g of hydrogen",
+              "B. 24.3 g of magnesium",
+              "C. 30.3 g of neon",
+              "D. 31.8 g of copper"
+            ],
+            "correct": "A",
+            "explanation": "In terms of atom,<br>2.0 g of hydrogen = 2.0 / 1.0 = 2 mole of H atoms.<br>24.3 g of magnesium = 24.3  / 24.3 = 1 mole of Mg atom.<br>30.3 g of neon = 30.3 / 20.2 = 1.5 mole of Ne atom.<br>31.8 g of copper = 31.8 / 63.5 = 0.5 mole of Cu atom.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C312A003",
+            "text": "If 2 g of helium gas contains 𝑦 molecules, how many molecules are present in 38 g of fluorine gas?",
+            "options": [
+              "A. 0.5𝑦",
+              "B. 𝑦",
+              "C. 2𝑦",
+              "D. 4𝑦"
+            ],
+            "correct": "C",
+            "explanation": "Note that He is monoatomic (He), while fluorine is diatomic (F₂)<br>From He, 𝑦 = 2 / 4 = 0.5 mol.<br>From F₂, no. of mol = 38 / (19x2) = 1 mol<br>Hence the coefficient of 𝑦 = 1 / 0.5 = 2<br>",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C312A004",
+            "text": "The percentage by mass of water of crystallization in Na₂CO₃‧H₂O is",
+            "options": [
+              "A. 13.0%.",
+              "B. 13.5%.",
+              "C. 14.0%.",
+              "D. 14.5%."
+            ],
+            "correct": "D",
+            "explanation": "Mass of water (H₂O) in 1 formula of salt = 16.0 + 1.0x2 = 18.0<br>Mass of 1 formula of salt = 23.0x2 + 12.0 + 16.0x3 + 18.0 = 124.0<br>Percentage by mass = 18.0/124.0 x 100% = 14.5%",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C312A005",
+            "text": "How many grams of iron can be extracted from 100 g of iron ore, which contains 70% by mass of Fe₃O₄?",
+            "options": [
+              "A. 16.9 g",
+              "B. 24.1 g",
+              "C. 50.6 g",
+              "D. 72.3 g"
+            ],
+            "correct": "C",
+            "explanation": "Percentage by mass of iron = 55.8x3 / (55.8x3 + 16.0x4) x100% = 72.34%<br>In 100 g ore, it has 100x70% = 70 g Fe₃O₄.<br>Hence mass of iron = 70 x 72.34% = 50.6 g.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C312A006",
+            "text": "The relative atomic mass of metal 𝑋 is 40.1. When metal 𝑋 burns in air, an oxide forms. It is found that 8.42 g of the oxide contains 2.40 g of oxygen. Calculate the mole ratio of 𝑋 to oxygen in the oxide.",
+            "options": [
+              "A. 1 : 1",
+              "B. 1 : 2",
+              "C. 2 : 1",
+              "D. 1 : 3"
+            ],
+            "correct": "A",
+            "explanation": "8.42 g oxide contains 2.40 g oxygen, means it contains 8.42 - 2.40 = 6.02 g of 𝑋.<br>No. of mole of O in oxide = 2.40 / 16.0 = 0.15 mol<br>No. of mole of 𝑋 in oxide = 6.02 / 40.1 = 0.15 mol<br>Hence mole ratio of 𝑋 : O = 1 : 1.",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 1
+          },
+          {
+            "id": "C312A007",
+            "text": "If 20.0 g of water is completely decomposed into hydrogen and oxygen, the total mass of gases formed is",
+            "options": [
+              "A. 1.11 g ",
+              "B. 2.22 g",
+              "C. 17.8 g",
+              "D. 20.0 g"
+            ],
+            "correct": "D",
+            "explanation": "Hydrogen and oxygen are the only products. They are both gases, so the mass is the same as the reactant.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C312A008",
+            "text": "4.76 g of metal 𝑅 combine with 5.33 g of chlorine to form a chloride in which the charge of the ion of 𝑅 is +2. What is the relative atomic mass of 𝑅?",
+            "options": [
+              "A. 63.4",
+              "B. 63.6",
+              "C. 65.3",
+              "D. 65.5"
+            ],
+            "correct": "A",
+            "explanation": "The ion is 𝑅²⁺ hence the formula is 𝑅Cl₂.<br>No. of mole of chlorine atoms: 5.33 / 35.5 = 0.15 mol,<br>by mole ratio, no. of mole of 𝑅 atoms = 0.15/2 = 0.075 mol<br>Hence, relative atomic mass of 𝑅 = 4.76 / 0.075 = 63.4 ",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
+            "sf": 0
+          },
+          {
+            "id": "C312A009",
+            "text": "Calcium carbonate decomposes on heating to give quicklime (calcium oxide) and carbon dioxide. What is the mass of calcium oxide produced if the decomposition of 10.01 g of calcium carbonate is <br>complete?",
+            "options": [
+              "A. 4.84 g",
+              "B. 5.61 g",
+              "C. 7.21 g",
+              "D. 9.62 g"
+            ],
+            "correct": "B",
+            "explanation": "CaCO₃ --> CaO + CO₂<br>No. of mole of CaCO₃  = 10.01/(40.1 + 12.0 + 16.0x3) = 0.10 mol<br>By mole ratio, CaCO₃ : CaO is 1 : 1,<br>Hence 0.10 mol of CaO is produced.<br>Mass of CaO = 0.10 mol x (40.1+16.0) = 5.61 g",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 0
+          },
+          {
+            "id": "C312A010",
+            "text": " If 4.31 g of calcium oxide is finally obtained in the themal decomposition of 10.01 g of calcium carbonate, what is the percentage yield of the reaction?",
+            "options": [
+              "A. 44.8%",
+              "B. 59.8%",
+              "C. 76.8%",
+              "D. 89.0%"
+            ],
+            "correct": "C",
+            "explanation": "CaCO₃ --> CaO + CO₂<br>No. of mole of CaCO₃  = 10.01/(40.1 + 12.0 + 16.0x3) = 0.10 mol<br>By mole ratio, CaCO₃ : CaO is 1 : 1,<br>Hence 0.10 mol of CaO is produced.<br>Mass of CaO = 0.10 mol x (40.1+16.0) = 5.61 g<br>Percentage yield = 4.31/5.61 x100% = 76.8%",
+            "imageUrl": null,
+            "difficulty": "🔥 Challenge",
+            "difficulty_level": 3,
             "sf": 0
           }
         ]
