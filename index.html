@@ -263,6 +263,517 @@
             display: inline-block;
             margin: 4px 0;
         }
+
+        /* ===== 工具視窗（左右結構） ===== */
+        .tool-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            padding: clamp(8px, 2vh, 20px);
+            animation: toolFadeIn 0.25s ease;
+        }
+        .tool-overlay.show {
+            display: flex;
+        }
+        @keyframes toolFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .tool-window {
+            background: white;
+            border-radius: clamp(16px, 2.5vh, 28px);
+            width: min(92vw, 820px);
+            height: min(88vh, 700px);
+            max-width: 100%;
+            max-height: 95vh;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+            animation: toolSlideUp 0.3s ease;
+        }
+        @keyframes toolSlideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* ===== 左側欄 ===== */
+        .tool-sidebar {
+            width: 130px;
+            min-width: 100px;
+            background: linear-gradient(180deg, #f5f0ff, #ede9fe);
+            border-right: 2px solid #e9e4f5;
+            display: flex;
+            flex-direction: column;
+            padding: 16px 12px 20px 12px;
+            flex-shrink: 0;
+            gap: 4px;
+        }
+        .tool-sidebar .back-btn {
+            background: none;
+            border: none;
+            font-size: clamp(0.8rem, 1.2vw, 1rem);
+            font-weight: 600;
+            color: #4a1d8c;
+            cursor: pointer;
+            padding: 10px 8px;
+            border-radius: 12px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+            text-align: left;
+            border-bottom: 2px solid #e9e4f5;
+            margin-bottom: 8px;
+        }
+        .tool-sidebar .back-btn:hover {
+            background: #e2daf5;
+        }
+        .tool-sidebar .sidebar-tab {
+            background: none;
+            border: none;
+            padding: 10px 8px;
+            font-size: clamp(0.75rem, 1vw, 0.85rem);
+            font-weight: 600;
+            cursor: pointer;
+            color: #999;
+            border-radius: 12px;
+            transition: all 0.2s;
+            text-align: left;
+            width: 100%;
+        }
+        .tool-sidebar .sidebar-tab:hover {
+            color: #4a1d8c;
+            background: #e2daf5;
+        }
+        .tool-sidebar .sidebar-tab.active {
+            color: #4a1d8c;
+            background: white;
+            box-shadow: 0 2px 8px rgba(74, 29, 140, 0.1);
+        }
+        .tool-sidebar .sidebar-spacer {
+            flex: 1;
+        }
+
+        /* ===== 主內容區 ===== */
+        .tool-main {
+            flex: 1;
+            padding: clamp(8px, 1.2vh, 12px) clamp(10px, 1.2vw, 14px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: #ffffff;
+        }
+        .tool-main .tab-content {
+            display: none;
+            flex: 1;
+            min-height: 0;
+            animation: toolFadeIn 0.2s ease;
+        }
+        .tool-main .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        /* ===== 計算機 ===== */
+        .calculator-layout {
+            display: flex;
+            gap: clamp(6px, 1vw, 14px);
+            flex: 1;
+            min-height: 0;
+        }
+        .calculator-left {
+            flex: 7;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .calculator-display {
+            background: #f5f0ff;
+            border-radius: clamp(8px, 1vh, 12px);
+            padding: clamp(6px, 0.8vh, 10px) clamp(10px, 1.2vw, 14px);
+            text-align: right;
+            font-size: clamp(1rem, 2.4vw, 1.6rem);
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: clamp(4px, 0.5vh, 8px);
+            min-height: clamp(32px, 4.5vh, 48px);
+            font-family: 'Courier New', monospace;
+            border: 2px solid #e9e4f5;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            letter-spacing: 1px;
+            flex-shrink: 0;
+        }
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: clamp(3px, 0.4vw, 6px);
+            flex: 1;
+            min-height: 0;
+        }
+        .calc-btn {
+            padding: 0;
+            font-size: clamp(0.7rem, 1.2vw, 1rem);
+            font-weight: 600;
+            border: none;
+            border-radius: clamp(5px, 0.6vh, 8px);
+            cursor: pointer;
+            transition: all 0.12s;
+            background: #f5f0ff;
+            color: #2e0f5a;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+            flex: 1;
+        }
+        .calc-btn:hover {
+            background: #ede9fe;
+            transform: translateY(-1px);
+        }
+        .calc-btn:active {
+            transform: scale(0.94);
+        }
+        .calc-btn.operator {
+            background: #ede9fe;
+            color: #4a1d8c;
+        }
+        .calc-btn.operator:hover {
+            background: #d5cce8;
+        }
+        .calc-btn.equals {
+            background: #fbbf24;
+            color: #1a1a2e;
+            font-size: clamp(0.9rem, 1.6vw, 1.3rem);
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+        }
+        .calc-btn.equals:hover {
+            background: #f59e0b;
+            transform: scale(1.03);
+        }
+        .calc-btn.clear {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        .calc-btn.clear:hover {
+            background: #fecaca;
+        }
+        .calc-btn.science {
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: clamp(0.5rem, 0.8vw, 0.7rem);
+        }
+        .calc-btn.science:hover {
+            background: #bfdbfe;
+        }
+        .calc-btn.func {
+            background: #e9e4f5;
+            color: #4a1d8c;
+            font-size: clamp(0.55rem, 0.9vw, 0.75rem);
+        }
+        .calc-btn.func:hover {
+            background: #d5cce8;
+        }
+
+        /* ===== 草稿格（按鈕有顏色） ===== */
+        .calculator-right {
+            flex: 3;
+            min-width: clamp(80px, 10vw, 140px);
+            background: #faf8ff;
+            border-radius: clamp(8px, 1vh, 12px);
+            padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1vw, 12px);
+            border: 2px solid #e9e4f5;
+            display: flex;
+            flex-direction: column;
+        }
+        .calculator-right .draft-title {
+            font-size: clamp(0.6rem, 0.8vw, 0.75rem);
+            font-weight: 700;
+            color: #999;
+            letter-spacing: 1px;
+            margin-bottom: clamp(4px, 0.5vh, 8px);
+            text-align: center;
+            border-bottom: 1px solid #e9e4f5;
+            padding-bottom: clamp(3px, 0.4vh, 5px);
+            flex-shrink: 0;
+        }
+        .draft-slot {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(1px, 0.2vh, 3px);
+            margin-bottom: clamp(3px, 0.4vh, 6px);
+            min-height: 0;
+        }
+        .draft-slot:last-child {
+            margin-bottom: 0;
+        }
+        .draft-slot .slot-label {
+            font-weight: 700;
+            font-size: clamp(0.55rem, 0.7vw, 0.7rem);
+            color: #4a1d8c;
+            flex-shrink: 0;
+        }
+        .draft-slot .slot-value {
+            background: white;
+            border: 2px solid #e9e4f5;
+            border-radius: clamp(4px, 0.5vh, 6px);
+            padding: clamp(2px, 0.3vh, 4px) clamp(4px, 0.5vw, 8px);
+            font-size: clamp(0.55rem, 0.7vw, 0.75rem);
+            font-family: 'Courier New', monospace;
+            color: #2e0f5a;
+            min-height: clamp(20px, 2.8vh, 28px);
+            display: flex;
+            align-items: center;
+            word-break: break-all;
+            flex: 1;
+        }
+        .draft-slot .slot-value.empty {
+            color: #ccc;
+            font-style: italic;
+            font-size: clamp(0.45rem, 0.6vw, 0.6rem);
+        }
+        .draft-slot .slot-buttons {
+            display: flex;
+            gap: clamp(3px, 0.4vw, 6px);
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+        /* 草稿格按鈕 - 恢復顏色 */
+        .draft-slot .slot-btn {
+            border: none;
+            border-radius: clamp(3px, 0.4vh, 5px);
+            padding: clamp(3px, 0.4vh, 5px) clamp(6px, 0.8vw, 10px);
+            font-size: clamp(0.5rem, 0.6vw, 0.65rem);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            flex: 1;
+            text-align: center;
+            min-height: clamp(20px, 2.5vh, 26px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .draft-slot .slot-btn.store {
+            background: #22c55e;
+        }
+        .draft-slot .slot-btn.store:hover {
+            background: #16a34a;
+            transform: scale(1.02);
+        }
+        .draft-slot .slot-btn.recall {
+            background: #3b82f6;
+        }
+        .draft-slot .slot-btn.recall:hover {
+            background: #2563eb;
+            transform: scale(1.02);
+        }
+        .draft-slot .slot-btn.danger {
+            background: #ef4444;
+        }
+        .draft-slot .slot-btn.danger:hover {
+            background: #dc2626;
+            transform: scale(1.02);
+        }
+
+        /* ===== 周期表（全高度） ===== */
+        .periodic-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            min-height: 0;
+            padding: 4px 0;
+            cursor: pointer;
+        }
+        .periodic-container img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: clamp(8px, 1vh, 12px);
+            border: 2px solid #e9e4f5;
+            background: white;
+            transition: transform 0.2s;
+        }
+        .periodic-container img:hover {
+            transform: scale(1.01);
+        }
+
+        /* ============================================================
+           手機版 (寬度 < 700px)
+           ============================================================ */
+        @media (max-width: 700px) {
+            .tool-window {
+                width: 100vw;
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+                max-width: 100%;
+                flex-direction: column;
+            }
+            .tool-sidebar {
+                width: 100%;
+                min-width: unset;
+                flex-direction: row;
+                padding: 6px 10px;
+                border-right: none;
+                border-bottom: 2px solid #e9e4f5;
+                gap: 4px;
+                flex-wrap: wrap;
+                align-items: center;
+                flex-shrink: 0;
+            }
+            .tool-sidebar .back-btn {
+                padding: 4px 8px;
+                font-size: 0.7rem;
+                border-bottom: none;
+                margin-bottom: 0;
+                width: auto;
+            }
+            .tool-sidebar .sidebar-tab {
+                padding: 4px 8px;
+                font-size: 0.6rem;
+                width: auto;
+            }
+            .tool-sidebar .sidebar-spacer {
+                display: none;
+            }
+            .tool-main {
+                padding: 6px 8px;
+            }
+            .calculator-layout {
+                flex-direction: column;
+                gap: 6px;
+            }
+            .calculator-right {
+                flex-direction: row;
+                flex-wrap: wrap;
+                padding: 4px 6px;
+                min-height: auto;
+                flex: 0 0 auto;
+            }
+            .calculator-right .draft-title {
+                width: 100%;
+                margin-bottom: 3px;
+                padding-bottom: 3px;
+                font-size: 0.5rem;
+            }
+            .draft-slot {
+                flex: 1;
+                min-width: 60px;
+                margin-bottom: 2px;
+                gap: 2px;
+            }
+            .draft-slot .slot-value {
+                font-size: 0.5rem;
+                min-height: 18px;
+                padding: 2px 4px;
+            }
+            .draft-slot .slot-btn {
+                font-size: 0.4rem;
+                padding: 2px 4px;
+                min-height: 16px;
+            }
+            .draft-slot .slot-label {
+                font-size: 0.5rem;
+            }
+            .calculator-display {
+                font-size: 0.9rem;
+                padding: 4px 8px;
+                min-height: 28px;
+            }
+            .calculator-grid {
+                gap: 3px;
+            }
+            .calc-btn {
+                font-size: 0.6rem;
+                border-radius: 4px;
+            }
+            .calc-btn.equals {
+                font-size: 0.75rem;
+            }
+            .calc-btn.science {
+                font-size: 0.45rem;
+            }
+            .calc-btn.func {
+                font-size: 0.45rem;
+            }
+            .periodic-container {
+                padding: 2px 0;
+            }
+            .periodic-container img {
+                max-height: 50vh;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .calculator-grid {
+                gap: 2px;
+            }
+            .calc-btn {
+                font-size: 0.5rem;
+                border-radius: 3px;
+            }
+            .calc-btn.equals {
+                font-size: 0.65rem;
+            }
+            .calc-btn.science {
+                font-size: 0.4rem;
+            }
+            .calc-btn.func {
+                font-size: 0.4rem;
+            }
+            .calculator-display {
+                font-size: 0.75rem;
+                padding: 3px 6px;
+                min-height: 24px;
+            }
+            .draft-slot .slot-value {
+                font-size: 0.45rem;
+                min-height: 16px;
+            }
+            .draft-slot .slot-btn {
+                font-size: 0.35rem;
+                padding: 1px 3px;
+                min-height: 14px;
+            }
+            .draft-slot .slot-label {
+                font-size: 0.45rem;
+            }
+            .calculator-right .draft-title {
+                font-size: 0.45rem;
+            }
+            .tool-sidebar .back-btn {
+                font-size: 0.6rem;
+                padding: 3px 6px;
+            }
+            .tool-sidebar .sidebar-tab {
+                font-size: 0.5rem;
+                padding: 3px 6px;
+            }
+        }
     </style>
     
     <!-- ===== Firebase SDK (改用 jsdelivr CDN，提升手機相容性) ===== -->
@@ -282,21 +793,12 @@
         };
         
         try {
-            // 初始化 Firebase
             firebase.initializeApp(firebaseConfig);
-            
-            // 初始化 Firestore 和 Auth
             const db = firebase.firestore();
             const auth = firebase.auth();
-            
             console.log('🔥 Firebase 已初始化！');
-            
-            // #5: 右下角狀態指示燈 - 已改為 style.css 中的樣式，不再顯示左上角文字
-            // 狀態由 script.js 中的 updateStatusDot() 控制
-            
         } catch(e) {
             console.error('❌ Firebase 初始化失敗:', e.message);
-            // 顯示錯誤狀態（由 script.js 處理）
         }
     </script>
 </head>
@@ -309,7 +811,7 @@
     <button id="dismissOrientationBtn" class="dismiss-btn">我知道了 / Got it</button>
 </div>
 
-<!-- ===== iPhone 橫置引導畫面（新增） ===== -->
+<!-- ===== iPhone 橫置引導畫面 ===== -->
 <div id="iphoneOrientationOverlay" class="iphone-orientation-overlay" style="display:none;">
     <div class="rotate-icon-big">🔄</div>
     <h2>請將手機橫置</h2>
@@ -382,7 +884,6 @@
         <h2 id="changePasswordTitle">🔐 修改密碼</h2>
         <div class="sub" id="changePasswordDesc">請輸入新的密碼。</div>
         <div id="changePasswordError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
-        <!-- 舊密碼欄位（老師修改密碼時顯示） -->
         <div class="form-group" id="oldPasswordGroup" style="display:none;">
             <label>舊密碼</label>
             <div class="password-wrapper">
@@ -390,7 +891,6 @@
                 <button type="button" class="toggle-password-btn" id="toggleOldPasswordBtn">👁️</button>
             </div>
         </div>
-        <!-- #12: 密碼至少 6 個字元 -->
         <div class="form-group">
             <label>新密碼（至少 6 個字元）</label>
             <div class="password-wrapper">
@@ -416,21 +916,29 @@
         <h1 style="color: var(--deep-purple); font-size: clamp(1.1rem, 6vw, 1.4rem);">📘 Mastering Science</h1>
         <span id="userLabel" style="font-size: clamp(0.7rem, 4vw, 0.85rem);"></span>
     </div>
+    <!-- ===== 分頁列（修改：合併為 4/5 個分頁） ===== -->
     <div class="nav-tabs">
         <button class="tab active" data-tab="practice">📖 練習</button>
-        <button class="tab" data-tab="myMistakes">❌ 我的錯題</button>
-        <button class="tab" data-tab="pastMistakes">🕒 錯題歷程</button>
+        <button class="tab" data-tab="learning">📊 學習紀錄</button>
         <button class="tab" data-tab="pinned">⭐ 收藏</button>
-        <button class="tab" data-tab="history">📋 做題紀錄</button>
         <button class="tab" data-tab="achievements">🏆 我的成就</button>
-        <!-- 老師專用分頁（僅老師帳號顯示） -->
         <button class="tab" data-tab="teacher" id="teacherTab" style="display:none;">🧑‍🏫 老師後台</button>
     </div>
     <div id="practicePanel"></div>
-    <div id="myMistakesPanel" style="display:none;"></div>
-    <div id="pastMistakesPanel" style="display:none;"></div>
+    <!-- ===== 學習紀錄面板（含三個子分頁） ===== -->
+    <div id="learningPanel" style="display:none;">
+        <div class="learning-subtabs">
+            <button class="sub-tab active" data-subtab="myMistakes">❌ 我的錯題</button>
+            <button class="sub-tab" data-subtab="pastMistakes">🕒 錯題歷程</button>
+            <button class="sub-tab" data-subtab="history">📋 做題紀錄</button>
+        </div>
+        <div id="learningContent">
+            <div id="learning-myMistakes" class="learning-subcontent"></div>
+            <div id="learning-pastMistakes" class="learning-subcontent" style="display:none;"></div>
+            <div id="learning-history" class="learning-subcontent" style="display:none;"></div>
+        </div>
+    </div>
     <div id="pinnedPanel" style="display:none;"></div>
-    <div id="historyPanel" style="display:none;"></div>
     <div id="achievementsPanel" style="display:none;"></div>
     <div id="teacherPanel" style="display:none;"></div>
 </div>
@@ -515,25 +1023,25 @@
                 <span class="timer" id="desktopTimer">⏱️ 00:00</span>
             </div>
 
-            <!-- 第 2 行：計數器 + 上一頁（小）+ 下一頁（大） -->
-            <div class="sidebar-row-2">
-                <span class="counter" id="desktopCounter">1 / 10</span>
-                <button class="btn-prev-sm" id="desktopPrevBtn">◀</button>
-                <button class="btn-next-lg" id="desktopNextBtn">下一題 ▶</button>
+            <!-- 第 2 行：提交按鈕（完美，不動） -->
+            <div class="sidebar-row-submit">
+                <button class="btn-submit" id="desktopSubmitBtn">✅ 提交並離開</button>
             </div>
 
             <!-- 第 2.5 行：工具列（獨立一行） -->
             <div class="sidebar-tools">
-                <button class="tool-btn" id="desktopPeriodicBtn">周期表</button>
-                <button class="tool-btn" id="desktopCalculatorBtn">計算機</button>
+                <button class="tool-btn" id="desktopPeriodicBtn" onclick="openToolWindow('periodic')">📊 周期表</button>
+                <button class="tool-btn" id="desktopCalculatorBtn" onclick="openToolWindow('calculator')">🧮 計算機</button>
             </div>
 
             <!-- 第 3 行：題號導航 -->
             <div class="nav-grid" id="desktopNav"></div>
 
-            <!-- 第 4 行：提交按鈕（獨立置中） -->
-            <div class="sidebar-actions">
-                <button class="btn-submit" id="desktopSubmitBtn">✅ 提交並離開</button>
+            <!-- 第 4 行：計數器 + 上一頁 + 下一頁（固定在底部） -->
+            <div class="sidebar-row-bottom">
+                <span class="counter" id="desktopCounter">1 / 10</span>
+                <button class="btn-prev-sm" id="desktopPrevBtn">◀</button>
+                <button class="btn-next-lg" id="desktopNextBtn">下一題 ▶</button>
             </div>
         </div>
     </div>
@@ -557,6 +1065,103 @@
 </div>
 
 <div id="unlockCardsContainer" class="unlock-cards-container"></div>
+
+<!-- ===== 工具視窗（左右結構：側欄 + 主內容） ===== -->
+<div class="tool-overlay" id="toolOverlay" onclick="closeToolWindowOutside(event)">
+    <div class="tool-window" id="toolWindow" onclick="event.stopPropagation();">
+        <!-- 左側欄 -->
+        <div class="tool-sidebar" id="toolSidebar">
+            <button class="back-btn" onclick="closeToolWindow()">← 回到題目</button>
+            <button class="sidebar-tab active" data-tab="calculator" onclick="switchToolTab('calculator')">📱 計算機</button>
+            <button class="sidebar-tab" data-tab="periodic" onclick="switchToolTab('periodic')">📊 周期表</button>
+            <div class="sidebar-spacer"></div>
+        </div>
+
+        <!-- 主內容區 -->
+        <div class="tool-main" id="toolMain">
+            <!-- 計算機分頁 -->
+            <div class="tab-content active" id="tab-calculator">
+                <div class="calculator-layout">
+                    <div class="calculator-left">
+                        <div class="calculator-display" id="calcDisplay">0</div>
+                        <div class="calculator-grid">
+                            <button class="calc-btn clear" onclick="calcInput('clear')">AC</button>
+                            <button class="calc-btn func" onclick="calcInput('x²')">x²</button>
+                            <button class="calc-btn func" onclick="calcInput('xⁿ')">xⁿ</button>
+                            <button class="calc-btn func" onclick="calcInput('√')">√</button>
+                            <button class="calc-btn clear" onclick="calcInput('backspace')">←</button>
+
+                            <button class="calc-btn" onclick="calcInput('7')">7</button>
+                            <button class="calc-btn" onclick="calcInput('8')">8</button>
+                            <button class="calc-btn" onclick="calcInput('9')">9</button>
+                            <button class="calc-btn operator" onclick="calcInput('(')">(</button>
+                            <button class="calc-btn operator" onclick="calcInput(')')">)</button>
+
+                            <button class="calc-btn" onclick="calcInput('4')">4</button>
+                            <button class="calc-btn" onclick="calcInput('5')">5</button>
+                            <button class="calc-btn" onclick="calcInput('6')">6</button>
+                            <button class="calc-btn operator" onclick="calcInput('×')">×</button>
+                            <button class="calc-btn operator" onclick="calcInput('÷')">÷</button>
+
+                            <button class="calc-btn" onclick="calcInput('1')">1</button>
+                            <button class="calc-btn" onclick="calcInput('2')">2</button>
+                            <button class="calc-btn" onclick="calcInput('3')">3</button>
+                            <button class="calc-btn operator" onclick="calcInput('+')">+</button>
+                            <button class="calc-btn operator" onclick="calcInput('−')">−</button>
+
+                            <button class="calc-btn" onclick="calcInput('0')">0</button>
+                            <button class="calc-btn" onclick="calcInput('.')">.</button>
+                            <button class="calc-btn science" onclick="calcInput('x10^')">x10^</button>
+                            <button class="calc-btn science" onclick="calcInput('log')">log</button>
+                            <button class="calc-btn equals" onclick="calcInput('=')">=</button>
+                        </div>
+                    </div>
+                    <!-- ===== 草稿格（按鈕有顏色） ===== -->
+                    <div class="calculator-right">
+                        <div class="draft-title">📝 草稿格</div>
+                        <div class="draft-slot">
+                            <span class="slot-label">A</span>
+                            <div class="slot-value empty" id="draftA">(空)</div>
+                            <div class="slot-buttons">
+                                <button class="slot-btn store" onclick="draftStore('A')">💾 儲存</button>
+                                <button class="slot-btn recall" onclick="draftRecall('A')">📤 叫出</button>
+                                <button class="slot-btn danger" onclick="draftClear('A')">✕ 清除</button>
+                            </div>
+                        </div>
+                        <div class="draft-slot">
+                            <span class="slot-label">B</span>
+                            <div class="slot-value empty" id="draftB">(空)</div>
+                            <div class="slot-buttons">
+                                <button class="slot-btn store" onclick="draftStore('B')">💾 儲存</button>
+                                <button class="slot-btn recall" onclick="draftRecall('B')">📤 叫出</button>
+                                <button class="slot-btn danger" onclick="draftClear('B')">✕ 清除</button>
+                            </div>
+                        </div>
+                        <div class="draft-slot">
+                            <span class="slot-label">C</span>
+                            <div class="slot-value empty" id="draftC">(空)</div>
+                            <div class="slot-buttons">
+                                <button class="slot-btn store" onclick="draftStore('C')">💾 儲存</button>
+                                <button class="slot-btn recall" onclick="draftRecall('C')">📤 叫出</button>
+                                <button class="slot-btn danger" onclick="draftClear('C')">✕ 清除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 周期表分頁 -->
+            <div class="tab-content" id="tab-periodic">
+                <div class="periodic-container" id="periodicContainer" onclick="togglePeriodicZoom()">
+                    <img src="https://raw.githubusercontent.com/hderys/mastering-science-images/main/webp_image/periodic_table.webp"
+                         alt="周期表"
+                         id="periodicImage"
+                         loading="lazy">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 window.ALL_UNITS = {
@@ -19430,6 +20035,582 @@ window.ALL_UNITS = {
             "difficulty": "🔥 Challenge",
             "difficulty_level": 3,
             "sf": 0
+          },
+          {
+            "id": "C312A011",
+            "text": "The relative molecular mass of a molecular compound is the sum of __________ of all atoms present in a molecule of that compound.",
+            "options": [
+              "A. relative atomic masses",
+              "B. relative formula masses",
+              "C. mass numbers",
+              "D. atomic numbers"
+            ],
+            "correct": "A",
+            "explanation": "Relative molecular mass is calculated by adding up the relative atomic masses of all the atoms in the molecular formula.<br>Relative formula mass is used for ionic compounds, not molecular compounds.<br>Mass number refers to protons + neutrons in a single atom.<br>Atomic number is the number of protons, not used for mass calculations.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C312A012",
+            "text": "One mole contains __________ particles — this number is called the __________.",
+            "options": [
+              "A. 6.02 × 10²³ / Avogadro constant",
+              "B. 6.02 × 10²⁴ / Mole number",
+              "C. 6.02 × 10²² / Constant number",
+              "D. 6.02 × 10²³ / Atomic constant"
+            ],
+            "correct": "A",
+            "explanation": "One mole of any substance contains exactly 6.02 × 10²³ particles (atoms, molecules, ions, etc.). This number is called the Avogadro constant.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C312A013",
+            "text": "The __________ of a substance is the mass in grams of one mole of the substance.",
+            "options": [
+              "A. relative atomic mass",
+              "B. relative molecular mass",
+              "C. molar mass",
+              "D. isotopic mass"
+            ],
+            "correct": "C",
+            "explanation": "Molar mass is defined as the mass (in grams) of one mole of a substance. It has the unit g/mol.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C312A014",
+            "text": "The __________ formula of a compound is the formula which shows the simplest whole number ratio of atoms or ions present. It can be calculated from its __________ by mass, which can be determined by experiment.",
+            "options": [
+              "A. molecular / composition",
+              "B. empirical / composition",
+              "C. structural / percentage",
+              "D. chemical / ratio"
+            ],
+            "correct": "B",
+            "explanation": "Empirical formula shows the simplest whole number ratio of atoms/ions.<br>It is calculated from the composition by mass (or percentage by mass) of each element in the compound.<br>Molecular formula shows the actual number of atoms, not the simplest ratio.<br>Structural formula shows how atoms are bonded; chemical formula is a general term.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C312A015",
+            "text": "Molecular formula may be determined from empirical formula and __________.",
+            "options": [
+              "A. molar mass",
+              "B. relative atomic mass",
+              "C. Avogadro constant",
+              "D. percentage composition"
+            ],
+            "correct": "A",
+            "explanation": "To determine the molecular formula from the empirical formula, you need the molar mass of the compound.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C312A016",
+            "text": "__________ is the substance which is all used up in a chemical reaction.",
+            "options": [
+              "A. Excess reagent",
+              "B. Limiting reagent",
+              "C. Catalyst",
+              "D. Product"
+            ],
+            "correct": "B",
+            "explanation": "The limiting reagent (or limiting reactant) is the substance that is completely consumed in a reaction. It determines the amount of product formed.<br>Excess reagent is the one left over after the reaction.<br>Catalyst speeds up the reaction but is not used up.<br>Product is what is formed, not consumed.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C312A017",
+            "text": "Percentage yield = __________ × 100%",
+            "options": [
+              "A. actual yield / theoretical yield",
+              "B. theoretical yield / actual yield",
+              "C. mass of product / mass of reactant",
+              "D. moles of product / moles of reactant"
+            ],
+            "correct": "A",
+            "explanation": "Percentage yield compares the actual yield (experimentally obtained) with the theoretical yield (calculated from stoichiometry). The value must be less or equal to 100%.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C312A018",
+            "text": "Calculate the total number of atoms in 2 moles of sodium metal.",
+            "options": [
+              "A. 1.204×10²⁴ atoms",
+              "B. 6.02×10²³ atoms",
+              "C. 1.204×10²³ atoms",
+              "D. 2.408×10²⁴ atoms"
+            ],
+            "correct": "A",
+            "explanation": "Sodium metal (Na) exists as single atoms.<br>Number of atoms = moles × Avogadro constant = 2 × 6.02 × 10²³ = 1.204 × 10²⁴ atoms.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C312A019",
+            "text": "Calculate the total number of atoms in 2 g of oxygen gas (O₂).",
+            "options": [
+              "A. 3.76×10²² atoms",
+              "B. 7.52×10²² atoms",
+              "C. 1.204×10²³ atoms",
+              "D. 6.02×10²² atoms"
+            ],
+            "correct": "B",
+            "explanation": "No. of oxygen (O₂) = 2.0 / (16.0x2) = 0.0625 mol<br>No. of oxygen molecules = 0.0625 x 6.02 x 10²³ = 3.76 x 10²².<br>Each molecule has 2 O atoms, hence no. of oxygen atoms = 2 x 3.76 x 10²² = 7.52 x 10²².",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C312A020",
+            "text": "Calculate the total number of atoms in 1.5 moles of nitrogen dioxide gas (NO₂).",
+            "options": [
+              "A. 9.03×10²³ atoms",
+              "B. 2.709×10²⁴ atoms",
+              "C. 1.204×10²⁴ atoms",
+              "D. 6.02×10²³ atoms"
+            ],
+            "correct": "B",
+            "explanation": "No. of molecules = 1.5 x 6.02 x 10²³ = 9.03 x 10²³.<br>Note that each molecule of NO₂ contains 3 atoms (1 N + 2 O).<br>No. of atoms = 3 x 9.03 x 10²³ = 2.709 x 10²⁴.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 1
+          },
+          {
+            "id": "C312A021",
+            "text": "Calculate the total number of atoms in 0.5 mole of sodium carbonate-10-water, Na₂CO₃‧10H₂O.",
+            "options": [
+              "A. 6.02×10²³ atoms",
+              "B. 1.08×10²⁵ atoms",
+              "C. 1.204×10²⁵ atoms",
+              "D. 3.01×10²⁴ atoms"
+            ],
+            "correct": "B",
+            "explanation": "Number of atoms per formula unit = 2(Na) + 1(C) + 3(O) + 10×(2H + 1O) = 2 + 1 + 3 + 20 + 10 = 36 atoms<br>No. of atoms = 0.5 x 6.02 x 10²³ x 36 = 1.0836 x 10²⁵.",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C312A022",
+            "text": "Calculate the total number of atoms in 22 g of aluminium sulphate, Al₂(SO₄)₃.",
+            "options": [
+              "A. 3.87×10²³ atoms",
+              "B. 6.58×10²³ atoms",
+              "C. 1.16×10²⁴ atoms",
+              "D. 2.71×10²⁴ atoms"
+            ],
+            "correct": "B",
+            "explanation": "No. of moles = 22.0 / (27.0x2 + 32.1x3 + 16.0x12) = 0.0643 mol<br>In each mole of formula unit, no. of atom = 2 + 3 + 12 = 17 atoms.<br>Hence no. of atoms = 0.0643 x 6.02x10²³ x 17 = 6.58 x 10²³",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C312A023",
+            "text": "Calculate the percentage by mass of carbon in methane, CH₄.",
+            "options": [
+              "A. 25%",
+              "B. 50%",
+              "C. 75%",
+              "D. 80%"
+            ],
+            "correct": "C",
+            "explanation": "Molar mass of methane = 12.0 + 1.0x4 = 16.0 g/mol<br>Percentage by mass = 12.0/16.0 x 100% = 75%.",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C312A024",
+            "text": "Calculate the percentage by mass of sulphur in anhydrous sodium sulphate, Na₂SO₄.",
+            "options": [
+              "A. 22.6%",
+              "B. 32.1%",
+              "C. 45.1%",
+              "D. 56.3%"
+            ],
+            "correct": "A",
+            "explanation": "Molar mass of sodium sulphate = 23.0x2 + 32.1 + 16.0x4 = 142.1 g/mol<br>Percentage by mass = 32.1 / 142.1 x 100% = 22.6%",
+            "imageUrl": null,
+            "difficulty": "✅ Basic",
+            "difficulty_level": 1,
+            "sf": 0
+          },
+          {
+            "id": "C312A025",
+            "text": "Calculate the percentage by mass of water in sodium carbonate-10-water, Na₂CO₃‧10H₂O.",
+            "options": [
+              "A. 37.1%",
+              "B. 62.9%",
+              "C. 10.0%",
+              "D. 52.9%"
+            ],
+            "correct": "B",
+            "explanation": "Molar mass of hydrated sodium carbonate: 23.0x2 + 12.0 + 16.0x3 + 18.0x10 = 286 g/mol<br>Molar mass of water = 18.0<br>Percentage by mass = 18.0x10 / 286 x 100% = 62.9%",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C312A026",
+            "text": "Calculate the percentage by mass of oxygen in iron(II) sulphate-7-water, FeSO₄‧7H₂O.",
+            "options": [
+              "A. 28.6%",
+              "B. 36.9%",
+              "C. 57.5%",
+              "D. 63.3%"
+            ],
+            "correct": "D",
+            "explanation": "Molar mass of hydrated iron(II) sulphate: 55.8 + 32.1 + 16.0x4 + 18.0x7 = 277.9 g/mol<br>There are 4 + 7 = 11 O atoms in a formula unit,<br>Percentage by mass = 16.0x7 / 277.9 x 100% - 63.3%",
+            "imageUrl": null,
+            "difficulty": "📈 Advanced",
+            "difficulty_level": 2,
+            "sf": 1
+          },
+          {
+            "id": "C312G001",
+            "text": "Actual yield 的中文是？",
+            "options": [
+              "A. 實際產量",
+              "B. 理論產量",
+              "C. 百分產率",
+              "D. 無水的"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G002",
+            "text": "Avogadro constant 的中文是？",
+            "options": [
+              "A. 亞佛加德羅常數",
+              "B.  摩爾",
+              "C. 無水的",
+              "D.  計量系數"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G003",
+            "text": "Composition by mass 的中文是？",
+            "options": [
+              "A. 質量組成",
+              "B. 百分產率",
+              "C. 摩爾質量",
+              "D. 質量百分比"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G004",
+            "text": "Empirical formula 的中文是？",
+            "options": [
+              "A. 實驗式",
+              "B. 結構式",
+              "C. 摩爾質量",
+              "D. 分子式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G005",
+            "text": "Limiting reactant 的中文是？",
+            "options": [
+              "A. 限量反應物",
+              "B. 過量",
+              "C.  副產品",
+              "D.  水合鹽"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G006",
+            "text": "Molar mass 的中文是？",
+            "options": [
+              "A. 摩爾質量",
+              "B. 質量百分比",
+              "C. 式量",
+              "D. 質量組成"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G007",
+            "text": "Mole 的中文是？",
+            "options": [
+              "A.  摩爾",
+              "B. 亞佛加德羅常數",
+              "C. 摩爾質量",
+              "D. 摩爾比"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G008",
+            "text": "Molecular formula 的中文是？",
+            "options": [
+              "A. 分子式",
+              "B. 實驗式",
+              "C. 結構式",
+              "D. 摩爾質量"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G009",
+            "text": "Percentage by mass 的中文是？",
+            "options": [
+              "A. 質量百分比",
+              "B. 百分產率",
+              "C. 摩爾質量",
+              "D. 式量"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G010",
+            "text": "Percentage yield 的中文是？",
+            "options": [
+              "A. 百分產率",
+              "B. 理論產量",
+              "C. 實際產量",
+              "D. 質量百分比"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G011",
+            "text": "Structural formula 的中文是？",
+            "options": [
+              "A. 結構式",
+              "B. 實驗式",
+              "C. 分子式",
+              "D. 式量"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G012",
+            "text": "Theoretical yield 的中文是？",
+            "options": [
+              "A. 理論產量",
+              "B. 實際產量",
+              "C. 百分產率",
+              "D.  計量系數"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G013",
+            "text": "Water of crystallization  的中文是？",
+            "options": [
+              "A. 結晶水",
+              "B. 無水的",
+              "C.  水合鹽",
+              "D.  計量系數"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G014",
+            "text": "Mole ratio 的中文是？",
+            "options": [
+              "A. 摩爾比",
+              "B. 摩爾質量",
+              "C.  摩爾",
+              "D. 分子式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G015",
+            "text": "Anhydrous 的中文是？",
+            "options": [
+              "A. 無水的",
+              "B.  水合鹽",
+              "C. 實際產量",
+              "D. 亞佛加德羅常數"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G016",
+            "text": "Hydrated salt 的中文是？",
+            "options": [
+              "A.  水合鹽",
+              "B. 無水的",
+              "C. 結晶水",
+              "D. 實驗式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G017",
+            "text": "Stoichiometric coefficient 的中文是？",
+            "options": [
+              "A.  計量系數",
+              "B. 亞佛加德羅常數",
+              "C. 結晶水",
+              "D. 質量組成"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G018",
+            "text": "Excess 的中文是？",
+            "options": [
+              "A. 過量",
+              "B. 限量反應物",
+              "C.  副產品",
+              "D. 實驗式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G019",
+            "text": "Formula mass 的中文是？",
+            "options": [
+              "A. 式量",
+              "B. 實驗式",
+              "C. 分子式",
+              "D. 結構式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
+          },
+          {
+            "id": "C312G020",
+            "text": "Side product 的中文是？",
+            "options": [
+              "A.  副產品",
+              "B. 限量反應物",
+              "C. 過量",
+              "D. 結構式"
+            ],
+            "correct": "A",
+            "explanation": "",
+            "imageUrl": null,
+            "difficulty": "🌐 Translate",
+            "difficulty_level": 0,
+            "sf": 1
           }
         ]
       }
@@ -19485,5 +20666,268 @@ window.ALL_UNITS = {
 };
 </script>
 <script src="script.js"></script>
+
+<script>
+// ============================================================
+// 🧮 工具視窗控制（獨立於 script.js，確保 early binding）
+// ============================================================
+
+// 紀錄週期表是否已放大（預設為 true，第一次顯示即放大）
+var periodicZoomed = true;
+
+function openToolWindow(defaultTab) {
+    var overlay = document.getElementById('toolOverlay');
+    if (!overlay) return;
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    
+    if (defaultTab) {
+        switchToolTab(defaultTab);
+    } else {
+        switchToolTab('calculator');
+    }
+}
+
+function closeToolWindow() {
+    var overlay = document.getElementById('toolOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function closeToolWindowOutside(e) {
+    if (e.target === document.getElementById('toolOverlay')) {
+        closeToolWindow();
+    }
+}
+
+function switchToolTab(tabId) {
+    document.querySelectorAll('.sidebar-tab').forEach(function(tab) {
+        if (tab.dataset.tab === tabId) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+    document.querySelectorAll('.tab-content').forEach(function(content) {
+        if (content.id === 'tab-' + tabId) {
+            content.classList.add('active');
+        } else {
+            content.classList.remove('active');
+        }
+    });
+    
+    if (tabId === 'periodic') {
+        applyPeriodicZoom(periodicZoomed);
+    }
+}
+
+// ===== 週期表縮放控制 =====
+function togglePeriodicZoom() {
+    periodicZoomed = !periodicZoomed;
+    applyPeriodicZoom(periodicZoomed);
+}
+
+function applyPeriodicZoom(zoomed) {
+    var container = document.getElementById('periodicContainer');
+    var img = document.getElementById('periodicImage');
+    if (!container || !img) return;
+    
+    if (zoomed) {
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '100%';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.style.objectFit = 'contain';
+        container.style.cursor = 'zoom-out';
+    } else {
+        img.style.maxWidth = '70%';
+        img.style.maxHeight = '70%';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.style.objectFit = 'contain';
+        container.style.cursor = 'zoom-in';
+    }
+}
+
+// ============================================================
+// 🧮 計算機邏輯
+// ============================================================
+
+var calcDisplay = document.getElementById('calcDisplay');
+var calcExpression = '';
+
+function calcInput(value) {
+    if (value === 'clear') {
+        calcExpression = '';
+        updateCalcDisplay('0');
+        return;
+    }
+
+    if (value === 'backspace') {
+        if (calcExpression.endsWith('x10^')) {
+            calcExpression = calcExpression.slice(0, -4);
+        } else if (calcExpression.endsWith('√(')) {
+            calcExpression = calcExpression.slice(0, -2);
+        } else if (calcExpression.endsWith('²')) {
+            calcExpression = calcExpression.slice(0, -1);
+        } else if (calcExpression.endsWith('log(')) {
+            calcExpression = calcExpression.slice(0, -4);
+        } else {
+            calcExpression = calcExpression.slice(0, -1);
+        }
+        updateCalcDisplay(calcExpression || '0');
+        return;
+    }
+
+    if (value === '=') {
+        try {
+            var expr = calcExpression
+                .replace(/×/g, '*')
+                .replace(/÷/g, '/')
+                .replace(/−/g, '-')
+                .replace(/x10\^/g, 'e')
+                .replace(/²/g, '**2')
+                .replace(/√\(/g, 'Math.sqrt(')
+                .replace(/log\(/g, 'Math.log10(');
+
+            if (expr.includes('^')) {
+                expr = expr.replace(/\^/g, '**');
+            }
+
+            var result = Function('"use strict"; return (' + expr + ')')();
+
+            if (Math.abs(result) > 1e15 || (Math.abs(result) < 1e-10 && result !== 0)) {
+                calcExpression = result.toExponential(6);
+            } else {
+                if (Number.isInteger(result) && Math.abs(result) < 1e15) {
+                    calcExpression = String(result);
+                } else {
+                    calcExpression = String(parseFloat(result.toFixed(10)));
+                }
+            }
+            updateCalcDisplay(calcExpression);
+        } catch (e) {
+            updateCalcDisplay('Error');
+            calcExpression = '';
+        }
+        return;
+    }
+
+    if (value === 'x²') {
+        var num = parseFloat(calcExpression);
+        if (!isNaN(num) && isFinite(num) && calcExpression !== '') {
+            calcExpression = String(num * num);
+            updateCalcDisplay(calcExpression);
+        } else {
+            calcExpression += '²';
+            updateCalcDisplay(calcExpression);
+        }
+        return;
+    }
+
+    if (value === 'xⁿ') {
+        calcExpression += '^';
+        updateCalcDisplay(calcExpression);
+        return;
+    }
+
+    if (value === '√') {
+        calcExpression += '√(';
+        updateCalcDisplay(calcExpression);
+        return;
+    }
+
+    if (value === 'log') {
+        calcExpression += 'log(';
+        updateCalcDisplay(calcExpression);
+        return;
+    }
+
+    if (value === 'x10^') {
+        calcExpression += 'x10^';
+        updateCalcDisplay(calcExpression);
+        return;
+    }
+
+    calcExpression += value;
+    updateCalcDisplay(calcExpression);
+}
+
+function updateCalcDisplay(text) {
+    if (calcDisplay) {
+        var displayText = text
+            .replace(/e\+?/g, '×10^')
+            .replace(/e-/g, '×10^−');
+        calcDisplay.textContent = displayText || '0';
+    }
+}
+
+// ============================================================
+// 📝 草稿格邏輯
+// ============================================================
+
+var draftData = { A: null, B: null, C: null };
+
+function draftStore(slot) {
+    var currentValue = calcDisplay.textContent;
+    if (currentValue === '0' || currentValue === 'Error' || currentValue === '(空)') {
+        alert('⚠️ 沒有可儲存的數值');
+        return;
+    }
+    draftData[slot] = calcExpression || currentValue;
+    var el = document.getElementById('draft' + slot);
+    if (el) {
+        el.textContent = currentValue;
+        el.classList.remove('empty');
+    }
+}
+
+function draftRecall(slot) {
+    var value = draftData[slot];
+    if (value === null) {
+        alert('⚠️ ' + slot + ' 暫存格是空的');
+        return;
+    }
+    calcExpression = String(value);
+    updateCalcDisplay(calcExpression);
+}
+
+function draftClear(slot) {
+    draftData[slot] = null;
+    var el = document.getElementById('draft' + slot);
+    if (el) {
+        el.textContent = '(空)';
+        el.classList.add('empty');
+    }
+}
+
+// ============================================================
+// ⌨️ 鍵盤支援
+// ============================================================
+
+document.addEventListener('keydown', function(e) {
+    var overlay = document.getElementById('toolOverlay');
+    if (!overlay || !overlay.classList.contains('show')) return;
+
+    var key = e.key;
+    if (key >= '0' && key <= '9') { calcInput(key); e.preventDefault(); }
+    else if (key === '.') { calcInput('.'); e.preventDefault(); }
+    else if (key === '+') { calcInput('+'); e.preventDefault(); }
+    else if (key === '-') { calcInput('−'); e.preventDefault(); }
+    else if (key === '*') { calcInput('×'); e.preventDefault(); }
+    else if (key === '/') { calcInput('÷'); e.preventDefault(); }
+    else if (key === 'Enter' || key === '=') { e.preventDefault(); calcInput('='); }
+    else if (key === 'Backspace') { e.preventDefault(); calcInput('backspace'); }
+    else if (key === 'Escape') { closeToolWindow(); }
+    else if (key === '(') { calcInput('('); e.preventDefault(); }
+    else if (key === ')') { calcInput(')'); e.preventDefault(); }
+});
+
+console.log('✅ 工具視窗（計算機 + 周期表）已載入！');
+console.log('📐 左右結構：側欄 + 主內容區');
+console.log('📊 周期表預設放大，點擊切換放大/適中');
+</script>
+
 </body>
 </html>
