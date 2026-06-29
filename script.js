@@ -967,7 +967,7 @@ function openChangePasswordModal(isFirstLogin = false) {
         title.textContent = '🔐 首次登入 - 設定密碼';
         desc.textContent = '這是您第一次登入，請設定自己的密碼。';
         cancelBtn.style.display = 'none';
-        if (oldPwdGroup) oldPwdGroup.style.display = 'none';
+        //if (oldPwdGroup) oldPwdGroup.style.display = 'none';
     } else {
         title.textContent = '🔑 修改密碼';
         desc.textContent = '請輸入舊密碼和新密碼。';
