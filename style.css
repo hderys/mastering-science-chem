@@ -1957,6 +1957,36 @@ body {
     opacity: 1;
 }
 
+/* ===== 圖解圖片樣式 ===== */
+.explain-image-container {
+    margin: 12px 0;
+    text-align: center;
+}
+.explain-image-container img {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 2px solid #e9e4f5;
+    padding: 4px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: #ffffff;
+}
+.explain-image-container img:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(74, 29, 140, 0.15);
+}
+.explain-image-label {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    margin-top: 4px;
+    display: block;
+}
+.explain-image-container:not(:has(img)) {
+    display: none;
+}
+
 .quiz-footer {
     display: flex;
     justify-content: space-between;
