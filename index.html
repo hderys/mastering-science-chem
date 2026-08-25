@@ -38,6 +38,43 @@
         .form-group-login input:focus {
             border-color: #4a1d8c;
         }
+        .google-login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px 14px;
+            background: white;
+            border: 2px solid #e0d6f5;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2e0f5a;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 4px 0;
+        }
+        .google-login-btn:hover {
+            background: #f5f0ff;
+            border-color: #4a1d8c;
+            transform: translateY(-1px);
+        }
+        .google-login-btn:active {
+            transform: scale(0.98);
+        }
+        .login-footer {
+            margin-top: 14px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #999;
+        }
+        .login-footer .small {
+            font-size: 0.75rem;
+            color: #bbb;
+            display: block;
+            margin-top: 2px;
+        }
         .password-wrapper {
             position: relative;
         }
@@ -826,87 +863,21 @@
 
     <div id="loginError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
 
-    <div class="form-group-login">
-        <label for="loginUserId">登入 ID（學號）</label>
-        <input type="text" id="loginUserId" placeholder="例如：20240001">
-    </div>
+    <!-- Google 登入按鈕 -->
+    <button id="googleLoginBtn" class="google-login-btn">
+        <svg width="22" height="22" viewBox="0 0 48 48">
+            <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+            <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+            <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+            <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+        </svg>
+        使用 Google 帳戶登入
+    </button>
 
-    <div class="form-group-login">
-        <label for="loginPassword">密碼</label>
-        <div class="password-wrapper">
-            <input type="password" id="loginPassword" placeholder="請輸入密碼">
-            <button type="button" class="toggle-password-btn" id="togglePasswordBtn">👁️</button>
-        </div>
-    </div>
-
-    <div style="display:flex; align-items:center; gap:8px; margin:12px 0 16px 0;">
-        <input type="checkbox" id="rememberMeCheckbox" style="width:16px; height:16px; cursor:pointer;">
-        <label for="rememberMeCheckbox" style="font-size:0.85rem; color:#2e0f5a; cursor:pointer;">🔒 記住我（下次自動登入）</label>
-    </div>
-
-    <button class="btn" id="loginBtn" style="width:100%; padding:12px; font-size:1rem;">🔒 登入</button>
-
-    <div style="margin-top:14px; text-align:center; font-size:0.8rem; color:#999;">
-        <span>第一次登入？請向老師索取初始密碼</span>
-        <br>
-        <button id="forgotPasswordLink" style="background:none; border:none; color:#4a1d8c; cursor:pointer; text-decoration:underline; font-size:0.8rem; margin-top:4px;">🔑 忘記密碼？</button>
-    </div>
-</div>
-
-<!-- ===== 忘記密碼彈窗 ===== -->
-<div class="modal-overlay" id="forgotPasswordModal">
-    <div class="modal-box">
-        <button class="close-btn" onclick="closeModal('forgotPasswordModal')">✕</button>
-        <h2>🔑 忘記密碼</h2>
-        <div class="sub">請輸入您的學號和電話號碼，驗證通過後即可重設密碼。</div>
-        <div id="forgotError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
-        <div class="form-group">
-            <label>登入 ID（學號）</label>
-            <input type="text" id="forgotUserId" placeholder="例如：20240001">
-        </div>
-        <div class="form-group">
-            <label>電話號碼</label>
-            <input type="text" id="forgotPhone" placeholder="例如：91234567">
-        </div>
-        <div class="inline-flex">
-            <button class="btn btn-outline" onclick="closeModal('forgotPasswordModal')">取消</button>
-            <button class="btn btn-primary" id="forgotSubmitBtn">驗證並重設</button>
-        </div>
-        <div id="forgotMessage" class="mt-8"></div>
-    </div>
-</div>
-
-<!-- ===== 修改密碼彈窗（含舊密碼欄位，老師專用） ===== -->
-<div class="modal-overlay" id="changePasswordModal">
-    <div class="modal-box">
-        <button class="close-btn" onclick="closeModal('changePasswordModal')">✕</button>
-        <h2 id="changePasswordTitle">🔐 修改密碼</h2>
-        <div class="sub" id="changePasswordDesc">請輸入新的密碼。</div>
-        <div id="changePasswordError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
-        <div class="form-group" id="oldPasswordGroup">
-            <label>舊密碼</label>
-            <div class="password-wrapper">
-                <input type="password" id="oldPassword" placeholder="請輸入舊密碼">
-                <button type="button" class="toggle-password-btn" id="toggleOldPasswordBtn">👁️</button>
-            </div>
-        </div>
-        <div class="form-group">
-            <label>新密碼（至少 6 個字元）</label>
-            <div class="password-wrapper">
-                <input type="password" id="newPassword" placeholder="請輸入新密碼">
-                <button type="button" class="toggle-password-btn" id="toggleNewPasswordBtn">👁️</button>
-            </div>
-        </div>
-        <div class="form-group">
-            <label>確認新密碼</label>
-            <div class="password-wrapper">
-                <input type="password" id="confirmPassword" placeholder="請再次輸入新密碼">
-                <button type="button" class="toggle-password-btn" id="toggleConfirmPasswordBtn">👁️</button>
-            </div>
-        </div>
-        <button class="btn btn-success" id="changePasswordBtn">✅ 確認修改</button>
-        <button class="btn btn-outline mt-8" id="changePasswordCancelBtn">取消</button>
-        <div id="changePasswordMessage" class="mt-8"></div>
+    <div class="login-footer">
+        <div>⚠️ 請使用學校電郵登入</div>
+        <span class="small">首次登入？用 Google 帳戶即可開始，系統會自動建立學習紀錄</span>
+        <span class="small" style="margin-top:2px;">使用非學校電郵僅開放第一單元試用</span>
     </div>
 </div>
 
@@ -921,9 +892,11 @@
         <button class="tab" data-tab="learning">📊 學習紀錄</button>
         <button class="tab" data-tab="pinned">⭐ 收藏</button>
         <button class="tab" data-tab="achievements">🏆 我的成就</button>
+        <button class="tab" data-tab="resources">📹 更多資源</button>
         <button class="tab" data-tab="teacher" id="teacherTab" style="display:none;">🧑‍🏫 老師後台</button>
     </div>
     <div id="practicePanel"></div>
+    <div id="resourcesPanel" style="display:none;"></div>
     <!-- ===== 學習紀錄面板（含三個子分頁） ===== -->
     <div id="learningPanel" style="display:none;">
         <div class="learning-subtabs">
@@ -39685,6 +39658,32 @@ window.ALL_UNITS = {
 };
 </script>
 <script src="script.js"></script>
+
+<script>
+// ============================================================
+// ✅ 登入畫面控制（Google 登入）
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    // 確保登入畫面顯示，主應用隱藏
+    var loginScreen = document.getElementById('loginScreen');
+    var mainApp = document.getElementById('mainApp');
+    if (loginScreen) loginScreen.style.display = 'block';
+    if (mainApp) mainApp.style.display = 'none';
+
+    // 登入按鈕事件
+    var googleLoginBtn = document.getElementById('googleLoginBtn');
+    if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', function() {
+            if (typeof handleGoogleLogin === 'function') {
+                handleGoogleLogin();
+            } else {
+                alert('⚠️ 請確認 script.js 已正確載入');
+            }
+        });
+    }
+    console.log('✅ 登入畫面已載入，等待用戶登入...');
+});
+</script>
 
 <script>
 // ============================================================
