@@ -70,6 +70,76 @@ const RESOURCE_VIDEOS = [
     { unit: '2', chapter: '9', id: 'pobEsk2WZmo', title: 'Chapter 9.6-9.9 Summary and Applications of Structures' },
 ];
 
+// ==================== 語言工具（中文班 / 英文班） ====================
+function isZhUser() {
+    return currentUser && currentUser.language === 'zh';
+}
+// 取題目文字（依語言）
+function qText(q) {
+    if (isZhUser() && q.textZh) return q.textZh;
+    return q.text;
+}
+function qOptions(q) {
+    if (isZhUser() && q.optionsZh && q.optionsZh.length === 4) return q.optionsZh;
+    return q.options;
+}
+function qExplanation(q) {
+    if (isZhUser() && q.explanationZh) return q.explanationZh;
+    return q.explanation;
+}
+// 把題目轉成使用者語言版本（產生新物件）
+function localizeQuestion(q) {
+    if (!isZhUser() || !q) return q;
+    return { ...q, text: qText(q), options: qOptions(q), explanation: qExplanation(q) };
+}
+// 單元名稱（依語言）
+function qUnitName(unit) {
+    const u = window.ALL_UNITS[unit];
+    if (!u) return unit;
+    if (isZhUser() && u.nameZh) {
+        const cnNames = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五'];
+        const idx = parseInt(unit) - 1;
+        const prefix = (idx >= 0 && idx < cnNames.length) ? `第${cnNames[idx]}章 · ` : '';
+        // 把開頭 emoji 移到名稱後（如「🌍 地球」→「地球 🌍」）
+        const first = u.nameZh.charCodeAt(0);
+        let core = u.nameZh, emoji = '';
+        if (u.nameZh.length > 0 && (u.nameZh.codePointAt(0) > 0x2600)) {
+            emoji = String.fromCodePoint(u.nameZh.codePointAt(0));
+            core = u.nameZh.slice(emoji.length).trim();
+        }
+        return prefix + (emoji ? `${core} ${emoji}` : core);
+    }
+    return u.name;
+}
+// 章節名稱（依語言）
+function qChapterName(unit, ch) {
+    const u = window.ALL_UNITS[unit];
+    const c = u ? u.chapters[ch] : null;
+    if (!c) return ch;
+    if (isZhUser() && c.nameZh) {
+        // 中文班：加章節數字前綴（如「1·化學基礎」）
+        const num = parseInt(ch);
+        if (!isNaN(num) && !c.nameZh.startsWith(String(num) + '.')) return `${num}·${c.nameZh}`;
+        return c.nameZh;
+    }
+    return c.name;
+}
+// 難易度顯示名稱（中文班：基礎/進階/挑戰；英文班：1星/3星/5星）
+function diffLabel(diff, stars) {
+    if (!isZhUser()) return stars;
+    if (diff === 0) return '基礎';
+    if (diff === 1) return '進階';
+    return '挑戰';
+}
+// 做題右上角難易度標籤（中文班：基礎/進階/挑戰）
+function diffLabelByDifficulty(difficulty) {
+    if (!isZhUser()) return difficulty;
+    if (difficulty.includes('Basic')) return '基礎';
+    if (difficulty.includes('Advanced')) return '進階';
+    if (difficulty.includes('Challenge')) return '挑戰';
+    return difficulty;
+}
+
 // 成績總表控制變量
 let showOnlyWrong = false;
 let showAnswers = false;
@@ -533,7 +603,7 @@ async function findUserAcrossDevices(userId) {
                 // 同步到本機 localStorage，下次登入即時識別
                 const db = getUsers();
                 if (!db.users.find(u => u.userId === userId)) {
-                    db.users.push({ userId: userId, name: data.name || userId, className: data.className || '', studentId: data.studentId || '', isTeacher: data.isTeacher || false, teacherCode: data.teacherCode || '' });
+                    db.users.push({ userId: userId, name: data.name || userId, className: data.className || '', studentId: data.studentId || '', language: data.language || 'en', isTeacher: data.isTeacher || false, teacherCode: data.teacherCode || '' });
                     saveUsers(db);
                 }
                 return db.users.find(u => u.userId === userId);
@@ -581,7 +651,7 @@ function generateUserId(className) {
     return String(num).padStart(6, '0');
 }
 
-async function createUser(name, className, studentId, customUserId = null, isTeacher = false, teacherCode = null) {
+async function createUser(name, className, studentId, customUserId = null, isTeacher = false, teacherCode = null, language = 'en') {
     const db = getUsers();
     const userId = customUserId || generateUserId(className);
     const user = {
@@ -589,6 +659,7 @@ async function createUser(name, className, studentId, customUserId = null, isTea
         name: name,
         className: className || '',
         studentId: studentId || '',
+        language: language || 'en',
         teacherCode: isTeacher ? (teacherCode || name) : '',
         isTeacher: isTeacher,
         managedClasses: [],
@@ -676,6 +747,44 @@ async function exitFullscreenMode() {
 // 📝 自訂彈窗（取代 prompt）- 讓您可以正常輸入
 // ============================================================
 
+// 教師首次登入：選擇檢視題目的語言
+function showLanguagePrompt() {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:999999; animation:fadeIn 0.3s ease;`;
+        const modal = document.createElement('div');
+        modal.style.cssText = `background:white; border-radius:24px; padding:32px 28px; max-width:380px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3); animation:slideUp 0.3s ease;`;
+        modal.innerHTML = `
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="font-size:2.5rem; margin-bottom:4px;">🗣️</div>
+                <h2 style="color:#2e0f5a; font-size:1.2rem; margin:0;">選擇檢視題目的語言</h2>
+                <p style="color:#888; font-size:0.85rem; margin:4px 0 0 0;">老師您好！請選擇您檢視題目時的語言。</p>
+            </div>
+            <div style="display:flex; gap:10px; margin-bottom:12px;">
+                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:12px 0; border-radius:12px; border:2px solid #e0d6f5; cursor:pointer; font-size:0.95rem; font-weight:600; color:#2e0f5a; background:white;">
+                    <input type="radio" name="teacherLang" value="zh" style="accent-color:#4a1d8c;"> 🇭🇰 中文
+                </label>
+                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:12px 0; border-radius:12px; border:2px solid #e0d6f5; cursor:pointer; font-size:0.95rem; font-weight:600; color:#2e0f5a; background:white;">
+                    <input type="radio" name="teacherLang" value="en" checked> 🇬🇧 英文
+                </label>
+            </div>
+            <div style="font-size:0.72rem; color:#f59e0b; margin-bottom:16px; text-align:center;">日後可在「老師後台 → 編輯個人資料」更改。</div>
+            <div style="display:flex; gap:10px;">
+                <button id="teacherLangCancel" style="flex:1; padding:10px 0; border:2px solid #e0d6f5; border-radius:40px; background:white; color:#666; font-size:0.95rem; font-weight:600; cursor:pointer;">取消</button>
+                <button id="teacherLangConfirm" style="flex:2; padding:10px 0; border:none; border-radius:40px; background:linear-gradient(135deg,#4a1d8c,#7c3aed); color:white; font-size:0.95rem; font-weight:600; cursor:pointer;">✅ 確認</button>
+            </div>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        document.getElementById('teacherLangConfirm').addEventListener('click', () => {
+            const lang = document.querySelector('input[name="teacherLang"]:checked');
+            overlay.remove();
+            resolve(lang ? lang.value : 'en');
+        });
+        document.getElementById('teacherLangCancel').addEventListener('click', () => { overlay.remove(); resolve('en'); });
+    });
+}
+
 function showCustomPrompt() {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
@@ -737,6 +846,23 @@ function showCustomPrompt() {
                 <input type="text" id="customStudentId" placeholder="例如：20240001"
                     style="width: 100%; padding: 10px 14px; border-radius: 12px; border: 2px solid #e0d6f5; font-size: 0.95rem; outline: none; transition: border-color 0.2s;"
                     onfocus="this.style.borderColor='#4a1d8c'" onblur="this.style.borderColor='#e0d6f5'">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #2e0f5a; margin-bottom: 4px;">
+                    🗣️ 學習語言 <span style="color: #dc2626;">*</span>
+                </label>
+                <div style="display: flex; gap: 10px;">
+                    <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 0; border-radius: 12px; border: 2px solid #e0d6f5; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #2e0f5a; transition: all 0.2s; background: white;">
+                        <input type="radio" name="customLang" value="zh" style="accent-color: #4a1d8c;"> 🇭🇰 中文
+                    </label>
+                    <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 0; border-radius: 12px; border: 2px solid #e0d6f5; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #2e0f5a; transition: all 0.2s; background: white;">
+                        <input type="radio" name="customLang" value="en" checked> 🇬🇧 英文
+                    </label>
+                </div>
+                <div style="font-size: 0.72rem; color: #f59e0b; margin-top: 6px; text-align: center;">
+                    ⚠️ 請根據你所屬的班別（中文化學班 / 英文化學班）選擇。<br>一旦選定，日後無法自行更改（老師可於後台修改）。
+                </div>
             </div>
 
             <div id="customPromptError" style="color: #dc2626; font-size: 0.85rem; margin-bottom: 12px; text-align: center; display: none;"></div>
@@ -803,8 +929,11 @@ function showCustomPrompt() {
                 return;
             }
 
+            const langInput = document.querySelector('input[name="customLang"]:checked');
+            const language = langInput ? langInput.value : 'en';
+
             overlay.remove();
-            resolve({ name: name, className: className, studentId: studentId });
+            resolve({ name: name, className: className, studentId: studentId, language: language });
         });
 
         document.getElementById('customCancelBtn').addEventListener('click', function() {
@@ -872,16 +1001,18 @@ async function handleGoogleLogin() {
             let name, className = null, studentId = null;
 
             if (isTeacher) {
-                // 教師：不需填寫班別/學號，直接建立帳戶，code = email 前面部分（如 chs1）
+                // 教師：不需填寫班別/學號，但選擇檢視題目語言
                 const emailPrefix = userId.split('@')[0];
                 name = user.displayName || emailPrefix.toUpperCase();
+                const teacherLang = await showLanguagePrompt();
                 const newUser = await createUser(
                     name,
                     className,
                     studentId,
                     userId,
                     isTeacher,
-                    emailPrefix.toUpperCase()
+                    emailPrefix.toUpperCase(),
+                    teacherLang
                 );
                 existingUser = newUser;
                 try {
@@ -900,13 +1031,16 @@ async function handleGoogleLogin() {
                 name = userInfo.name || user.displayName || userId;
                 className = userInfo.className;
                 studentId = userInfo.studentId;
+                const language = userInfo.language || 'en';
                 
                 const newUser = await createUser(
                     name,
                     className,
                     studentId,
                     userId,
-                    isTeacher
+                    isTeacher,
+                    null,
+                    language
                 );
                 existingUser = newUser;
                 await new Promise(resolve => setTimeout(resolve, 1500));
@@ -1600,7 +1734,7 @@ async function renderPractice() {
         }
         if (Object.keys(filteredChapters).length === 0) continue;
         let mastery = getUnitMastery(unit);
-        let unitNameForDisplay = isMobile() ? unitObj.name.replace(/（[^）]*）/, '') : unitObj.name;
+        let unitNameForDisplay = isZhUser() ? qUnitName(unit) : (isMobile() ? unitObj.name.replace(/（[^）]*）/, '') : unitObj.name);
         html += `<div class="unit-group"><div class="unit-header" id="unit-header-${unit}" onclick="toggleUnit('${unit}')">
             <div class="unit-header-left">
                 <span class="unit-toggle" id="toggle-${unit}">▶</span>
@@ -1621,7 +1755,7 @@ async function renderPractice() {
         </div><div class="chapters-container" id="chapters-${unit}">`;
         for (let ch in filteredChapters) {
             let chMastery = getChapterMastery(unit, ch), chTotal = getChapterTotalQuestions(unit, ch);
-            let chNameDisplay = filteredChapters[ch].name;
+            let chNameDisplay = qChapterName(unit, ch);
             if (isMobile()) {
                 html += `<div class="chapter-item">
                     <span class="chapter-name">${chNameDisplay} (${chTotal} 題)</span>
@@ -1632,7 +1766,7 @@ async function renderPractice() {
                         </div>
                         <div class="chapter-actions">
                             <button class="btn btn-small practice-chapter" data-unit="${unit}" data-chapter="${ch}">✏️練習</button>
-                            <button class="btn btn-small translate-chapter" data-unit="${unit}" data-chapter="${ch}" title="只做本章翻譯題">🗣️翻譯</button>
+                            ${isZhUser() ? '' : `<button class="btn btn-small translate-chapter" data-unit="${unit}" data-chapter="${ch}" title="只做本章翻譯題">🗣️翻譯</button>`}
                             <button class="btn btn-danger btn-small clear-chapter" data-unit="${unit}" data-chapter="${ch}">🗑️重置</button>
                         </div>
                     </div>
@@ -1646,7 +1780,7 @@ async function renderPractice() {
                     </div>
                     <div class="chapter-actions">
                         <button class="btn btn-small practice-chapter" data-unit="${unit}" data-chapter="${ch}">✏️ 練習</button>
-                        <button class="btn btn-small translate-chapter" data-unit="${unit}" data-chapter="${ch}" title="只做本章翻譯題">🗣️ 翻譯</button>
+                        ${isZhUser() ? '' : `<button class="btn btn-small translate-chapter" data-unit="${unit}" data-chapter="${ch}" title="只做本章翻譯題">🗣️ 翻譯</button>`}
                         <button class="btn btn-danger btn-small clear-chapter" data-unit="${unit}" data-chapter="${ch}">🗑️ 重置</button>
                     </div>
                 </div>`;
@@ -1768,7 +1902,7 @@ function startUnitTest(unit) {
     selectedQuestions = shuffleArray(selectedQuestions);
     currentUnit = unit;
     currentChapter = null;
-    currentQuestions = selectedQuestions;
+    currentQuestions = selectedQuestions.map(q => localizeQuestion(q));
     currentOptionsMapping = currentQuestions.map(q => {
         if (q.sf === 0) {
             let letters = ['A', 'B', 'C', 'D'], map = {};
@@ -1857,7 +1991,7 @@ function startSingleQuestion(qid, source) {
     if (!foundQ) { alert('找不到該題目'); return; }
     currentUnit = foundUnit;
     currentChapter = foundChapter;
-    currentQuestions = [foundQ];
+    currentQuestions = [localizeQuestion(foundQ)];
     currentOptionsMapping = currentQuestions.map(q => {
         if (q.sf === 0) {
             let letters = ['A', 'B', 'C', 'D'], map = {};
@@ -2045,15 +2179,18 @@ function updateSettingsUnlockStatus() {
     else if (currentStage === 'star3') needed = Math.ceil(0.8 * advancedTotal) - advancedCorrect;
     else if (currentStage === 'star5') needed = Math.ceil(0.8 * challengeTotal) - challengeCorrect;
     if (needed < 0) needed = 0;
+    let dE = document.getElementById('diff-easy');
     let dM = document.getElementById('diff-medium');
     let dH = document.getElementById('diff-hard');
     let tM = document.getElementById('trial-mode');
     let diffHint = document.getElementById('diffHint');
+    if (dE) dE.innerHTML = `<span class="stars">★</span><span class="label">${diffLabel(0, '1 星')}</span>`;
     if (dM) {
         if (star3Unlocked) {
-            dM.classList.remove('locked'); dM.disabled = false; dM.innerHTML = '<span class="stars">★★★</span><span class="label">3 星</span>';
+            dM.classList.remove('locked'); dM.disabled = false; dM.innerHTML = `<span class="stars">★★★</span><span class="label">${diffLabel(1, '3 星')}</span>`;
         } else {
             dM.classList.add('locked'); dM.disabled = true;
+            dM.innerHTML = `<span class="stars">★★★</span><span class="label">${diffLabel(1, '3 星 🔒')}</span>`;
             if (selectedDifficulty === 1) {
                 selectedDifficulty = 0;
                 document.getElementById('diff-easy').classList.add('active');
@@ -2064,9 +2201,10 @@ function updateSettingsUnlockStatus() {
     }
     if (dH) {
         if (star5Unlocked) {
-            dH.classList.remove('locked'); dH.disabled = false; dH.innerHTML = '<span class="stars">★★★★★</span><span class="label">5 星</span>';
+            dH.classList.remove('locked'); dH.disabled = false; dH.innerHTML = `<span class="stars">★★★★★</span><span class="label">${diffLabel(2, '5 星')}</span>`;
         } else {
             dH.classList.add('locked'); dH.disabled = true;
+            dH.innerHTML = `<span class="stars">★★★★★</span><span class="label">${diffLabel(2, '5 星 🔒')}</span>`;
             if (selectedDifficulty === 2) {
                 selectedDifficulty = 0;
                 document.getElementById('diff-easy').classList.add('active');
@@ -2158,7 +2296,7 @@ function renderMyMistakes(targetPanel) {
         html += `<div class="mistake-chapter-group"><div class="mistake-chapter-header" onclick="toggleMistakeChapter('${ch}','my')"><span>📖 ${wrongByChapter[ch][0].chapterName}</span><span class="unit-toggle" id="my-toggle-${ch}">▶</span></div><div class="mistake-questions" id="my-${ch}">`;
         for (let q of wrongByChapter[ch]) {
             let isFav = userData.favorites.includes(q.id);
-            html += `<div class="mistake-question-item"><span>${q.text}</span><div>
+            html += `<div class="mistake-question-item"><span>${qText(q)}</span><div>
                 <button class="btn-icon star" data-qid="${q.id}" style="color:${isFav ? '#fbbf24' : '#ccc'}">★</button>
                 <button class="btn-icon redo-q" data-qid="${q.id}" data-source="myMistakes">🔄</button>
             </div></div>`;
@@ -2185,7 +2323,7 @@ function renderPastMistakes(targetPanel) {
         html += `<div class="mistake-chapter-group"><div class="mistake-chapter-header" onclick="toggleMistakeChapter('${ch}','past')"><span>📖 ${pastByChapter[ch][0].chapterName}</span><span class="unit-toggle" id="past-toggle-${ch}">▶</span></div><div class="mistake-questions" id="past-${ch}">`;
         for (let q of pastByChapter[ch]) {
             let isFav = userData.favorites.includes(q.id);
-            html += `<div class="mistake-question-item"><span>${q.text}</span><div>
+            html += `<div class="mistake-question-item"><span>${qText(q)}</span><div>
                 <button class="btn-icon star" data-qid="${q.id}" style="color:${isFav ? '#fbbf24' : '#ccc'}">★</button>
                 <button class="btn-icon redo-q" data-qid="${q.id}" data-source="pastMistakes">🔄</button>
                 <button class="btn-icon remove-q" data-qid="${q.id}" style="color:#dc2626;" title="移除該題">🗑️</button>
@@ -2206,7 +2344,7 @@ function renderPinned() {
     for (let qid of userData.favorites) {
         let found = null, chapterName = '';
         for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) { let q = window.ALL_UNITS[u].chapters[c].questions.find(qq => qq.id === qid); if (q) { found = q; chapterName = window.ALL_UNITS[u].chapters[c].name; break; } }
-        if (found) html += `<div class="mistake-question-item"><span><strong>${chapterName}</strong> ${found.text}</span><div>
+        if (found) html += `<div class="mistake-question-item"><span><strong>${chapterName}</strong> ${qText(found)}</span><div>
             <button class="btn-icon redo-q" data-qid="${qid}" data-source="pinned">🔄</button>
             <button class="btn-icon remove-q" data-qid="${qid}" style="color:#dc2626;" title="移除該題">🗑️</button>
         </div></div>`;
@@ -2969,6 +3107,7 @@ async function showAchievementEarners(achKey, displayName) {
 
 // ===== 只做翻譯題練習 =====
 function startTranslatePractice(unit, chapter) {
+    if (isZhUser()) { alert('中文班不需翻譯練習'); return; }
     const allQuestions = [...(window.ALL_UNITS[unit]?.chapters[chapter]?.questions || [])];
     const translateQuestions = allQuestions.filter(q => q.difficulty === '🌐 Translate');
     if (translateQuestions.length === 0) {
@@ -2978,7 +3117,7 @@ function startTranslatePractice(unit, chapter) {
     let selectedQuestions = shuffleArray([...translateQuestions]);
     currentUnit = unit;
     currentChapter = chapter;
-    currentQuestions = selectedQuestions;
+    currentQuestions = selectedQuestions.map(q => localizeQuestion(q));
     currentOptionsMapping = currentQuestions.map(q => {
         if (q.sf === 0) {
             let letters = ['A', 'B', 'C', 'D'], map = {};
@@ -3022,7 +3161,7 @@ function startPracticeWithSettings() {
     selectedQuestions = shuffleArray(selectedQuestions);
     currentUnit = unit;
     currentChapter = chapter;
-    currentQuestions = selectedQuestions;
+    currentQuestions = selectedQuestions.map(q => localizeQuestion(q));
     currentOptionsMapping = currentQuestions.map(q => {
         if (q.sf === 0) {
             let letters = ['A', 'B', 'C', 'D'], map = {};
@@ -3256,7 +3395,7 @@ function renderDesktopCurrentQuestion() {
     const hasImage = q.imageUrl !== null;
     document.getElementById('desktopQuestionText').innerHTML = q.text;
     document.getElementById('desktopCounter').innerHTML = `${currentQIndex + 1} / ${currentQuestions.length}`;
-    document.getElementById('desktopDifficulty').innerHTML = q.difficulty;
+    document.getElementById('desktopDifficulty').innerHTML = isZhUser() ? diffLabelByDifficulty(q.difficulty) : q.difficulty;
     updateDesktopTimerDisplay();
     updateDesktopSidebarDifficulty();
     const imageArea = document.getElementById('desktopImageArea');
@@ -3686,7 +3825,7 @@ document.addEventListener('DOMContentLoaded', function() {
             window._singleRedoQid = null;
             let unit = pendingUnit, chapter = pendingChapter, allQs = [...window.ALL_UNITS[unit].chapters[chapter].questions], targetQ = allQs.find(q => q.id === qid);
             if (targetQ) {
-                currentUnit = unit; currentChapter = chapter; currentQuestions = [targetQ];
+                currentUnit = unit; currentChapter = chapter; currentQuestions = [localizeQuestion(targetQ)];
                 currentOptionsMapping = currentQuestions.map(q => { let letters = ['A', 'B', 'C', 'D'], map = {}; for (let i = 0; i < 4; i++) { let optText = q.options[i].substring(3); map[letters[i]] = optText; } return { letterToText: map, correctLetter: q.correct }; });
                 currentAnswers = new Array(1).fill(null); currentQIndex = 0; timeRemaining = 90; updateDesktopTimerDisplay();
                 if (timerInterval) clearInterval(timerInterval);
@@ -4362,13 +4501,24 @@ async function openEditNameModal(userId) {
             <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #2e0f5a; margin-bottom: 4px;">👤 姓名</label>
             <input type="text" id="editUserName" value="${(user.name || '').replace(/"/g, '&quot;')}" style="width:100%; padding:10px 14px; border-radius:12px; border:2px solid #e0d6f5; font-size:0.95rem; outline:none;">
         </div>
-        <div style="margin-bottom: 14px;">
+        ${user.isTeacher ? '' : `<div style="margin-bottom: 14px;">
             <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #2e0f5a; margin-bottom: 4px;">📚 班別</label>
             <input type="text" id="editUserClass" value="${(user.className || '').replace(/"/g, '&quot;')}" style="width:100%; padding:10px 14px; border-radius:12px; border:2px solid #e0d6f5; font-size:0.95rem; outline:none;">
         </div>
         <div style="margin-bottom: 20px;">
             <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #2e0f5a; margin-bottom: 4px;">🆔 學號</label>
             <input type="text" id="editUserStudentId" value="${(user.studentId || '').replace(/"/g, '&quot;')}" style="width:100%; padding:10px 14px; border-radius:12px; border:2px solid #e0d6f5; font-size:0.95rem; outline:none;">
+        </div>`}
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #2e0f5a; margin-bottom: 4px;">🗣️ 學習語言</label>
+            <div style="display: flex; gap: 10px;">
+                <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 0; border-radius: 12px; border: 2px solid ${user.language === 'zh' ? '#4a1d8c' : '#e0d6f5'}; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #2e0f5a; background: ${user.language === 'zh' ? '#f5f0ff' : 'white'};">
+                    <input type="radio" name="editLang" value="zh" ${user.language === 'zh' ? 'checked' : ''} style="accent-color: #4a1d8c;"> 🇭🇰 中文
+                </label>
+                <label style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 0; border-radius: 12px; border: 2px solid ${user.language !== 'zh' ? '#4a1d8c' : '#e0d6f5'}; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #2e0f5a; background: ${user.language !== 'zh' ? '#f5f0ff' : 'white'};">
+                    <input type="radio" name="editLang" value="en" ${user.language !== 'zh' ? 'checked' : ''} style="accent-color: #4a1d8c;"> 🇬🇧 英文
+                </label>
+            </div>
         </div>
         <div id="editUserError" style="color:#dc2626; font-size:0.85rem; margin-bottom:12px; text-align:center; display:none;"></div>
         <div style="display: flex; gap: 10px;">
@@ -4384,25 +4534,53 @@ async function openEditNameModal(userId) {
     const idInput = document.getElementById('editUserStudentId');
     const errorEl = document.getElementById('editUserError');
 
+    // 語言選項：切換時即時更新 label 外框樣式
+    document.querySelectorAll('input[name="editLang"]').forEach(rb => {
+        rb.addEventListener('change', function() {
+            const lang = this.value;
+            const labels = modal.querySelectorAll('input[name="editLang"]');
+            labels.forEach(r => {
+                const lbl = r.closest('label');
+                const active = (r.value === lang);
+                lbl.style.borderColor = active ? '#4a1d8c' : '#e0d6f5';
+                lbl.style.background = active ? '#f5f0ff' : 'white';
+            });
+        });
+    });
+
     document.getElementById('editUserCancelBtn').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
 
     document.getElementById('editUserConfirmBtn').addEventListener('click', async function() {
         const newName = nameInput.value.trim();
-        const newClass = classInput.value.trim().toUpperCase();
-        const newStudentId = idInput.value.trim();
-        if (!newName || !newClass || !newStudentId) {
-            errorEl.textContent = '⚠️ 請填寫姓名、班別和學號';
+        const newClass = classInput ? classInput.value.trim().toUpperCase() : '';
+        const newStudentId = idInput ? idInput.value.trim() : '';
+        const isTeacherEdit = user.isTeacher || false;
+        if (!newName) {
+            errorEl.textContent = '⚠️ 請填寫姓名';
             errorEl.style.display = 'block';
             return;
         }
-        if (!/^[1-9][0-9]?[A-Z]$/.test(newClass)) {
+        // 老師豁免班別/學號
+        if (!isTeacherEdit && !newClass) {
+            errorEl.textContent = '⚠️ 請填寫班別';
+            errorEl.style.display = 'block';
+            return;
+        }
+        if (!isTeacherEdit && !/^[1-9][0-9]?[A-Z]$/.test(newClass)) {
             errorEl.textContent = '⚠️ 班別格式錯誤：請填「數字+字母」（例如 3A、4C、4D）';
             errorEl.style.display = 'block';
             return;
         }
+        if (!isTeacherEdit && !newStudentId) {
+            errorEl.textContent = '⚠️ 請填寫學號';
+            errorEl.style.display = 'block';
+            return;
+        }
         try {
-            await updateUser(userId, { name: newName, className: newClass, studentId: newStudentId });
+            const langInput = document.querySelector('input[name="editLang"]:checked');
+            const newLang = langInput ? langInput.value : 'en';
+            await updateUser(userId, { name: newName, className: newClass, studentId: newStudentId, language: newLang });
             if (firebase.auth().currentUser && firebase.auth().currentUser.uid === userId) {
                 try { await firebase.auth().currentUser.updateProfile({ displayName: newName }); }
                 catch(e) { console.warn('⚠️ Auth displayName 更新失敗:', e.message); }
@@ -4411,9 +4589,12 @@ async function openEditNameModal(userId) {
             renderTeacherPanel();
             if (currentUser && currentUser.userId === userId) {
                 currentUser = findUser(userId);
+                if (!currentUser) currentUser = { userId: userId, name: newName, language: newLang };
                 updateUserLabel();
+                // 語言改變時重新渲染練習頁（反映中英文章節名/難易度）
+                renderPractice();
             }
-            alert(`✅ 已更新「${newName}」的資料`);
+            alert(`✅ 已更新「${newName}」的資料（語言：${newLang === 'zh' ? '中文' : '英文'}）`);
         } catch (e) {
             console.error('❌ 更新失敗:', e);
             errorEl.textContent = '❌ 更新失敗：' + e.message;
