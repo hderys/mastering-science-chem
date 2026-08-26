@@ -888,7 +888,7 @@
     </div>
     <!-- ===== 分頁列（修改：合併為 4/5 個分頁） ===== -->
     <div class="nav-tabs">
-        <button class="tab active" data-tab="practice">📖 練習</button>
+        <button class="tab active" data-tab="practice">📖 每課練習</button>
         <button class="tab" data-tab="learning">📊 學習紀錄</button>
         <button class="tab" data-tab="pinned">⭐ 收藏</button>
         <button class="tab" data-tab="achievements">🏆 我的成就</button>
@@ -1020,7 +1020,7 @@
 </div>
 
 <div id="resultModal" class="modal"><div class="modal-content"><h3>成績總表</h3><div id="resultContent" class="result-container"></div><button id="closeResultBtn" class="btn">關閉</button></div></div>
-<div id="imageZoomModal" class="modal"><div class="modal-content"><button onclick="closeImageZoom()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666; position:absolute; top:10px; right:16px; z-index:10;">✕</button><img id="zoomImage" src="" style="width:100%; max-height:70vh; object-fit:contain;"><button id="closeZoomBtn" class="btn" style="margin-top:0.8rem;">關閉</button></div></div>
+<div id="imageZoomModal" class="modal"><div class="modal-content" style="background:transparent; padding:0; max-width:96vw; align-items:center; justify-content:center;"><button onclick="closeImageZoom()" style="background:rgba(255,255,255,0.9); border:none; font-size:1.5rem; cursor:pointer; color:#333; position:absolute; top:12px; right:12px; z-index:10; border-radius:50%; width:36px; height:36px; line-height:36px; text-align:center;">✕</button><img id="zoomImage" src="" style="max-width:96vw; max-height:88vh; width:auto; height:auto; object-fit:contain; border-radius:12px; background:transparent;"><button id="closeZoomBtn" class="btn" style="margin-top:0.8rem;">關閉</button></div></div>
 
 <!-- ===== #5: 右下角 Firebase 狀態指示燈 ===== -->
 <div id="statusIndicator" class="status-indicator" 
