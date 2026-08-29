@@ -306,22 +306,48 @@ async function updateMigrationStatusInFirebase(code, status, newUserId) {
     }
 }
 
+// 班別歸組：中四（4 開頭，如 4C/4D）依語言歸入 S4(中)/S4(Eng)，其餘班別維持原樣
+function groupClassName(className, language) {
+    const cn = (className || '').trim().toUpperCase();
+    if (/^4[A-Z]$/.test(cn)) return (language === 'zh') ? 'S4(中)' : 'S4(Eng)';
+    return cn;
+}
+function displayClassOf(user) {
+    return groupClassName(user.className, user.language);
+}
+function isS4GroupClass(cls) {
+    return cls === 'S4(中)' || cls === 'S4(Eng)';
+}
+function isS4RealClass(cn) {
+    return /^4[A-Z]$/.test((cn || '').trim().toUpperCase());
+}
+
 async function loadAllStudentsFromFirebase(className) {
     console.log('📥 從 Firebase 讀取學生數據:', className);
     const db = getUsers();
     const isAll = className === '__all__';
-    // 選「全部」時載入所有學生；選特定班別時只載入該班
+    const isS4Group = isS4GroupClass(className);
+    const s4WantZh = className === 'S4(中)';
+    const inS4Filter = u => isS4RealClass(u.className) && ((u.language || 'en') === 'zh') === s4WantZh;
+    // 選「全部」時載入所有學生；選特定班別時只載入該班；S4(中)/S4(Eng) 載入對應語言的中四班
     const localStudents = isAll
         ? db.users.filter(u => !u.isTeacher)
-        : db.users.filter(u => u.className === className && !u.isTeacher);
+        : (isS4Group
+            ? db.users.filter(u => !u.isTeacher && inS4Filter(u))
+            : db.users.filter(u => u.className === className && !u.isTeacher));
     console.log(`📊 localStorage: ${localStudents.length} 位學生`);
     if (!firestoreEnabled) return localStudents;
     try {
         let query = firebase.firestore().collection('users').where('isTeacher', '==', false);
-        if (!isAll) query = query.where('className', '==', className);
+        if (!isAll && !isS4Group) query = query.where('className', '==', className);
+        if (isS4Group) query = query.where('className', '>=', '4A').where('className', '<=', '4Z');
         const snapshot = await query.get();
         const firebaseStudents = [];
-        snapshot.forEach(doc => firebaseStudents.push(doc.data()));
+        snapshot.forEach(doc => {
+            const u = doc.data();
+            if (isS4Group && !inS4Filter(u)) return;
+            firebaseStudents.push(u);
+        });
         console.log(`📊 Firebase: ${firebaseStudents.length} 位學生`);
         const merged = [...firebaseStudents];
         for (const s of localStudents) {
@@ -1229,8 +1255,8 @@ function addPenaltyAchievement(name, icon, points, desc) {
 let achievementQueue = [];
 let isAchievementShowing = false;
 
-function showAchievementEffect(name, icon, desc, points) {
-    achievementQueue.push({ name, icon, desc, points });
+function showAchievementEffect(name, icon, desc, points, chapterName) {
+    achievementQueue.push({ name, icon, desc, points, chapterName });
     if (!isAchievementShowing) processAchievementQueue();
 }
 
@@ -1283,7 +1309,7 @@ function processAchievementQueue() {
         'blankPaper': '📄 交白卷',
         'downwardTrend': '📉 下滑趨勢'
     };
-    const achievementName = titleMap[item.name] || item.name;
+    const achievementName = isChapterAchievement ? (item.chapterName || item.name) : (titleMap[item.name] || item.name);
     const pointsText = item.points > 0 ? `🏆 +${item.points} 積分` : (item.points < 0 ? `⚠️ ${item.points} 積分` : '');
     overlay.innerHTML = `
         <div class="achievement-card" style="border-color: ${borderColor};">
@@ -1352,37 +1378,37 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     if (s1 >= 80) {
         if (!userData.achievements[key].star1) {
             userData.achievements[key].star1 = { unlocked: true, date: today, lastAccuracy: s1 };
-            newUnlocks.push({ title: "🎉 成就解鎖！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成`, date: today, points: ACHIEVEMENT_POINTS.star1 });
+            newUnlocks.push({ id: key, title: "🎉 成就解鎖！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成`, chapterName: window.ALL_UNITS[unit].chapters[chapter].name, date: today, points: ACHIEVEMENT_POINTS.star1 });
         } else if (userData.achievements[key].star1.lastAccuracy && userData.achievements[key].star1.lastAccuracy < 80 && s1 >= 80) {
             userData.achievements[key].star1.lastAccuracy = s1;
-            newUnlocks.push({ title: "🎉 成就恢復！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成 (再次達標)`, date: today, points: 0 });
+            newUnlocks.push({ id: key, title: "🎉 成就恢復！", message: `✅ ${window.ALL_UNITS[unit].chapters[chapter].name} - 一星完成 (再次達標)`, chapterName: window.ALL_UNITS[unit].chapters[chapter].name, date: today, points: 0 });
         } else userData.achievements[key].star1.lastAccuracy = s1;
     }
     if (s1 >= 80 && s3 >= 80) {
         if (!userData.achievements[key].star3) {
             userData.achievements[key].star3 = { unlocked: true, date: today, lastAccuracy: s3 };
-            newUnlocks.push({ title: "🎉 成就解鎖！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖`, date: today, points: ACHIEVEMENT_POINTS.star3 });
+            newUnlocks.push({ id: key, title: "🎉 成就解鎖！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖`, chapterName: window.ALL_UNITS[unit].chapters[chapter].name, date: today, points: ACHIEVEMENT_POINTS.star3 });
         } else if (userData.achievements[key].star3.lastAccuracy && userData.achievements[key].star3.lastAccuracy < 80 && s3 >= 80) {
             userData.achievements[key].star3.lastAccuracy = s3;
-            newUnlocks.push({ title: "🎉 成就恢復！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖 (再次達標)`, date: today, points: 0 });
+            newUnlocks.push({ id: key, title: "🎉 成就恢復！", message: `🔥 ${window.ALL_UNITS[unit].chapters[chapter].name} - 三星解鎖 (再次達標)`, chapterName: window.ALL_UNITS[unit].chapters[chapter].name, date: today, points: 0 });
         } else userData.achievements[key].star3.lastAccuracy = s3;
     }
     if (s1 >= 80 && s3 >= 80 && s5 >= 80) {
         if (!userData.achievements[key].star5) {
             userData.achievements[key].star5 = { unlocked: true, date: today, lastAccuracy: s5 };
-            newUnlocks.push({ title: "🎉 成就解鎖！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖`, date: today, points: ACHIEVEMENT_POINTS.star5 });
+            newUnlocks.push({ id: key, title: "🎉 成就解鎖！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖`, chapterName: window.ALL_UNITS[unit].chapters[chapter].name, date: today, points: ACHIEVEMENT_POINTS.star5 });
         } else if (userData.achievements[key].star5.lastAccuracy && userData.achievements[key].star5.lastAccuracy < 80 && s5 >= 80) {
             userData.achievements[key].star5.lastAccuracy = s5;
-            newUnlocks.push({ title: "🎉 成就恢復！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖 (再次達標)`, date: today, points: 0 });
+            newUnlocks.push({ id: key, title: "🎉 成就恢復！", message: `💎 ${window.ALL_UNITS[unit].chapters[chapter].name} - 五星解鎖 (再次達標)`, chapterName: window.ALL_UNITS[unit].chapters[chapter].name, date: today, points: 0 });
         } else userData.achievements[key].star5.lastAccuracy = s5;
     }
     if (isTrialMode && accuracy >= 80) {
         if (!userData.achievements[key].trial) {
             userData.achievements[key].trial = { unlocked: true, date: today, lastAccuracy: accuracy };
-            newUnlocks.push({ title: "🎉 成就解鎖！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成`, date: today, points: ACHIEVEMENT_POINTS.trial });
+            newUnlocks.push({ id: key, title: "🎉 成就解鎖！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成`, chapterName: window.ALL_UNITS[unit].chapters[chapter].name, date: today, points: ACHIEVEMENT_POINTS.trial });
         } else if (userData.achievements[key].trial.lastAccuracy && userData.achievements[key].trial.lastAccuracy < 80 && accuracy >= 80) {
             userData.achievements[key].trial.lastAccuracy = accuracy;
-            newUnlocks.push({ title: "🎉 成就恢復！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成 (再次達標)`, date: today, points: 0 });
+            newUnlocks.push({ id: key, title: "🎉 成就恢復！", message: `⚔️ ${window.ALL_UNITS[unit].chapters[chapter].name} - 試煉完成 (再次達標)`, chapterName: window.ALL_UNITS[unit].chapters[chapter].name, date: today, points: 0 });
         } else userData.achievements[key].trial.lastAccuracy = accuracy;
     }
     let totalQ = userData.stats.totalQuestionsAnswered;
@@ -1399,35 +1425,35 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     }
     if (!userData.achievements.firstPractice && userData.practiceHistory.length === 1) {
         userData.achievements.firstPractice = { unlocked: true, date: today, progress: 1, target: 1 };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🎯 初試啼聲 - 完成第一次練習", date: today, points: ACHIEVEMENT_POINTS.firstPractice });
+        newUnlocks.push({ id: 'firstPractice', title: "🎉 成就解鎖！", message: "🎯 初試啼聲 - 完成第一次練習", date: today, points: ACHIEVEMENT_POINTS.firstPractice });
     }
     if (totalQ >= 100 && !userData.achievements.tenQuestions) {
         userData.achievements.tenQuestions = { unlocked: true, date: today, progress: totalQ, target: 100 };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📝 十題達人 - 累積完成100題", date: today, points: ACHIEVEMENT_POINTS.tenQuestions });
+        newUnlocks.push({ id: 'tenQuestions', title: "🎉 成就解鎖！", message: "📝 十題達人 - 累積完成100題", date: today, points: ACHIEVEMENT_POINTS.tenQuestions });
     }
     if (totalQ >= 500 && !userData.achievements.fiveHundred) {
         userData.achievements.fiveHundred = { unlocked: true, date: today, progress: totalQ, target: 500 };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚔️ 百題斬 - 累積完成500題", date: today, points: ACHIEVEMENT_POINTS.fiveHundred });
+        newUnlocks.push({ id: 'fiveHundred', title: "🎉 成就解鎖！", message: "⚔️ 百題斬 - 累積完成500題", date: today, points: ACHIEVEMENT_POINTS.fiveHundred });
     }
     if (totalQ >= 1000 && !userData.achievements.thousand) {
         userData.achievements.thousand = { unlocked: true, date: today, progress: totalQ, target: 1000 };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "👑 千題之王 - 累積完成1000題", date: today, points: ACHIEVEMENT_POINTS.thousand });
+        newUnlocks.push({ id: 'thousand', title: "🎉 成就解鎖！", message: "👑 千題之王 - 累積完成1000題", date: today, points: ACHIEVEMENT_POINTS.thousand });
     }
     if (isPerfect && !userData.achievements.perfectLesson) {
         userData.achievements.perfectLesson = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🌟 完美一課 - 單次練習10題以上全對", date: today, points: ACHIEVEMENT_POINTS.perfectLesson });
+        newUnlocks.push({ id: 'perfectLesson', title: "🎉 成就解鎖！", message: "🌟 完美一課 - 單次練習10題以上全對", date: today, points: ACHIEVEMENT_POINTS.perfectLesson });
     }
     if (isDSE && !userData.achievements.dseComplete) {
         userData.achievements.dseComplete = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📝 DSE模擬完成 - 完成36題模式", date: today, points: ACHIEVEMENT_POINTS.dseComplete });
+        newUnlocks.push({ id: 'dseComplete', title: "🎉 成就解鎖！", message: "📝 DSE模擬完成 - 完成36題模式", date: today, points: ACHIEVEMENT_POINTS.dseComplete });
     }
     if (isSpeed && !userData.achievements.speedStar) {
         userData.achievements.speedStar = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚡ 速度之星 - 提前50%時間完成練習且正確率≥70%", date: today, points: ACHIEVEMENT_POINTS.speedStar });
+        newUnlocks.push({ id: 'speedStar', title: "🎉 成就解鎖！", message: "⚡ 速度之星 - 提前50%時間完成練習且正確率≥70%", date: today, points: ACHIEVEMENT_POINTS.speedStar });
     }
     if (consecutiveCorrectCount >= 20 && !userData.achievements.consecutive20) {
         userData.achievements.consecutive20 = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🔥 連續答對王 - 連續答對20題", date: today, points: ACHIEVEMENT_POINTS.consecutive20 });
+        newUnlocks.push({ id: 'consecutive20', title: "🎉 成就解鎖！", message: "🔥 連續答對王 - 連續答對20題", date: today, points: ACHIEVEMENT_POINTS.consecutive20 });
     }
     let allChaptersDone = true;
     for (let u in window.ALL_UNITS) {
@@ -1437,21 +1463,21 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     }
     if (allChaptersDone && !userData.achievements.allChaptersMaster) {
         userData.achievements.allChaptersMaster = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🏆 全科目制霸 - 所有章節完成度達80%", date: today, points: ACHIEVEMENT_POINTS.allChaptersMaster });
+        newUnlocks.push({ id: 'allChaptersMaster', title: "🎉 成就解鎖！", message: "🏆 全科目制霸 - 所有章節完成度達80%", date: today, points: ACHIEVEMENT_POINTS.allChaptersMaster });
     }
     let recentPractices = userData.practiceHistory.slice(0, 5);
     let allPerfect = recentPractices.length >= 5 && recentPractices.every(p => p.accuracy === 100);
     if (allPerfect && !userData.achievements.fiveStarStreak) {
         userData.achievements.fiveStarStreak = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⭐ 五星連珠 - 連續5次練習正確率100%", date: today, points: ACHIEVEMENT_POINTS.fiveStarStreak });
+        newUnlocks.push({ id: 'fiveStarStreak', title: "🎉 成就解鎖！", message: "⭐ 五星連珠 - 連續5次練習正確率100%", date: today, points: ACHIEVEMENT_POINTS.fiveStarStreak });
     }
     if (clearedMistakes >= 50 && !userData.achievements.mistakeEraser) {
         userData.achievements.mistakeEraser = { unlocked: true, date: today, progress: clearedMistakes, target: 50 };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🗑️ 錯題剋星 - 從錯題本清除50道錯題", date: today, points: ACHIEVEMENT_POINTS.mistakeEraser });
+        newUnlocks.push({ id: 'mistakeEraser', title: "🎉 成就解鎖！", message: "🗑️ 錯題剋星 - 從錯題本清除50道錯題", date: today, points: ACHIEVEMENT_POINTS.mistakeEraser });
     }
     if (userData.favorites.length >= 50 && !userData.achievements.collector) {
         userData.achievements.collector = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📚 收藏家 - 收藏50道題目", date: today, points: ACHIEVEMENT_POINTS.collector });
+        newUnlocks.push({ id: 'collector', title: "🎉 成就解鎖！", message: "📚 收藏家 - 收藏50道題目", date: today, points: ACHIEVEMENT_POINTS.collector });
     }
     let lastDate = userData.stats.lastPracticeDate;
     if (lastDate) {
@@ -1465,42 +1491,42 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     userData.stats.lastPracticeDate = today;
     if (userData.stats.dailyPracticeDates.length >= 7 && !userData.achievements.weekChallenge) {
         userData.achievements.weekChallenge = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📅 一週挑戰 - 連續7天完成至少一次練習", date: today, points: ACHIEVEMENT_POINTS.weekChallenge });
+        newUnlocks.push({ id: 'weekChallenge', title: "🎉 成就解鎖！", message: "📅 一週挑戰 - 連續7天完成至少一次練習", date: today, points: ACHIEVEMENT_POINTS.weekChallenge });
     }
     const ts = userData.translationStats || { totalAttempted: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, perfectRuns: 0, lastAttemptTime: 0, quickCorrectCount: 0 };
     if (ts.totalAttempted >= 1 && !userData.achievements.firstTranslation) {
         userData.achievements.firstTranslation = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "🗣️ 初試譯聲 - 完成第 1 題翻譯題", date: today, points: ACHIEVEMENT_POINTS.firstTranslation });
+        newUnlocks.push({ id: 'firstTranslation', title: "🎉 成就解鎖！", message: "🗣️ 初試譯聲 - 完成第 1 題翻譯題", date: today, points: ACHIEVEMENT_POINTS.firstTranslation });
     }
     if (ts.totalAttempted >= 100 && !userData.achievements.livingDictionary) {
         userData.achievements.livingDictionary = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📖 活字典 - 累積完成 100 題翻譯題", date: today, points: ACHIEVEMENT_POINTS.livingDictionary });
+        newUnlocks.push({ id: 'livingDictionary', title: "🎉 成就解鎖！", message: "📖 活字典 - 累積完成 100 題翻譯題", date: today, points: ACHIEVEMENT_POINTS.livingDictionary });
     }
     if (ts.totalAttempted >= 300 && !userData.achievements.translationMaster) {
         userData.achievements.translationMaster = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📚 翻譯大師 - 累積完成 300 題翻譯題", date: today, points: ACHIEVEMENT_POINTS.translationMaster });
+        newUnlocks.push({ id: 'translationMaster', title: "🎉 成就解鎖！", message: "📚 翻譯大師 - 累積完成 300 題翻譯題", date: today, points: ACHIEVEMENT_POINTS.translationMaster });
     }
     if (ts.totalAttempted >= 30 && !userData.achievements.translationAdept) {
         const rate = Math.round(ts.totalCorrect / ts.totalAttempted * 100);
         if (rate >= 80) {
             userData.achievements.translationAdept = { unlocked: true, date: today };
-            newUnlocks.push({ title: "🎉 成就解鎖！", message: "🎯 譯之達人 - 翻譯題正確率 ≥ 80%（≥30 題）", date: today, points: ACHIEVEMENT_POINTS.translationAdept });
+            newUnlocks.push({ id: 'translationAdept', title: "🎉 成就解鎖！", message: "🎯 譯之達人 - 翻譯題正確率 ≥ 80%（≥30 題）", date: today, points: ACHIEVEMENT_POINTS.translationAdept });
         }
     }
     if (ts.totalAttempted >= 50 && !userData.achievements.translationKing) {
         const rate = Math.round(ts.totalCorrect / ts.totalAttempted * 100);
         if (rate >= 90) {
             userData.achievements.translationKing = { unlocked: true, date: today };
-            newUnlocks.push({ title: "🎉 成就解鎖！", message: "🎯 譯之王者 - 翻譯題正確率 ≥ 90%（≥50 題）", date: today, points: ACHIEVEMENT_POINTS.translationKing });
+            newUnlocks.push({ id: 'translationKing', title: "🎉 成就解鎖！", message: "🎯 譯之王者 - 翻譯題正確率 ≥ 90%（≥50 題）", date: today, points: ACHIEVEMENT_POINTS.translationKing });
         }
     }
     if (ts.maxConsecutive >= 10 && !userData.achievements.swiftTranslator) {
         userData.achievements.swiftTranslator = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "⚡ 閃譯手 - 30 秒內連續答對 10 題翻譯題", date: today, points: ACHIEVEMENT_POINTS.swiftTranslator });
+        newUnlocks.push({ id: 'swiftTranslator', title: "🎉 成就解鎖！", message: "⚡ 閃譯手 - 30 秒內連續答對 10 題翻譯題", date: today, points: ACHIEVEMENT_POINTS.swiftTranslator });
     }
     if (ts.perfectRuns >= 1 && !userData.achievements.perfectTranslation) {
         userData.achievements.perfectTranslation = { unlocked: true, date: today };
-        newUnlocks.push({ title: "🎉 成就解鎖！", message: "📝 譯筆生花 - 單次練習 10 題翻譯題全對", date: today, points: ACHIEVEMENT_POINTS.perfectTranslation });
+        newUnlocks.push({ id: 'perfectTranslation', title: "🎉 成就解鎖！", message: "📝 譯筆生花 - 單次練習 10 題翻譯題全對", date: today, points: ACHIEVEMENT_POINTS.perfectTranslation });
     }
     saveUserData();
 }
@@ -1532,7 +1558,8 @@ function addPracticeHistory(unit, chapter, difficultyName, questionCount, correc
                         newUnlocks[i].id || 'achievement',
                         newUnlocks[i].icon || '🌟',
                         newUnlocks[i].message || '',
-                        newUnlocks[i].points || 0
+                        newUnlocks[i].points || 0,
+                        newUnlocks[i].chapterName || ''
                     );
                 }, i * 500);
             }
@@ -1550,7 +1577,7 @@ function calculateTotalPoints(achievements) {
 
 async function calculateClassRank(userId, userPoints) {
     if (!currentUser || !currentUser.className) return { rank: 0, total: 0 };
-    const className = currentUser.className;
+    const className = groupClassName(currentUser.className, currentUser.language);
     const allStudents = await loadAllStudentsFromFirebase(className);
     if (allStudents.length === 0) return { rank: 0, total: 0 };
     const classmates = [];
@@ -1708,7 +1735,8 @@ async function renderPractice() {
     if (!container) return;
     if (!window.ALL_UNITS) { container.innerHTML = '<div class="card">題庫未載入</div>'; return; }
     const className = currentUser.className;
-    const classSettings = await loadClassSettings(className) || {};
+    const settingsKey = groupClassName(className, currentUser.language);
+    const classSettings = await loadClassSettings(settingsKey) || {};
     const openChapters = classSettings.openChapters || [];
     const isTeacher = currentUser.isTeacher || false;
     // 非學校電郵的訪客/試用者：只開放第一單元（Unit 1），除非已被老師批准
@@ -2432,6 +2460,11 @@ function renderResources() {
                 <span style="font-size:0.85rem; font-weight:600;">離子與化合物<br><span style="font-weight:400; color:#888;">Ionic Compounds · Ch.7</span></span>
                 <span style="margin-left:auto; color:#4a1d8c; font-size:0.7rem;">前往 ↗</span>
             </a>
+            <a href="https://chemistry-kit.pages.dev/structure.html?lang=zh" target="_blank" rel="noopener" style="flex:1; min-width:180px; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; background:#f5f0fb; text-decoration:none; color:#333; border-left:4px solid #0d9488;">
+                <span style="font-size:1.3rem;">🏗️</span>
+                <span style="font-size:0.85rem; font-weight:600;">結構<br><span style="font-weight:400; color:#888;">Structure · Ch.9</span></span>
+                <span style="margin-left:auto; color:#0d9488; font-size:0.7rem;">前往 ↗</span>
+            </a>
             <a href="https://chemistry-kit.pages.dev/rxn.html?lang=zh" target="_blank" rel="noopener" style="flex:1; min-width:180px; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; background:#f5f0fb; text-decoration:none; color:#333; border-left:4px solid #b45309;">
                 <span style="font-size:1.3rem;">⚙️</span>
                 <span style="font-size:0.85rem; font-weight:600;">金屬反應<br><span style="font-weight:400; color:#888;">Metal Reactions · Ch.11</span></span>
@@ -2480,7 +2513,7 @@ async function renderAchievements() {
     let rankInfo = await calculateClassRank(currentUser.id, totalPoints);
     let rankListHtml = '', podiumHtml = '';
     try {
-        const className = currentUser.className;
+        const className = groupClassName(currentUser.className, currentUser.language);
         const allStudents = await loadAllStudentsFromFirebase(className);
         const rankedStudents = [...allStudents].sort((a, b) => {
             const aPoints = calculateTotalPoints(a.achievements || {});
@@ -2577,7 +2610,7 @@ async function renderAchievements() {
         }
     } catch(e) { console.warn('⚠️ 生成頒獎臺失敗:', e); }
     try {
-        const className = currentUser.className;
+        const className = groupClassName(currentUser.className, currentUser.language);
         const allStudents = await loadAllStudentsFromFirebase(className);
         const rankedStudents = [...allStudents].sort((a, b) => {
             const aPoints = calculateTotalPoints(a.achievements || {});
@@ -2748,7 +2781,28 @@ async function renderAchievements() {
 
 // ===== 老師：全班成就統計 =====
 async function renderTeacherAchievements(container) {
-    const allStudents = await loadAllStudentsFromFirebase('__all__');
+    const allRawStudents = await loadAllStudentsFromFirebase('__all__');
+    // 成就分頁的班級下拉：全部 + 歸組班級（與後台一致）
+    if (!window.__achClass) window.__achClass = '__all__';
+    const rawClasses = new Set(allRawStudents.map(s => displayClassOf(s)).filter(Boolean));
+    const s4First = ['S4(中)', 'S4(Eng)'].filter(c => rawClasses.has(c));
+    const otherClasses = [...rawClasses].filter(c => !s4First.includes(c)).sort();
+    const achClassOptions = ['__all__', ...s4First, ...otherClasses];
+    if (!achClassOptions.includes(window.__achClass)) window.__achClass = '__all__';
+    const achLabel = c => c === '__all__' ? '全部班級' : c;
+    const allStudents = window.__achClass === '__all__'
+        ? allRawStudents
+        : allRawStudents.filter(s => displayClassOf(s) === window.__achClass);
+    const achFilterHtml = `
+        <div class="card teacher-settings" style="margin-bottom:0.7rem; padding:0.7rem 0.9rem;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <label style="font-size:12px; font-weight:500; color:#2e0f5a;">📚 成就班級：</label>
+                <select id="teacherAchClassSelector" style="padding:4px 10px; border-radius:16px; border:2px solid #e0d6f5; font-size:13px; background:white;">
+                    ${achClassOptions.map(c => `<option value="${c}" ${c === window.__achClass ? 'selected' : ''}>${achLabel(c)}</option>`).join('')}
+                </select>
+                <span style="font-size:11px; color:#888;">${allStudents.length} 位學生</span>
+            </div>
+        </div>`;
     const achDefs = [
         { id: 'firstPractice', name: '初試啼聲', icon: '🎯', desc: '完成第一次練習' },
         { id: 'tenQuestions', name: '十題達人', icon: '📝', desc: '累積完成100題' },
@@ -2820,7 +2874,7 @@ async function renderTeacherAchievements(container) {
             const displayOrder = [1, 0, 2];
             podiumHtml = `
                 <div class="podium-wrapper">
-                    <div class="podium-title"><strong>🏆</strong> · 全校榮譽榜</div>
+                    <div class="podium-title"><strong>🏆</strong> · ${window.__achClass === '__all__' ? '全校' : achLabel(window.__achClass)}榮譽榜</div>
                     <div class="podium-container">
             `;
             for (const idx of displayOrder) {
@@ -2866,7 +2920,7 @@ async function renderTeacherAchievements(container) {
             // 完整排名列表
             rankListHtml = `
                 <div class="card" style="padding:0.8rem; margin-top:0.6rem;">
-                    <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem;">📊 全部學生積分榜</div>
+                    <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem;">📊 ${window.__achClass === '__all__' ? '全部學生' : achLabel(window.__achClass)}積分榜</div>
                     <div style="overflow-x:auto;">`;
             let listRank = 1, prevPoints = null;
             rankedWithPoints.forEach((s, index) => {
@@ -2876,7 +2930,7 @@ async function renderTeacherAchievements(container) {
                 const medal = listRank <= 3 ? ['🥇', '🥈', '🥉'][listRank - 1] : `${listRank}`;
                 rankListHtml += `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border-bottom:1px solid #f0edf8; border-radius:8px;">
-                        <span style="font-size:0.85rem;">${medal} ${s.name} <span style="color:#999; font-size:0.7rem;">(${s.className || '-'})</span></span>
+                        <span style="font-size:0.85rem;">${medal} ${s.name} <span style="color:#999; font-size:0.7rem;">(${displayClassOf(s) || '-'})</span></span>
                         <span style="font-size:0.85rem; font-weight:600; color:#2e0f5a;">${points} 分</span>
                     </div>
                 `;
@@ -2888,8 +2942,8 @@ async function renderTeacherAchievements(container) {
     let html = podiumHtml;
     if (rankListHtml) html += rankListHtml;
     html += `<div style="margin:0.8rem 0 0.5rem 0;">
-        <h3 style="margin:0; color:#2e0f5a;">🏆 全班成就統計</h3>
-        <p style="color:#888; font-size:0.8rem; margin:4px 0 0 0;">所有學生的成就解鎖情況（點擊可查看名單）</p>
+        <h3 style="margin:0; color:#2e0f5a;">🏆 ${window.__achClass === '__all__' ? '全校' : achLabel(window.__achClass)}成就統計</h3>
+        <p style="color:#888; font-size:0.8rem; margin:4px 0 0 0;">${window.__achClass === '__all__' ? '所有學生的成就解鎖情況（點擊可查看名單）' : achLabel(window.__achClass) + ' 學生的成就解鎖情況（點擊可查看名單）'}</p>
     </div>
     <div class="card" style="padding:0.8rem;">
         <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem; font-size:0.9rem;">🎯 特殊成就</div>
@@ -2917,7 +2971,7 @@ async function renderTeacherAchievements(container) {
     
     // 章節成就
     html += `<div class="card" style="padding:0.8rem; margin-top:0.6rem;">
-        <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem; font-size:0.9rem;">📖 章節成就</div>
+        <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem; font-size:0.9rem;">📖 章節成就（${window.__achClass === '__all__' ? '全校' : achLabel(window.__achClass)}）</div>
         <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
             <thead><tr><th style="text-align:left; padding:6px; border-bottom:2px solid #4a1d8c;">章節成就</th><th style="padding:6px; border-bottom:2px solid #4a1d8c;">解鎖人數</th></tr></thead>
             <tbody>`;
@@ -2946,7 +3000,14 @@ async function renderTeacherAchievements(container) {
     }
     html += `</tbody></table></div>`;
     
-    container.innerHTML = html;
+    container.innerHTML = achFilterHtml + html;
+    const achSelector = document.getElementById('teacherAchClassSelector');
+    if (achSelector) {
+        achSelector.onchange = function() {
+            window.__achClass = this.value;
+            renderTeacherAchievements(container);
+        };
+    }
 }
 
 // ===== 顯示學生已獲得的成就 =====
@@ -3032,7 +3093,7 @@ async function showStudentAchievements(userId) {
         <div style="text-align:center; margin-bottom:10px;">
             <div style="font-size:2rem;">🏆</div>
             <h2 style="color:#2e0f5a; font-size:1.1rem; margin:0;">${studentData.name}</h2>
-            <p style="color:#888; font-size:0.8rem; margin:4px 0 0 0;">${studentData.className || ''} ${studentData.studentId || ''} · ${totalPoints} 分 · ${unlockedSpecials.length + chapterDefs.length} 個成就</p>
+            <p style="color:#888; font-size:0.8rem; margin:4px 0 0 0;">${displayClassOf(studentData) || ''} ${studentData.studentId || ''} · ${totalPoints} 分 · ${unlockedSpecials.length + chapterDefs.length} 個成就</p>
         </div>
         ${listHtml}
         <button id="studentAchCloseBtn" style="margin-top:16px; width:100%; padding:10px 0; border:none; border-radius:40px; background:#4a1d8c; color:white; font-size:0.95rem; font-weight:600; cursor:pointer;">關閉</button>
@@ -3046,8 +3107,9 @@ async function showStudentAchievements(userId) {
 // ===== 查看誰已獲得某成就（學生只看同班，老師看全部） =====
 async function showAchievementEarners(achKey, displayName) {
     const isTeacher = currentUser && currentUser.isTeacher;
-    // 載入所有學生（學生載入同班，老師載入全部）
-    const students = await loadAllStudentsFromFirebase(isTeacher ? '__all__' : (currentUser.className || '__all__'));
+    // 載入所有學生（學生載入同班，老師依成就分頁所選班級；未選則全部）
+    const achClass = isTeacher ? (window.__achClass || '__all__') : (groupClassName(currentUser.className, currentUser.language) || '__all__');
+    const students = await loadAllStudentsFromFirebase(achClass);
     
     // 取得所有學生（含當前使用者資料，確保從 Firestore 讀最新）
     const earners = [];
@@ -3863,10 +3925,18 @@ async function renderTeacherPanel() {
         currentUser.managedClasses = [];
         updateUser(currentUser.userId, { managedClasses: currentUser.managedClasses });
     }
-    // 教師的班級選項：全部 + 各班（動態從學生資料收集）
+    // 教師的班級選項：全部 + 各班（動態從學生資料收集；中四依語言歸組為 S4(中)/S4(Eng)）
     const allStudentsForClass = await loadAllStudentsFromFirebase('__all__');
-    const classOptions = ['__all__', ...new Set(allStudentsForClass.map(s => s.className).filter(Boolean))];
+    const rawClasses = new Set(allStudentsForClass.map(s => displayClassOf(s)).filter(Boolean));
+    const s4First = ['S4(中)', 'S4(Eng)'].filter(c => rawClasses.has(c));
+    const otherClasses = [...rawClasses].filter(c => !s4First.includes(c)).sort();
+    const classOptions = ['__all__', ...s4First, ...otherClasses];
+    // 兼容舊儲存的 currentClass（如 4C/4D），映射為新的歸組班級
+    if (currentClass && isS4RealClass(currentClass) && !classOptions.includes(currentClass)) {
+        currentClass = groupClassName(currentClass, currentUser.language);
+    }
     if (!currentClass) currentClass = '__all__';
+    if (!classOptions.includes(currentClass)) currentClass = '__all__';
     const classLabel = c => c === '__all__' ? '全部班級' : c;
     let html = `
         <div class="card teacher-settings">
@@ -4038,7 +4108,7 @@ async function renderSubtabProgress(className) {
                         <button class="btn-icon" onclick="openEditNameModal('${s.userId}')" style="font-size:12px;" title="編輯資料">✏️</button>
                     </td>
                     <td>${s.studentId || '-'}</td>
-                    <td>${s.className || '-'}</td>
+<td>${displayClassOf(s) || '-'}</td>
                     <td>${total}</td>
                     <td style="font-weight:600; color:${acc >= 70 ? '#10b981' : (acc >= 40 ? '#f59e0b' : '#dc2626')};">${acc}%</td>
                     <td style="font-size:0.75rem; color:#666;">${s.lastLogin ? formatLastLogin(s.lastLogin) : '-'}</td>
@@ -4248,7 +4318,7 @@ async function renderSubtabLastLogin(className) {
         const detail = s.lastLogin ? format(new Date(s.lastLogin), 'yyyy-MM-dd HH:mm') : '-';
         html += `<tr>
             <td style="font-weight:600;">${s.name}</td>
-            <td>${s.className || '-'}</td>
+            <td>${displayClassOf(s) || '-'}</td>
             <td>${s.studentId || '-'}</td>
             <td><span style="font-weight:600; color:${color};">${lastLogin}</span></td>
             <td style="color:#888; font-size:0.7rem;">${detail}</td>
@@ -4335,7 +4405,7 @@ async function renderSubtabChapters(className) {
     if (className === '__all__') {
         container.innerHTML = `<div class="card" style="text-align:center; color:#888; padding:24px;">
             📖 章節開放設定是按班別管理的。<br><br>
-            請在上方「📚 班級」下拉選取<b>單一班別</b>（如 3A、4C、4D）再進行設定。
+            請在上方「📚 班級」下拉選取<b>單一班別</b>（如 3A、S4(中)、S4(Eng)）再進行設定。
         </div>`;
         return;
     }
@@ -4742,7 +4812,7 @@ async function showStudentDetail(userId) {
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; border-bottom:2px solid #e9e4f5; padding-bottom:12px;">
                     <div>
                         <h2 style="color:#2e0f5a; margin:0;">👤 ${user.name}</h2>
-                        <div style="color:#888; font-size:0.85rem;">🆔 ${user.userId}  |  📚 ${user.className}</div>
+                        <div style="color:#888; font-size:0.85rem;">🆔 ${user.userId}  |  📚 ${displayClassOf(user) || '-'}</div>
                         <div style="color:#999; font-size:0.7rem; margin-top:2px;">🕐 最後更新：${lastUpdated}</div>
                     </div>
                     <button onclick="document.getElementById('studentDetailModal').remove()" style="
