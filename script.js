@@ -1531,7 +1531,7 @@ function checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, isPe
     saveUserData();
 }
 
-function addPracticeHistory(unit, chapter, difficultyName, questionCount, correctCount, accuracy, mode, timeSpentPercent, consecutiveCorrectCount, isBlankPaper, timeSpentSeconds) {
+function addPracticeHistory(unit, chapter, difficultyName, questionCount, correctCount, accuracy, mode, timeSpentPercent, consecutiveCorrectCount, isBlankPaper, timeSpentSeconds, skipAchievements) {
     let now = new Date(), date = now.toISOString().slice(0, 10), time = now.toTimeString().slice(0, 5);
     let unitObj = window.ALL_UNITS[unit];
     let unitName = unitObj ? unitObj.name : unit;
@@ -1549,7 +1549,7 @@ function addPracticeHistory(unit, chapter, difficultyName, questionCount, correc
     let isSpeed = timeSpentPercent <= 50 && accuracy >= 70;
     saveUserData();
     let newUnlocks = [];
-    checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, accuracy === 100 && questionCount >= 10, selectedCount === 36, isSpeed, totalQuestions, newUnlocks, consecutiveCorrectCount, isBlankPaper, previousAccuracy);
+    if (!skipAchievements) checkAndUnlockAchievements(unit, chapter, accuracy, questionCount, accuracy === 100 && questionCount >= 10, selectedCount === 36, isSpeed, totalQuestions, newUnlocks, consecutiveCorrectCount, isBlankPaper, previousAccuracy);
     if (newUnlocks.length > 0) {
         setTimeout(() => {
             for (let i = 0; i < newUnlocks.length; i++) {
@@ -1840,7 +1840,7 @@ async function renderPractice() {
             let qs = window.ALL_UNITS[unit].chapters[chapter].questions;
             for (let q of qs) delete userData.latestStatus[q.id];
             userData.allAttempts = userData.allAttempts.filter(att => !qs.some(q => q.id === att.qid));
-            saveUserData(); renderPractice(); renderMyMistakes(); renderPastMistakes(); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
+            saveUserData(); renderPractice(); renderMyMistakes(); renderMyMistakes('learning'); renderPastMistakes(); renderPastMistakes('learning'); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
         }
     }));
 }
@@ -2455,6 +2455,21 @@ function renderResources() {
     <div class="card" style="margin-bottom:0.8rem; padding:0.8rem;">
         <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem; font-size:0.9rem;">🧪 網上互動練習</div>
         <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <a href="https://chemistry-kit.pages.dev/ch1.html?lang=zh" target="_blank" rel="noopener" style="flex:1; min-width:180px; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; background:#f5f0fb; text-decoration:none; color:#333; border-left:4px solid #3b82f6;">
+                <span style="font-size:1.3rem;">⚗️</span>
+                <span style="font-size:0.85rem; font-weight:600;">儀器與標籤<br><span style="font-weight:400; color:#888;">Apparatus &amp; Labels · Ch.1</span></span>
+                <span style="margin-left:auto; color:#3b82f6; font-size:0.7rem;">前往 ↗</span>
+            </a>
+            <a href="https://chemistry-kit.pages.dev/ch2.html?lang=zh" target="_blank" rel="noopener" style="flex:1; min-width:180px; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; background:#f5f0fb; text-decoration:none; color:#333; border-left:4px solid #06b6d4;">
+                <span style="font-size:1.3rem;">🔬</span>
+                <span style="font-size:0.85rem; font-weight:600;">特性、變化與分類<br><span style="font-weight:400; color:#888;">Properties &amp; Changes · Ch.2</span></span>
+                <span style="margin-left:auto; color:#06b6d4; font-size:0.7rem;">前往 ↗</span>
+            </a>
+            <a href="https://chemistry-kit.pages.dev/ch5.html?lang=zh" target="_blank" rel="noopener" style="flex:1; min-width:180px; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; background:#f5f0fb; text-decoration:none; color:#333; border-left:4px solid #8b5cf6;">
+                <span style="font-size:1.3rem;">⚛️</span>
+                <span style="font-size:0.85rem; font-weight:600;">原子與周期表<br><span style="font-weight:400; color:#888;">Atoms &amp; Periodic Table · Ch.5/6</span></span>
+                <span style="margin-left:auto; color:#8b5cf6; font-size:0.7rem;">前往 ↗</span>
+            </a>
             <a href="https://chemistry-kit.pages.dev/ions.html?lang=zh" target="_blank" rel="noopener" style="flex:1; min-width:180px; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; background:#f5f0fb; text-decoration:none; color:#333; border-left:4px solid #4a1d8c;">
                 <span style="font-size:1.3rem;">🧪</span>
                 <span style="font-size:0.85rem; font-weight:600;">離子與化合物<br><span style="font-weight:400; color:#888;">Ionic Compounds · Ch.7</span></span>
@@ -2469,6 +2484,11 @@ function renderResources() {
                 <span style="font-size:1.3rem;">⚙️</span>
                 <span style="font-size:0.85rem; font-weight:600;">金屬反應<br><span style="font-weight:400; color:#888;">Metal Reactions · Ch.11</span></span>
                 <span style="margin-left:auto; color:#b45309; font-size:0.7rem;">前往 ↗</span>
+            </a>
+            <a href="https://chemistry-kit.pages.dev/detective.html?lang=zh" target="_blank" rel="noopener" style="flex:1; min-width:180px; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; background:#f5f0fb; text-decoration:none; color:#333; border-left:4px solid #7c3aed;">
+                <span style="font-size:1.3rem;">🕵️</span>
+                <span style="font-size:0.85rem; font-weight:600;">偵探訓練<br><span style="font-weight:400; color:#888;">Analytical Chemistry</span></span>
+                <span style="margin-left:auto; color:#7c3aed; font-size:0.7rem;">前往 ↗</span>
             </a>
         </div>
     </div>`;
@@ -2874,7 +2894,7 @@ async function renderTeacherAchievements(container) {
             const displayOrder = [1, 0, 2];
             podiumHtml = `
                 <div class="podium-wrapper">
-                    <div class="podium-title"><strong>🏆</strong> · ${window.__achClass === '__all__' ? '全校' : achLabel(window.__achClass)}榮譽榜</div>
+                    <div class="podium-title"><strong>🏆</strong> · 榮譽榜</div>
                     <div class="podium-container">
             `;
             for (const idx of displayOrder) {
@@ -2920,7 +2940,7 @@ async function renderTeacherAchievements(container) {
             // 完整排名列表
             rankListHtml = `
                 <div class="card" style="padding:0.8rem; margin-top:0.6rem;">
-                    <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem;">📊 ${window.__achClass === '__all__' ? '全部學生' : achLabel(window.__achClass)}積分榜</div>
+                    <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem;">📊 積分榜</div>
                     <div style="overflow-x:auto;">`;
             let listRank = 1, prevPoints = null;
             rankedWithPoints.forEach((s, index) => {
@@ -2942,8 +2962,8 @@ async function renderTeacherAchievements(container) {
     let html = podiumHtml;
     if (rankListHtml) html += rankListHtml;
     html += `<div style="margin:0.8rem 0 0.5rem 0;">
-        <h3 style="margin:0; color:#2e0f5a;">🏆 ${window.__achClass === '__all__' ? '全校' : achLabel(window.__achClass)}成就統計</h3>
-        <p style="color:#888; font-size:0.8rem; margin:4px 0 0 0;">${window.__achClass === '__all__' ? '所有學生的成就解鎖情況（點擊可查看名單）' : achLabel(window.__achClass) + ' 學生的成就解鎖情況（點擊可查看名單）'}</p>
+        <h3 style="margin:0; color:#2e0f5a;">🏆 成就統計</h3>
+        <p style="color:#888; font-size:0.8rem; margin:4px 0 0 0;">學生的成就解鎖情況（點擊可查看名單）</p>
     </div>
     <div class="card" style="padding:0.8rem;">
         <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem; font-size:0.9rem;">🎯 特殊成就</div>
@@ -2971,7 +2991,7 @@ async function renderTeacherAchievements(container) {
     
     // 章節成就
     html += `<div class="card" style="padding:0.8rem; margin-top:0.6rem;">
-        <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem; font-size:0.9rem;">📖 章節成就（${window.__achClass === '__all__' ? '全校' : achLabel(window.__achClass)}）</div>
+        <div style="font-weight:700; color:#2e0f5a; margin-bottom:0.5rem; font-size:0.9rem;">📖 章節成就</div>
         <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
             <thead><tr><th style="text-align:left; padding:6px; border-bottom:2px solid #4a1d8c;">章節成就</th><th style="padding:6px; border-bottom:2px solid #4a1d8c;">解鎖人數</th></tr></thead>
             <tbody>`;
@@ -3328,7 +3348,9 @@ function toggleFavorite(qid) {
     saveUserData();
     renderPinned();
     renderMyMistakes();
+    renderMyMistakes('learning');
     renderPastMistakes();
+    renderPastMistakes('learning');
 }
 
 function showPeriodicTable() { openToolWindow('periodic'); }
@@ -3661,8 +3683,8 @@ function continueSubmitDesktopAll() {
             else alert('❌ 答錯了！再試一次吧！');
         }
         recordBatch(batch);
-        addPracticeHistory(currentUnit, currentChapter, '單題練習', 1, isCorrectSingle ? 1 : 0, isCorrectSingle ? 100 : 0, 'single', 0, consecutiveCorrect, isBlankPaper, timeSpentSeconds);
-        renderMyMistakes(); renderPastMistakes(); renderPinned(); renderHistory(); renderAchievements();
+        addPracticeHistory(currentUnit, currentChapter, '單題練習', 1, isCorrectSingle ? 1 : 0, isCorrectSingle ? 100 : 0, 'single', 0, consecutiveCorrect, isBlankPaper, timeSpentSeconds, true);
+        renderMyMistakes(); renderMyMistakes('learning'); renderPastMistakes(); renderPastMistakes('learning'); renderPinned(); renderHistory(); renderAchievements();
         document.getElementById('desktopQuizModal').style.display = 'none';
         exitFullscreenMode();
         return;
@@ -3674,13 +3696,13 @@ function continueSubmitDesktopAll() {
         showDSEResult(accuracy, correctCount, currentQuestions.length);
         document.getElementById('desktopQuizModal').style.display = 'none';
         exitFullscreenMode();
-        renderPractice(); renderMyMistakes(); renderPastMistakes(); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
+        renderPractice(); renderMyMistakes(); renderMyMistakes('learning'); renderPastMistakes(); renderPastMistakes('learning'); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
         return;
     }
     document.getElementById('desktopQuizModal').style.display = 'none';
     exitFullscreenMode();
     setTimeout(function() { displayResults(results); }, 100);
-    renderPractice(); renderMyMistakes(); renderPastMistakes(); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
+    renderPractice(); renderMyMistakes(); renderMyMistakes('learning'); renderPastMistakes(); renderPastMistakes('learning'); renderPinned(); renderHistory(); renderAchievements(); updateSettingsUnlockStatus();
 }
 
 function showQuizModal() { showDesktopQuizModal(); }
@@ -3910,7 +3932,7 @@ function unlockAll() {
     for (let q of qs) userData.latestStatus[q.id] = true;
     saveUserData();
     updateSettingsUnlockStatus();
-    renderPractice(); renderMyMistakes(); renderPastMistakes(); renderPinned(); renderHistory(); renderAchievements();
+    renderPractice(); renderMyMistakes(); renderMyMistakes('learning'); renderPastMistakes(); renderPastMistakes('learning'); renderPinned(); renderHistory(); renderAchievements();
     alert('🔓 所有難度已解鎖！');
 }
 
@@ -4625,24 +4647,25 @@ async function openEditNameModal(userId) {
         const newName = nameInput.value.trim();
         const newClass = classInput ? classInput.value.trim().toUpperCase() : '';
         const newStudentId = idInput ? idInput.value.trim() : '';
-        const isTeacherEdit = user.isTeacher || false;
+        const isOperatorTeacher = (currentUser && currentUser.isTeacher) || false;
+        const isTeacherTarget = user.isTeacher || false;
         if (!newName) {
             errorEl.textContent = '⚠️ 請填寫姓名';
             errorEl.style.display = 'block';
             return;
         }
-        // 老師豁免班別/學號
-        if (!isTeacherEdit && !newClass) {
+        // 老師帳戶豁免班別/學號；老師操作時班別可填任意值（如 VIP）
+        if (!isTeacherTarget && !newClass) {
             errorEl.textContent = '⚠️ 請填寫班別';
             errorEl.style.display = 'block';
             return;
         }
-        if (!isTeacherEdit && !/^[1-9][0-9]?[A-Z]$/.test(newClass)) {
+        if (!isTeacherTarget && !isOperatorTeacher && !/^[1-9][0-9]?[A-Z]$/.test(newClass)) {
             errorEl.textContent = '⚠️ 班別格式錯誤：請填「數字+字母」（例如 3A、4C、4D）';
             errorEl.style.display = 'block';
             return;
         }
-        if (!isTeacherEdit && !newStudentId) {
+        if (!isTeacherTarget && !newStudentId) {
             errorEl.textContent = '⚠️ 請填寫學號';
             errorEl.style.display = 'block';
             return;
