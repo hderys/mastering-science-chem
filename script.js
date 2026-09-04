@@ -1079,22 +1079,7 @@ async function handleGoogleLogin() {
             }
         }
         
-        updateStatusDot('online', `✅ 歡迎 ${existingUser.name}！`, '#d4edda', '#065f46');
-        currentUser = existingUser;
-        
-        // 記錄最後上線時間
-        try {
-            const nowISO = new Date().toISOString();
-            existingUser.lastLogin = nowISO;
-            const db = getUsers();
-            const idx = db.users.findIndex(u => u.userId === currentUser.userId);
-            if (idx !== -1) { db.users[idx].lastLogin = nowISO; saveUsers(db); }
-            if (firestoreEnabled) {
-                firebase.firestore().collection('users').doc(currentUser.userId).set({ lastLogin: nowISO }, { merge: true }).catch(e => console.warn('⚠️ 記錄上線時間失敗:', e.message));
-            }
-        } catch(e) { console.warn('⚠️ 記錄上線時間失敗:', e); }
-        
-        enterMainApp(currentUser);
+        await finalizeLogin(existingUser);
         
     } catch (error) {
         console.error('❌ Google 登入失敗:', error);
@@ -1105,6 +1090,130 @@ async function handleGoogleLogin() {
         } else {
             showLoginError('❌ Google 登入失敗：' + error.message);
         }
+    }
+}
+
+// ===== 登入完成後的共同流程（記錄上線時間 + 進入主程式） =====
+async function finalizeLogin(existingUser) {
+    updateStatusDot('online', `✅ 歡迎 ${existingUser.name}！`, '#d4edda', '#065f46');
+    currentUser = existingUser;
+
+    // 記錄最後上線時間
+    try {
+        const nowISO = new Date().toISOString();
+        existingUser.lastLogin = nowISO;
+        const db = getUsers();
+        const idx = db.users.findIndex(u => u.userId === currentUser.userId);
+        if (idx !== -1) { db.users[idx].lastLogin = nowISO; saveUsers(db); }
+        if (firestoreEnabled) {
+            firebase.firestore().collection('users').doc(currentUser.userId).set({ lastLogin: nowISO }, { merge: true }).catch(e => console.warn('⚠️ 記錄上線時間失敗:', e.message));
+        }
+    } catch(e) { console.warn('⚠️ 記錄上線時間失敗:', e); }
+
+    enterMainApp(currentUser);
+}
+
+// ===== 電郵／密碼登入（內地生或無 Google 帳戶者使用） =====
+function getEmailLoginInputs() {
+    return {
+        email: (document.getElementById('emailLoginInput') || {}).value || '',
+        password: (document.getElementById('emailLoginPassword') || {}).value || ''
+    };
+}
+
+async function handleEmailLogin() {
+    clearLoginError();
+    const { email, password } = getEmailLoginInputs();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showLoginError('⚠️ 請輸入有效的電郵地址'); return; }
+    if (!password) { showLoginError('⚠️ 請輸入密碼'); return; }
+    updateStatusDot('connecting', '⏳ 連線中...', '#fef3c7', '#7c5a00');
+    try {
+        await firebase.auth().signInWithEmailAndPassword(email.trim(), password);
+        const userId = email.trim().toLowerCase();
+        const existingUser = await findUserAcrossDevices(userId);
+        if (!existingUser) {
+            // 理論上不應發生（註冊時會建立），但保險：補建使用者
+            await firebase.auth().signOut();
+            showLoginError('⚠️ 找不到帳戶資料，請先註冊');
+            return;
+        }
+        await finalizeLogin(existingUser);
+    } catch (error) {
+        console.error('❌ 電郵登入失敗:', error);
+        updateStatusDot('offline', '❌ 登入失敗', '#f8d7da', '#7f1d1d');
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            showLoginError('❌ 電郵或密碼錯誤，請重試或先註冊');
+        } else if (error.code === 'auth/invalid-email') {
+            showLoginError('❌ 電郵格式不正確');
+        } else {
+            showLoginError('❌ 登入失敗：' + error.message);
+        }
+    }
+}
+
+async function handleEmailRegister() {
+    clearLoginError();
+    const { email, password } = getEmailLoginInputs();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showLoginError('⚠️ 請輸入有效的電郵地址'); return; }
+    if (!password || password.length < 6) { showLoginError('⚠️ 密碼至少 6 位'); return; }
+    updateStatusDot('connecting', '⏳ 註冊中...', '#fef3c7', '#7c5a00');
+    try {
+        const userId = email.trim().toLowerCase();
+        // 檢查是否已有學習紀錄
+        const existing = await findUserAcrossDevices(userId);
+        if (existing) {
+            showLoginError('⚠️ 此電郵已註冊，請直接登入');
+            return;
+        }
+        await firebase.auth().createUserWithEmailAndPassword(email.trim(), password);
+        const isTeacher = isTeacherEmail(userId);
+        let name, className = null, studentId = null;
+        if (isTeacher) {
+            const emailPrefix = userId.split('@')[0];
+            name = emailPrefix.toUpperCase();
+            const teacherLang = await showLanguagePrompt();
+            const newUser = await createUser(name, className, studentId, userId, isTeacher, emailPrefix.toUpperCase(), teacherLang);
+            await finalizeLogin(newUser);
+        } else {
+            const userInfo = await showCustomPrompt();
+            if (!userInfo) {
+                await firebase.auth().signOut();
+                updateStatusDot('offline', '❌ 註冊取消', '#f8d7da', '#7f1d1d');
+                return;
+            }
+            name = userInfo.name || userId;
+            className = userInfo.className;
+            studentId = userInfo.studentId;
+            const language = userInfo.language || 'en';
+            const newUser = await createUser(name, className, studentId, userId, isTeacher, null, language);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            await finalizeLogin(newUser);
+        }
+    } catch (error) {
+        console.error('❌ 電郵註冊失敗:', error);
+        updateStatusDot('offline', '❌ 註冊失敗', '#f8d7da', '#7f1d1d');
+        if (error.code === 'auth/email-already-in-use') {
+            showLoginError('⚠️ 此電郵已註冊，請直接登入');
+        } else if (error.code === 'auth/weak-password') {
+            showLoginError('⚠️ 密碼太弱，至少 6 位');
+        } else if (error.code === 'auth/invalid-email') {
+            showLoginError('⚠️ 電郵格式不正確');
+        } else {
+            showLoginError('❌ 註冊失敗：' + error.message);
+        }
+    }
+}
+
+async function handleEmailForgot() {
+    clearLoginError();
+    const email = (document.getElementById('emailLoginInput') || {}).value || '';
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showLoginError('⚠️ 請先輸入電郵地址，再按「忘記密碼」'); return; }
+    try {
+        await firebase.auth().sendPasswordResetEmail(email.trim());
+        alert('✅ 重設密碼郵件已寄出，請檢查信箱（含垃圾郵件）');
+    } catch (error) {
+        console.error('❌ 發送重置信失敗:', error);
+        showLoginError('❌ 發送失敗：' + error.message);
     }
 }
 

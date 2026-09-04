@@ -863,21 +863,56 @@
 
     <div id="loginError" style="color:#dc2626; font-size:0.85rem; margin-bottom:8px; display:none;"></div>
 
-    <!-- Google 登入按鈕 -->
-    <button id="googleLoginBtn" class="google-login-btn">
-        <svg width="22" height="22" viewBox="0 0 48 48">
-            <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
-            <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
-            <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
-            <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
-        </svg>
-        使用 Google 帳戶登入
-    </button>
+    <!-- 登入方式切換 -->
+    <div style="display:flex; margin-bottom:16px; border-radius:12px; background:#f0edf8; padding:4px;">
+        <button id="loginTabGoogle" onclick="switchLoginTab('google')" style="flex:1; padding:8px 0; border:none; border-radius:10px; background:#4a1d8c; color:white; font-size:0.9rem; font-weight:600; cursor:pointer;">🔑 Google 登入</button>
+        <button id="loginTabEmail" onclick="switchLoginTab('email')" style="flex:1; padding:8px 0; border:none; border-radius:10px; background:transparent; color:#666; font-size:0.9rem; font-weight:600; cursor:pointer;">✉️ 電郵登入</button>
+    </div>
+
+    <!-- Google 登入（預設顯示） -->
+    <div id="loginGooglePane">
+        <button id="googleLoginBtn" class="google-login-btn">
+            <svg width="22" height="22" viewBox="0 0 48 48">
+                <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+                <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+                <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+                <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+            </svg>
+            使用 Google 帳戶登入
+        </button>
+    </div>
+
+    <!-- 電郵登入 -->
+    <div id="loginEmailPane" style="display:none;">
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">✉️ 電郵</label>
+            <input type="email" id="emailLoginInput" placeholder="例如：yourname@email.com" autocomplete="email"
+                style="width:100%; padding:10px 14px; border-radius:12px; border:2px solid #e0d6f5; font-size:0.95rem; outline:none;">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">🔒 密碼</label>
+            <input type="password" id="emailLoginPassword" placeholder="請輸入密碼" autocomplete="current-password"
+                style="width:100%; padding:10px 14px; border-radius:12px; border:2px solid #e0d6f5; font-size:0.95rem; outline:none;">
+        </div>
+        <button id="emailLoginBtn" style="width:100%; padding:11px 0; border:none; border-radius:40px; background:linear-gradient(135deg,#4a1d8c,#7c3aed); color:white; font-size:0.95rem; font-weight:600; cursor:pointer; margin-bottom:8px;">
+            🔑 登入
+        </button>
+        <button id="emailRegisterBtn" style="width:100%; padding:11px 0; border:2px solid #e0d6f5; border-radius:40px; background:white; color:#4a1d8c; font-size:0.95rem; font-weight:600; cursor:pointer; margin-bottom:8px;">
+            📝 註冊新帳戶
+        </button>
+        <button id="emailForgotBtn" style="width:100%; padding:8px 0; border:none; background:none; color:#888; font-size:0.82rem; cursor:pointer; text-decoration:underline;">
+            忘記密碼？
+        </button>
+        <div style="font-size:0.75rem; color:#888; margin-top:10px; line-height:1.5;">
+            💡 未有 Google 帳戶？可用電郵＋密碼註冊（例如內地生用 QQ 郵箱）。<br>
+            使用非學校電郵僅開放第一單元試用，請老師批准後即可使用完整內容。
+        </div>
+    </div>
 
     <div class="login-footer">
-        <div>⚠️ 請使用學校電郵登入</div>
+        <div>⚠️ 老師及本校學生請使用學校 Google 帳戶登入</div>
         <span class="small">首次登入？用 Google 帳戶即可開始，系統會自動建立學習紀錄</span>
-        <span class="small" style="margin-top:2px;">使用非學校電郵僅開放第一單元試用</span>
+        <span class="small" style="margin-top:2px;">未有 Google 帳戶？可用「✉️ 電郵登入」註冊（非學校電郵僅開放第一單元試用，請老師批准）</span>
     </div>
 </div>
 
@@ -55641,6 +55676,50 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // 登入方式切換（Google / 電郵）
+    window.switchLoginTab = function(tab) {
+        var googleBtn = document.getElementById('loginTabGoogle');
+        var emailBtn = document.getElementById('loginTabEmail');
+        var googlePane = document.getElementById('loginGooglePane');
+        var emailPane = document.getElementById('loginEmailPane');
+        var activeStyle = 'background:#4a1d8c; color:white;';
+        var inactiveStyle = 'background:transparent; color:#666;';
+        if (tab === 'email') {
+            emailBtn.style.cssText = activeStyle + 'flex:1; padding:8px 0; border:none; border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer;';
+            googleBtn.style.cssText = inactiveStyle + 'flex:1; padding:8px 0; border:none; border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer;';
+            googlePane.style.display = 'none';
+            emailPane.style.display = 'block';
+        } else {
+            googleBtn.style.cssText = activeStyle + 'flex:1; padding:8px 0; border:none; border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer;';
+            emailBtn.style.cssText = inactiveStyle + 'flex:1; padding:8px 0; border:none; border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer;';
+            googlePane.style.display = 'block';
+            emailPane.style.display = 'none';
+        }
+    };
+
+    // 電郵登入 / 註冊 / 忘記密碼
+    var emailLoginBtn = document.getElementById('emailLoginBtn');
+    if (emailLoginBtn) emailLoginBtn.addEventListener('click', function() {
+        if (typeof handleEmailLogin === 'function') handleEmailLogin();
+        else alert('⚠️ 請確認 script.js 已正確載入');
+    });
+    var emailRegisterBtn = document.getElementById('emailRegisterBtn');
+    if (emailRegisterBtn) emailRegisterBtn.addEventListener('click', function() {
+        if (typeof handleEmailRegister === 'function') handleEmailRegister();
+        else alert('⚠️ 請確認 script.js 已正確載入');
+    });
+    var emailForgotBtn = document.getElementById('emailForgotBtn');
+    if (emailForgotBtn) emailForgotBtn.addEventListener('click', function() {
+        if (typeof handleEmailForgot === 'function') handleEmailForgot();
+        else alert('⚠️ 請確認 script.js 已正確載入');
+    });
+
+    // 電郵登入輸入框 Enter 鍵觸發登入
+    var emailLoginInput = document.getElementById('emailLoginInput');
+    var emailLoginPassword = document.getElementById('emailLoginPassword');
+    if (emailLoginInput) emailLoginInput.addEventListener('keydown', function(e) { if (e.key === 'Enter' && emailLoginPassword) emailLoginPassword.focus(); });
+    if (emailLoginPassword) emailLoginPassword.addEventListener('keydown', function(e) { if (e.key === 'Enter' && typeof handleEmailLogin === 'function') handleEmailLogin(); });
     console.log('✅ 登入畫面已載入，等待用戶登入...');
 });
 </script>
