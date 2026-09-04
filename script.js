@@ -340,7 +340,7 @@ async function loadAllStudentsFromFirebase(className) {
     try {
         let query = firebase.firestore().collection('users').where('isTeacher', '==', false);
         if (!isAll && !isS4Group) query = query.where('className', '==', className);
-        if (isS4Group) query = query.where('className', '>=', '4A').where('className', '<=', '4Z');
+        if (isS4Group) query = firebase.firestore().collection('users').where('className', '>=', '4A').where('className', '<=', '4Z');
         const snapshot = await query.get();
         const firebaseStudents = [];
         snapshot.forEach(doc => {
