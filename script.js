@@ -1162,9 +1162,9 @@ async function handleEmailLogin() {
     if (!password) { showLoginError('⚠️ 請輸入密碼'); return; }
     updateStatusDot('connecting', '⏳ 連線中...', '#fef3c7', '#7c5a00');
     try {
-        await firebase.auth().signInWithEmailAndPassword(email.trim(), password);
+        await withTimeout(firebase.auth().signInWithEmailAndPassword(email.trim(), password), 8000);
         const userId = email.trim().toLowerCase();
-        const existingUser = await findUserAcrossDevices(userId);
+        const existingUser = await withTimeout(findUserAcrossDevices(userId), 8000);
         if (!existingUser) {
             // 理論上不應發生（註冊時會建立），但保險：補建使用者
             await firebase.auth().signOut();
@@ -1199,12 +1199,12 @@ async function handleEmailRegister() {
     try {
         const userId = email.trim().toLowerCase();
         // 檢查是否已有學習紀錄
-        const existing = await findUserAcrossDevices(userId);
+        const existing = await withTimeout(findUserAcrossDevices(userId), 8000);
         if (existing) {
             showLoginError('⚠️ 此電郵已註冊，請直接登入');
             return;
         }
-        await firebase.auth().createUserWithEmailAndPassword(email.trim(), password);
+        await withTimeout(firebase.auth().createUserWithEmailAndPassword(email.trim(), password), 8000);
         const isTeacher = isTeacherEmail(userId);
         let name, className = null, studentId = null;
         if (isTeacher) {
@@ -1252,6 +1252,19 @@ async function handleEmailRegister() {
 function isOfflineNetworkError(error) {
     return error && (error.code === 'auth/network-request-failed'
         || /network|timeout|unreachable|INTERNET_DISCONNECTED/i.test(error.message || ''));
+}
+
+// 給 Firebase 呼叫加超時：內地被牆時連線會卡很久，超過 ms 即判定為離線
+function withTimeout(promise, ms) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => {
+            const err = new Error('timeout');
+            err.code = 'auth/network-request-failed';
+            err.message = 'Network request timed out';
+            reject(err);
+        }, ms))
+    ]);
 }
 
 async function sha256(text) {
@@ -1336,7 +1349,20 @@ async function offlineRegister(userId, password) {
     firestoreEnabled = false;
     currentUser = user;
     console.log('✅ 離線註冊成功:', userId);
-    alert(`✅ 已建立離線帳戶（未連線雲端）！\n\n👤 ${user.name}\n📚 班別：${user.className}\n\n💡 回港後請按右上「🔄 同步到雲端」，即可上傳進度。`);
+    alert(`✅ 已建立離線帳戶（未連線雲端）！
+
+👤 ${user.name}
+📚 班別：${user.className}
+
+📴 【離線模式使用指引】
+1. 在內地：直接練習即可，進度會儲存在這部裝置
+2. 回港後：按主程式頂部的「🔄 同步到雲端」黃色橫幅
+3. 輸入同一組電郵＋密碼 → 進度上傳雲端
+4. 之後在學校用「✉️ 電郵登入」＋同一組電郵密碼登入
+5. 放學回內地會自動轉離線模式，繼續練習
+6. 第二天回校再按「🔄 同步到雲端」即可
+
+⚠️ 請記住你的電郵和密碼，日後同步/登入都需要用同一組。`);
     showOfflineBanner();
     enterMainApp(user);
     return true;
@@ -1369,6 +1395,11 @@ function openOfflineSyncModal() {
         <div style="font-size:2rem; margin-bottom:6px;">🔄</div>
         <h3 style="color:#2e0f5a; margin:0 0 4px 0;">同步到雲端</h3>
         <p style="color:#888; font-size:0.85rem; margin:0 0 16px 0;">輸入密碼建立雲端帳戶，並上傳本機進度。<br>（回港連線正常後使用）</p>
+        <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:10px 12px; font-size:0.78rem; color:#0c4a6e; text-align:left; margin-bottom:14px; line-height:1.6;">
+            📴 同步後：在學校用「✉️ 電郵登入」＋同一組密碼登入即可；<br>
+            放學回內地會自動轉離線模式繼續練習，<br>
+            第二天回校再按此同步，進度不會丟失。
+        </div>
         <div style="margin-bottom:12px; text-align:left;">
             <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">✉️ 電郵</label>
             <input id="offlineSyncEmail" value="${currentUser.userId}" readonly style="width:100%; padding:10px 14px; border-radius:12px; border:2px solid #e0d6f5; font-size:0.95rem; background:#f0edf8; outline:none;">
