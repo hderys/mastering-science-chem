@@ -1129,6 +1129,8 @@ async function handleGoogleLogin() {
 
 // ===== 登入完成後的共同流程（記錄上線時間 + 進入主程式） =====
 async function finalizeLogin(existingUser) {
+    // 雲端登入成功：確保 firestore 啟用（避免先前離線模式殘留 false 影響儲存）
+    firestoreEnabled = true;
     updateStatusDot('online', `✅ 歡迎 ${existingUser.name}！`, '#d4edda', '#065f46');
     currentUser = existingUser;
 
@@ -1171,6 +1173,21 @@ async function handleEmailLogin() {
             showLoginError('⚠️ 找不到帳戶資料，請先註冊');
             return;
         }
+        // 雲端登入成功：拉取老師可能設定的欄位（approved 批准）併回本機帳戶
+        try {
+            const cloudDoc = await firebase.firestore().collection('users').doc(userId).get();
+            if (cloudDoc.exists) {
+                const cd = cloudDoc.data();
+                if (cd.approved === true) existingUser.approved = true;
+                const db = getUsers();
+                const idx = db.users.findIndex(u => u.userId === userId);
+                if (idx !== -1) {
+                    db.users[idx].approved = (db.users[idx].approved === true || cd.approved === true) ? true : false;
+                    saveUsers(db);
+                    existingUser = db.users[idx];
+                }
+            }
+        } catch(e) { console.warn('⚠️ 讀取雲端使用者設定失敗:', e.message); }
         await finalizeLogin(existingUser);
     } catch (error) {
         console.error('❌ 電郵登入失敗:', error);
@@ -1380,8 +1397,17 @@ function showOfflineBanner() {
         mainApp.insertBefore(banner, mainApp.firstChild);
     }
     banner.innerHTML = `
-        <span>📴 <b>離線模式</b>：目前未連線雲端，進度儲存於此裝置。</span>
-        <button onclick="openOfflineSyncModal()" style="margin-left:auto; padding:6px 14px; border:none; border-radius:40px; background:linear-gradient(135deg,#f59e0b,#d97706); color:white; font-weight:600; cursor:pointer; font-size:0.85rem;">🔄 同步到雲端</button>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; width:100%;">
+            <span style="font-size:1.1rem;">📴</span>
+            <div style="flex:1; min-width:200px;">
+                <div style="font-weight:700; color:#92400e;">離線模式（未連線雲端）</div>
+                <div style="font-size:0.78rem; color:#78350f; margin-top:2px; line-height:1.5;">
+                    進度只儲存在<b>此裝置</b>。<br>
+                    💡 換裝置或換瀏覽器會看不到此處的進度！回港後請先按「🔄 同步到雲端」上傳。
+                </div>
+            </div>
+            <button onclick="openOfflineSyncModal()" style="margin-left:auto; padding:7px 16px; border:none; border-radius:40px; background:linear-gradient(135deg,#f59e0b,#d97706); color:white; font-weight:700; cursor:pointer; font-size:0.85rem; box-shadow:0 2px 8px rgba(217,119,6,0.4);">🔄 同步到雲端</button>
+        </div>
     `;
 }
 
@@ -1474,6 +1500,17 @@ async function performOfflineSync(userId, password) {
         delete cloudUser.isOffline;
         cloudUser.lastLogin = new Date().toISOString();
         await firebase.firestore().collection('users').doc(userId).set(cloudUser, { merge: true });
+        // 下載雲端中老師可能設定的欄位（如 approved 批准狀態），併回本機帳戶
+        try {
+            const cloudDoc = await firebase.firestore().collection('users').doc(userId).get();
+            if (cloudDoc.exists) {
+                const cd = cloudDoc.data();
+                if (cd.approved === true) cloudUser.approved = true;
+                if (cd.className) cloudUser.className = cd.className;
+                if (cd.language) cloudUser.language = cd.language;
+                if (cd.studentId) cloudUser.studentId = cd.studentId;
+            }
+        } catch(e) { console.warn('⚠️ 讀取雲端使用者設定失敗:', e.message); }
         // 本機保留 passwordHash，供日後內地離線登入
         const localKeep = { ...cloudUser, passwordHash: localUser.passwordHash };
         db.users[db.users.findIndex(u => u.userId === userId)] = localKeep;
