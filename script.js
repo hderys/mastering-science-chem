@@ -412,7 +412,7 @@ function formatLastLogin(isoStr) {
 async function loadUserData() {
     if (!currentUser) return;
     const userId = currentUser.id || currentUser.userId;
-    // 本機可能有離線練習資料（此帳戶在本機登入過離線模式）
+    // 本機可能有較新的練習資料（無論是否離線帳戶）
     const localRaw = localStorage.getItem(`ms_chem_${userId}`);
     const localData = localRaw ? JSON.parse(localRaw) : null;
     const localCount = localData && localData.stats ? (localData.stats.totalQuestionsAnswered || 0) : 0;
@@ -423,8 +423,8 @@ async function loadUserData() {
             const cloudData = await loadFromFirestore('users', userId);
             if (cloudData) {
                 const cloudCount = (cloudData.stats && cloudData.stats.totalQuestionsAnswered) || 0;
-                // 若本機曾離線練習且本機題數 >= 雲端，表示本機較新 → 以本機為準並上傳雲端
-                if (hadOffline && localData && localCount >= cloudCount && localCount > 0) {
+                // 若本機有練習資料且本機題數 >= 雲端，表示本機較新 → 以本機為準並上傳雲端
+                if (localData && localCount >= cloudCount && localCount > 0) {
                     userData = localData;
                     if (!userData.practiceHistory) userData.practiceHistory = [];
                     if (!userData.achievements) userData.achievements = {};
