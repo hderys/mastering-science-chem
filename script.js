@@ -412,10 +412,44 @@ function formatLastLogin(isoStr) {
 async function loadUserData() {
     if (!currentUser) return;
     const userId = currentUser.id || currentUser.userId;
+    // 本機可能有離線練習資料（此帳戶在本機登入過離線模式）
+    const localRaw = localStorage.getItem(`ms_chem_${userId}`);
+    const localData = localRaw ? JSON.parse(localRaw) : null;
+    const localCount = localData && localData.stats ? (localData.stats.totalQuestionsAnswered || 0) : 0;
+    const localUserRec = findUser(userId);
+    const hadOffline = !!(localUserRec && localUserRec.passwordHash);
     if (firestoreEnabled) {
         try {
             const cloudData = await loadFromFirestore('users', userId);
             if (cloudData) {
+                const cloudCount = (cloudData.stats && cloudData.stats.totalQuestionsAnswered) || 0;
+                // 若本機曾離線練習且本機題數 >= 雲端，表示本機較新 → 以本機為準並上傳雲端
+                if (hadOffline && localData && localCount >= cloudCount && localCount > 0) {
+                    userData = localData;
+                    if (!userData.practiceHistory) userData.practiceHistory = [];
+                    if (!userData.achievements) userData.achievements = {};
+                    if (!userData.stats) userData.stats = { totalQuestionsAnswered: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, dailyPracticeDates: [], lastAccuracy: null };
+                    if (!userData.stats.dailyPracticeDates) userData.stats.dailyPracticeDates = [];
+                    if (!userData.translationStats) userData.translationStats = { totalAttempted: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, perfectRuns: 0, lastAttemptTime: 0, quickCorrectCount: 0 };
+                    if (!userData.mistakeTracker) userData.mistakeTracker = {};
+                    if (!userData.chapterAccuracy) userData.chapterAccuracy = {};
+                    localStorage.setItem(`ms_chem_${userId}`, JSON.stringify(userData));
+                    syncToFirestore('users', userId, {
+                        latestStatus: userData.latestStatus || {},
+                        allAttempts: userData.allAttempts || [],
+                        favorites: userData.favorites || [],
+                        practiceHistory: userData.practiceHistory || [],
+                        achievements: userData.achievements || {},
+                        stats: userData.stats || {},
+                        translationStats: userData.translationStats || {},
+                        mistakeTracker: userData.mistakeTracker || {},
+                        chapterAccuracy: userData.chapterAccuracy || {},
+                        lastLogin: new Date().toISOString(),
+                        lastUpdated: new Date().toISOString()
+                    });
+                    console.log('✅ 本機離線資料較新，已上傳雲端');
+                    return;
+                }
                 userData = {
                     latestStatus: cloudData.latestStatus || {},
                     allAttempts: cloudData.allAttempts || [],
@@ -1140,6 +1174,11 @@ async function handleEmailLogin() {
         await finalizeLogin(existingUser);
     } catch (error) {
         console.error('❌ 電郵登入失敗:', error);
+        if (isOfflineNetworkError(error)) {
+            // 內地連不上 Firebase：改用本機離線登入
+            const ok = await offlineLogin(email.trim().toLowerCase(), password);
+            if (ok) return;
+        }
         updateStatusDot('offline', '❌ 登入失敗', '#f8d7da', '#7f1d1d');
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
             showLoginError('❌ 電郵或密碼錯誤，請重試或先註冊');
@@ -1191,6 +1230,11 @@ async function handleEmailRegister() {
         }
     } catch (error) {
         console.error('❌ 電郵註冊失敗:', error);
+        if (isOfflineNetworkError(error)) {
+            // 內地連不上 Firebase：改用本機離線註冊
+            const ok = await offlineRegister(email.trim().toLowerCase(), password);
+            if (ok) return;
+        }
         updateStatusDot('offline', '❌ 註冊失敗', '#f8d7da', '#7f1d1d');
         if (error.code === 'auth/email-already-in-use') {
             showLoginError('⚠️ 此電郵已註冊，請直接登入');
@@ -1201,6 +1245,225 @@ async function handleEmailRegister() {
         } else {
             showLoginError('❌ 註冊失敗：' + error.message);
         }
+    }
+}
+
+// ===== 離線模式（內地連不上 Firebase 時使用） =====
+function isOfflineNetworkError(error) {
+    return error && (error.code === 'auth/network-request-failed'
+        || /network|timeout|unreachable|INTERNET_DISCONNECTED/i.test(error.message || ''));
+}
+
+async function sha256(text) {
+    try {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch(e) {
+        // 極舊瀏覽器不支援 crypto.subtle：退而求其次用簡單 hash
+        let h = 0;
+        for (let i = 0; i < text.length; i++) { h = (h * 31 + text.charCodeAt(i)) >>> 0; }
+        return 'fallback-' + h.toString(16);
+    }
+}
+
+async function offlineLogin(userId, password) {
+    const local = findUser(userId);
+    if (!local || !local.passwordHash) {
+        showLoginError('⚠️ 無法連線雲端，且本機未有此帳戶的離線資料。請回港後再試，或確認電郵正確。');
+        return false;
+    }
+    const hash = await sha256(password);
+    if (local.passwordHash && local.passwordHash !== hash) {
+        showLoginError('⚠️ 離線模式密碼錯誤（此密碼僅用於本機登入）');
+        return false;
+    }
+    firestoreEnabled = false;
+    currentUser = local;
+    console.log('✅ 離線登入成功:', userId);
+    showOfflineBanner();
+    // 記錄本機登入時間（不寫雲端）
+    const nowISO = new Date().toISOString();
+    local.lastLogin = nowISO;
+    const db = getUsers();
+    const idx = db.users.findIndex(u => u.userId === userId);
+    if (idx !== -1) { db.users[idx].lastLogin = nowISO; saveUsers(db); }
+    enterMainApp(local);
+    return true;
+}
+
+async function offlineRegister(userId, password) {
+    const existing = findUser(userId);
+    if (existing) {
+        showLoginError('⚠️ 此電郵在本機已有帳戶，請直接登入');
+        return false;
+    }
+    const isTeacher = isTeacherEmail(userId);
+    if (isTeacher) {
+        showLoginError('⚠️ 離線模式不支援教師帳戶，請回港後以學校電郵註冊');
+        return false;
+    }
+    const userInfo = await showCustomPrompt();
+    if (!userInfo) {
+        updateStatusDot('offline', '❌ 註冊取消', '#f8d7da', '#7f1d1d');
+        return false;
+    }
+    const passwordHash = await sha256(password);
+    const db = getUsers();
+    const user = {
+        userId: userId,
+        name: userInfo.name || userId,
+        className: userInfo.className,
+        studentId: userInfo.studentId,
+        language: userInfo.language || 'en',
+        teacherCode: '',
+        isTeacher: false,
+        isOffline: true,
+        passwordHash: passwordHash,
+        managedClasses: [],
+        createdAt: new Date().toISOString(),
+        latestStatus: {},
+        allAttempts: [],
+        favorites: [],
+        practiceHistory: [],
+        achievements: {},
+        stats: { totalQuestionsAnswered: 0, totalCorrect: 0 },
+        translationStats: { totalAttempted: 0, totalCorrect: 0, consecutiveCorrect: 0, maxConsecutive: 0, perfectRuns: 0, lastAttemptTime: 0, quickCorrectCount: 0 },
+        mistakeTracker: {},
+        chapterAccuracy: {}
+    };
+    db.users.push(user);
+    saveUsers(db);
+    firestoreEnabled = false;
+    currentUser = user;
+    console.log('✅ 離線註冊成功:', userId);
+    alert(`✅ 已建立離線帳戶（未連線雲端）！\n\n👤 ${user.name}\n📚 班別：${user.className}\n\n💡 回港後請按右上「🔄 同步到雲端」，即可上傳進度。`);
+    showOfflineBanner();
+    enterMainApp(user);
+    return true;
+}
+
+// 顯示離線模式提示橫幅（主程式頂部）
+function showOfflineBanner() {
+    const mainApp = document.getElementById('mainApp');
+    if (!mainApp) return;
+    let banner = document.getElementById('offlineSyncBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'offlineSyncBanner';
+        banner.style.cssText = 'background:#fef3c7; border:2px solid #f59e0b; border-radius:12px; padding:10px 14px; margin-bottom:10px; font-size:0.85rem; color:#78350f; display:flex; align-items:center; gap:10px; flex-wrap:wrap;';
+        mainApp.insertBefore(banner, mainApp.firstChild);
+    }
+    banner.innerHTML = `
+        <span>📴 <b>離線模式</b>：目前未連線雲端，進度儲存於此裝置。</span>
+        <button onclick="openOfflineSyncModal()" style="margin-left:auto; padding:6px 14px; border:none; border-radius:40px; background:linear-gradient(135deg,#f59e0b,#d97706); color:white; font-weight:600; cursor:pointer; font-size:0.85rem;">🔄 同步到雲端</button>
+    `;
+}
+
+function openOfflineSyncModal() {
+    const overlay = document.createElement('div');
+    overlay.id = 'offlineSyncOverlay';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:999999;';
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background:white; border-radius:24px; padding:28px; max-width:400px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+    modal.innerHTML = `
+        <div style="font-size:2rem; margin-bottom:6px;">🔄</div>
+        <h3 style="color:#2e0f5a; margin:0 0 4px 0;">同步到雲端</h3>
+        <p style="color:#888; font-size:0.85rem; margin:0 0 16px 0;">輸入密碼建立雲端帳戶，並上傳本機進度。<br>（回港連線正常後使用）</p>
+        <div style="margin-bottom:12px; text-align:left;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">✉️ 電郵</label>
+            <input id="offlineSyncEmail" value="${currentUser.userId}" readonly style="width:100%; padding:10px 14px; border-radius:12px; border:2px solid #e0d6f5; font-size:0.95rem; background:#f0edf8; outline:none;">
+        </div>
+        <div style="margin-bottom:16px; text-align:left;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">🔒 密碼</label>
+            <input id="offlineSyncPassword" type="password" placeholder="請輸入密碼" style="width:100%; padding:10px 14px; border-radius:12px; border:2px solid #e0d6f5; font-size:0.95rem; outline:none;">
+        </div>
+        <div id="offlineSyncError" style="color:#dc2626; font-size:0.85rem; margin-bottom:12px; display:none;"></div>
+        <div style="display:flex; gap:10px;">
+            <button id="offlineSyncCancel" style="flex:1; padding:10px 0; border:2px solid #e0d6f5; border-radius:40px; background:white; color:#666; font-size:0.95rem; font-weight:600; cursor:pointer;">取消</button>
+            <button id="offlineSyncConfirm" style="flex:2; padding:10px 0; border:none; border-radius:40px; background:linear-gradient(135deg,#4a1d8c,#7c3aed); color:white; font-size:0.95rem; font-weight:600; cursor:pointer;">✅ 同步</button>
+        </div>
+    `;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    const errEl = document.getElementById('offlineSyncError');
+    const pwdInput = document.getElementById('offlineSyncPassword');
+    setTimeout(() => pwdInput.focus(), 100);
+    document.getElementById('offlineSyncCancel').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('offlineSyncConfirm').addEventListener('click', async function() {
+        const password = pwdInput.value;
+        if (!password) { errEl.textContent = '⚠️ 請輸入密碼'; errEl.style.display = 'block'; return; }
+        errEl.style.display = 'none';
+        document.getElementById('offlineSyncConfirm').disabled = true;
+        document.getElementById('offlineSyncConfirm').textContent = '⏳ 同步中...';
+        const ok = await performOfflineSync(currentUser.userId, password);
+        if (ok) { overlay.remove(); }
+        else {
+            document.getElementById('offlineSyncConfirm').disabled = false;
+            document.getElementById('offlineSyncConfirm').textContent = '✅ 同步';
+        }
+    });
+}
+
+async function performOfflineSync(userId, password) {
+    try {
+        // 嘗試登入雲端；若帳戶不存在則建立
+        try {
+            await firebase.auth().signInWithEmailAndPassword(userId, password);
+        } catch (e) {
+            if (e.code === 'auth/user-not-found') {
+                await firebase.auth().createUserWithEmailAndPassword(userId, password);
+            } else {
+                throw e;
+            }
+        }
+        firestoreEnabled = true;
+        const db = getUsers();
+        const localUser = db.users.find(u => u.userId === userId);
+        if (!localUser) { alert('❌ 找不到本機帳戶資料'); return false; }
+        // 上傳本機 userData
+        const rawData = localStorage.getItem(`ms_chem_${userId}`);
+        const userDataObj = rawData ? JSON.parse(rawData) : {};
+        await syncToFirestore('users', userId, {
+            latestStatus: userDataObj.latestStatus || {},
+            allAttempts: userDataObj.allAttempts || [],
+            favorites: userDataObj.favorites || [],
+            practiceHistory: userDataObj.practiceHistory || [],
+            achievements: userDataObj.achievements || {},
+            stats: userDataObj.stats || {},
+            translationStats: userDataObj.translationStats || {},
+            mistakeTracker: userDataObj.mistakeTracker || {},
+            chapterAccuracy: userDataObj.chapterAccuracy || {},
+            lastLogin: new Date().toISOString(),
+            lastUpdated: new Date().toISOString()
+        });
+        // 更新使用者資料（移除離線標記，寫入雲端；密碼 hash 僅存本機不傳雲端）
+        const cloudUser = { ...localUser };
+        delete cloudUser.passwordHash;
+        delete cloudUser.isOffline;
+        cloudUser.lastLogin = new Date().toISOString();
+        await firebase.firestore().collection('users').doc(userId).set(cloudUser, { merge: true });
+        // 本機保留 passwordHash，供日後內地離線登入
+        const localKeep = { ...cloudUser, passwordHash: localUser.passwordHash };
+        db.users[db.users.findIndex(u => u.userId === userId)] = localKeep;
+        saveUsers(db);
+        currentUser = localKeep;
+        // 移除離線橫幅
+        const banner = document.getElementById('offlineSyncBanner');
+        if (banner) banner.remove();
+        alert('✅ 同步完成！本機進度已上傳雲端，日後可在任何裝置登入使用。');
+        enterMainApp(cloudUser);
+        return true;
+    } catch (error) {
+        console.error('❌ 同步失敗:', error);
+        const errEl = document.getElementById('offlineSyncError');
+        if (errEl) {
+            if (isOfflineNetworkError(error)) errEl.textContent = '⚠️ 仍無法連線雲端（可能身處內地），請回港後再試';
+            else if (error.code === 'auth/email-already-in-use') errEl.textContent = '⚠️ 此電郵雲端已有帳戶，請直接用「電郵登入」登入';
+            else errEl.textContent = '❌ 同步失敗：' + error.message;
+            errEl.style.display = 'block';
+        }
+        return false;
     }
 }
 
