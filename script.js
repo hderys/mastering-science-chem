@@ -1146,7 +1146,194 @@ async function finalizeLogin(existingUser) {
         }
     } catch(e) { console.warn('⚠️ 記錄上線時間失敗:', e); }
 
+    // 偵測本機離線帳戶並提示合併（僅雲端登入；離線登入本身就會有離線橫幅引導同步）
+    try {
+        const pendingOffline = findLocalOfflineAccounts(currentUser.userId);
+        if (pendingOffline.length > 0) {
+            // 只要有未合併的，或離線帳戶題數比上次合併時增加（內地又做了新題）→ 提示
+            const needsMerge = pendingOffline.some(a => {
+                if (!a.mergedTo || a.mergedTo !== currentUser.userId) return true;
+                const accData = loadLocalUserData(a.userId);
+                const count = (accData && accData.stats && accData.stats.totalQuestionsAnswered) || 0;
+                return count > (a.lastMergedCount || 0);
+            });
+            if (needsMerge) openMergeModal(pendingOffline);
+        }
+    } catch(e) { console.warn('⚠️ 離線合併偵測失敗:', e.message); }
+
     enterMainApp(currentUser);
+}
+
+// ===== 本機離線帳戶資料合併到當前雲端帳戶 =====
+// 內地生回港用學校 Google 登入時，自動偵測本機未同步的離線帳戶（如 QQ），詢問是否合併
+function findLocalOfflineAccounts(excludeUserId) {
+    const db = getUsers();
+    return db.users.filter(u => u.passwordHash && u.userId !== excludeUserId);
+}
+
+function mergeUserData(base, incoming) {
+    // latestStatus：同題取「答對」優先
+    const latestStatus = { ...base.latestStatus, ...incoming.latestStatus };
+    for (const k in incoming.latestStatus) {
+        if (incoming.latestStatus[k] === true) latestStatus[k] = true;
+    }
+    // allAttempts：依 qid+timestamp 去重合併
+    const seen = new Set(base.allAttempts.map(a => a.qid));
+    const allAttempts = [...base.allAttempts];
+    for (const a of incoming.allAttempts || []) {
+        if (!seen.has(a.qid)) { allAttempts.push(a); seen.add(a.qid); }
+    }
+    // favorites：併集
+    const favorites = [...new Set([...(base.favorites || []), ...(incoming.favorites || [])])];
+    // practiceHistory：依 id 去重
+    const historySeen = new Set((base.practiceHistory || []).map(h => h.id));
+    const practiceHistory = [...(base.practiceHistory || [])];
+    for (const h of incoming.practiceHistory || []) {
+        if (!historySeen.has(h.id)) { practiceHistory.push(h); historySeen.add(h.id); }
+    }
+    // achievements：併集（unlocked 優先）
+    const achievements = { ...(base.achievements || {}), ...(incoming.achievements || {}) };
+    for (const k in incoming.achievements || {}) {
+        if (incoming.achievements[k] && incoming.achievements[k].unlocked) achievements[k] = incoming.achievements[k];
+    }
+    // stats：合計
+    const stats = { ...(base.stats || {}), ...(incoming.stats || {}) };
+    stats.totalQuestionsAnswered = (base.stats?.totalQuestionsAnswered || 0) + (incoming.stats?.totalQuestionsAnswered || 0);
+    stats.totalCorrect = (base.stats?.totalCorrect || 0) + (incoming.stats?.totalCorrect || 0);
+    stats.consecutiveCorrect = Math.max(base.stats?.consecutiveCorrect || 0, incoming.stats?.consecutiveCorrect || 0);
+    stats.maxConsecutive = Math.max(base.stats?.maxConsecutive || 0, incoming.stats?.maxConsecutive || 0);
+    const daily = [...new Set([...(base.stats?.dailyPracticeDates || []), ...(incoming.stats?.dailyPracticeDates || [])])];
+    stats.dailyPracticeDates = daily;
+    stats.lastAccuracy = incoming.stats?.lastAccuracy ?? base.stats?.lastAccuracy ?? null;
+    // translationStats：合計
+    const ts = { ...(base.translationStats || {}), ...(incoming.translationStats || {}) };
+    ts.totalAttempted = (base.translationStats?.totalAttempted || 0) + (incoming.translationStats?.totalAttempted || 0);
+    ts.totalCorrect = (base.translationStats?.totalCorrect || 0) + (incoming.translationStats?.totalCorrect || 0);
+    ts.consecutiveCorrect = Math.max(base.translationStats?.consecutiveCorrect || 0, incoming.translationStats?.consecutiveCorrect || 0);
+    ts.maxConsecutive = Math.max(base.translationStats?.maxConsecutive || 0, incoming.translationStats?.maxConsecutive || 0);
+    ts.perfectRuns = (base.translationStats?.perfectRuns || 0) + (incoming.translationStats?.perfectRuns || 0);
+    ts.quickCorrectCount = Math.max(base.translationStats?.quickCorrectCount || 0, incoming.translationStats?.quickCorrectCount || 0);
+    ts.lastAttemptTime = Math.max(base.translationStats?.lastAttemptTime || 0, incoming.translationStats?.lastAttemptTime || 0);
+    // mistakeTracker：逐題取較大計數
+    const mistakeTracker = { ...(base.mistakeTracker || {}) };
+    for (const k in incoming.mistakeTracker || {}) {
+        mistakeTracker[k] = Math.max(mistakeTracker[k] || 0, incoming.mistakeTracker[k] || 0);
+    }
+    // chapterAccuracy：併集（取較大）
+    const chapterAccuracy = { ...(base.chapterAccuracy || {}) };
+    for (const k in incoming.chapterAccuracy || {}) {
+        chapterAccuracy[k] = Math.max(chapterAccuracy[k] || 0, incoming.chapterAccuracy[k] || 0);
+    }
+    return {
+        latestStatus, allAttempts, favorites, practiceHistory,
+        achievements, stats, translationStats: ts, mistakeTracker, chapterAccuracy
+    };
+}
+
+function openMergeModal(offlineAccounts) {
+    const overlay = document.createElement('div');
+    overlay.id = 'mergeOfflineOverlay';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); display:flex; justify-content:center; align-items:center; z-index:999999; backdrop-filter:blur(3px);';
+    const names = offlineAccounts.map(a => `📴 ${a.userId}`).join('<br>');
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background:white; border-radius:24px; padding:28px 26px; max-width:420px; width:92%; text-align:center; box-shadow:0 20px 70px rgba(0,0,0,0.35); animation:slideUp 0.3s ease;';
+    modal.innerHTML = `
+        <div style="font-size:2.2rem; margin-bottom:8px;">📥</div>
+        <h3 style="color:#2e0f5a; margin:0 0 8px 0;">偵測到本機離線帳戶</h3>
+        <div style="color:#666; font-size:0.9rem; margin-bottom:14px; line-height:1.7;">
+            你的本機有以下離線練習資料：<br>
+            <b style="color:#4a1d8c;">${names}</b><br>
+            <span style="font-size:0.8rem; color:#888;">要把這些練習進度合併到目前的帳戶嗎？<br>（內地離線做的題、成就、錯題會搬過來）</span>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button id="mergeCancelBtn" style="flex:1; padding:11px 0; border:2px solid #e0d6f5; border-radius:40px; background:white; color:#666; font-size:0.95rem; font-weight:600; cursor:pointer;">稍後再合併</button>
+            <button id="mergeConfirmBtn" style="flex:2; padding:11px 0; border:none; border-radius:40px; background:linear-gradient(135deg,#4a1d8c,#7c3aed); color:white; font-size:0.95rem; font-weight:700; cursor:pointer;">✅ 合併到本帳戶</button>
+        </div>
+        <div id="mergeError" style="color:#dc2626; font-size:0.85rem; margin-top:10px; display:none;"></div>
+    `;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    document.getElementById('mergeCancelBtn').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('mergeConfirmBtn').addEventListener('click', async function() {
+        const btn = this;
+        btn.disabled = true; btn.textContent = '⏳ 合併中...';
+        try {
+            const result = await mergeOfflineAccounts(offlineAccounts);
+            if (result.success) {
+                alert(`✅ 合併完成！\n\n已把 ${result.accounts} 個離線帳戶的資料合併到目前帳戶。\n\n合併內容：\n${result.summary}\n\n之後在內地仍可用原本的離線帳戶繼續練習，回港登入本帳戶即可再次合併。`);
+                overlay.remove();
+            } else {
+                const err = document.getElementById('mergeError');
+                err.textContent = '❌ 合併失敗：' + result.message;
+                err.style.display = 'block';
+                btn.disabled = false; btn.textContent = '✅ 合併到本帳戶';
+            }
+        } catch(e) {
+            console.error('❌ 合併失敗:', e);
+            const err = document.getElementById('mergeError');
+            err.textContent = '❌ 合併失敗：' + e.message;
+            err.style.display = 'block';
+            btn.disabled = false; btn.textContent = '✅ 合併到本帳戶';
+        }
+    });
+}
+
+async function mergeOfflineAccounts(offlineAccounts) {
+    const db = getUsers();
+    const targetUserId = currentUser.userId;
+    const base = loadLocalUserData(targetUserId);
+    let mergedData = base;
+    let summaryLines = [];
+    for (const acc of offlineAccounts) {
+        const accData = loadLocalUserData(acc.userId);
+        if (!accData) continue;
+        const beforeCount = mergedData.stats?.totalQuestionsAnswered || 0;
+        mergedData = mergeUserData(mergedData, accData);
+        const afterCount = mergedData.stats?.totalQuestionsAnswered || 0;
+        const gained = afterCount - beforeCount;
+        const accAchievements = Object.keys(accData.achievements || {}).filter(k => accData.achievements[k]?.unlocked).length;
+        summaryLines.push(`${acc.userId}：+${gained} 題、${accAchievements} 成就`);
+        // 標記該離線帳戶為已合併（保留本機資料供內地繼續用，記錄合併時的題數）
+        const idx = db.users.findIndex(u => u.userId === acc.userId);
+        if (idx !== -1) {
+            db.users[idx].mergedTo = targetUserId;
+            db.users[idx].lastMergedAt = new Date().toISOString();
+            db.users[idx].lastMergedCount = (accData.stats && accData.stats.totalQuestionsAnswered) || 0;
+        }
+    }
+    saveUsers(db);
+    // 寫入目標帳戶本機 + 雲端
+    saveUserDataWith(mergedData);
+    if (firestoreEnabled) {
+        await syncToFirestore('users', targetUserId, {
+            latestStatus: mergedData.latestStatus || {},
+            allAttempts: mergedData.allAttempts || [],
+            favorites: mergedData.favorites || [],
+            practiceHistory: mergedData.practiceHistory || [],
+            achievements: mergedData.achievements || {},
+            stats: mergedData.stats || {},
+            translationStats: mergedData.translationStats || {},
+            mistakeTracker: mergedData.mistakeTracker || {},
+            chapterAccuracy: mergedData.chapterAccuracy || {},
+            lastLogin: new Date().toISOString(),
+            lastUpdated: new Date().toISOString()
+        });
+    }
+    return { success: true, accounts: offlineAccounts.length, summary: summaryLines.join('\n') };
+}
+
+function loadLocalUserData(userId) {
+    const raw = localStorage.getItem(`ms_chem_${userId}`);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch(e) { return null; }
+}
+
+function saveUserDataWith(data) {
+    if (!currentUser) return;
+    const userId = currentUser.id || currentUser.userId;
+    localStorage.setItem(`ms_chem_${userId}`, JSON.stringify(data));
+    userData = data;
 }
 
 // ===== 電郵／密碼登入（內地生或無 Google 帳戶者使用） =====
@@ -1197,7 +1384,8 @@ async function handleEmailLogin() {
             if (ok) return;
         }
         // 雲端無此帳戶但本機有離線帳戶：這是離線建立的帳戶，改用本機登入
-        if (error.code === 'auth/user-not-found' && findUser(email.trim().toLowerCase()) && findUser(email.trim().toLowerCase()).passwordHash) {
+        // 注意：新版 Firebase SDK 對 email 不存在／密碼錯誤統一回 auth/invalid-credential，需一併處理
+        if ((error.code === 'auth/user-not-found' || error.code === 'auth/too-many-requests' || error.code === 'auth/invalid-credential') && findUser(email.trim().toLowerCase()) && findUser(email.trim().toLowerCase()).passwordHash) {
             const ok = await offlineLogin(email.trim().toLowerCase(), password);
             if (ok) return;
         }
