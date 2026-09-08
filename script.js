@@ -1196,6 +1196,11 @@ async function handleEmailLogin() {
             const ok = await offlineLogin(email.trim().toLowerCase(), password);
             if (ok) return;
         }
+        // 雲端無此帳戶但本機有離線帳戶：這是離線建立的帳戶，改用本機登入
+        if (error.code === 'auth/user-not-found' && findUser(email.trim().toLowerCase()) && findUser(email.trim().toLowerCase()).passwordHash) {
+            const ok = await offlineLogin(email.trim().toLowerCase(), password);
+            if (ok) return;
+        }
         updateStatusDot('offline', '❌ 登入失敗', '#f8d7da', '#7f1d1d');
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
             showLoginError('❌ 電郵或密碼錯誤，請重試或先註冊');
