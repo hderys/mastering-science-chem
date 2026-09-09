@@ -5654,10 +5654,12 @@ async function showStudentDetail(userId) {
         for (let ch in window.ALL_UNITS[u].chapters) {
             const questions = window.ALL_UNITS[u].chapters[ch].questions;
             let correct = 0;
+            // 該章節按難度拆解
+            const chDiff = { 0: { done: 0, total: 0 }, 1: { done: 0, total: 0 }, 2: { done: 0, total: 0 }, 3: { done: 0, total: 0 } };
             for (const q of questions) {
-                if (studentData.latestStatus && studentData.latestStatus[q.id] === true) {
-                    correct++;
-                }
+                if (studentData.latestStatus && studentData.latestStatus[q.id] === true) correct++;
+                const dl = q.difficulty_level;
+                if (chDiff[dl]) { chDiff[dl].total++; if (studentData.latestStatus && studentData.latestStatus[q.id] === true) chDiff[dl].done++; }
             }
             const progress = questions.length > 0 ? Math.round(correct / questions.length * 100) : 0;
             chapterProgress.push({
@@ -5666,25 +5668,12 @@ async function showStudentDetail(userId) {
                 chapterNum: parseInt(ch),
                 progress: progress,
                 total: questions.length,
-                correct: correct
+                correct: correct,
+                diff: chDiff
             });
         }
     }
     chapterProgress.sort((a, b) => a.chapterNum - b.chapterNum);
-    
-    // 按難度拆解完成度（翻譯/基礎/進階/挑戰）
-    const diffStats = { 0: { label: '🌐 翻譯題', done: 0, total: 0 }, 1: { label: '✅ 基礎題', done: 0, total: 0 }, 2: { label: '📈 進階題', done: 0, total: 0 }, 3: { label: '🔥 挑戰題', done: 0, total: 0 } };
-    for (let u in window.ALL_UNITS) {
-        for (let ch in window.ALL_UNITS[u].chapters) {
-            for (const q of window.ALL_UNITS[u].chapters[ch].questions) {
-                const dl = q.difficulty_level;
-                if (diffStats[dl]) {
-                    diffStats[dl].total++;
-                    if (studentData.latestStatus && studentData.latestStatus[q.id] === true) diffStats[dl].done++;
-                }
-            }
-        }
-    }
     
     const achievements = studentData.achievements || {};
     const unlockedAchievements = [];
@@ -5772,19 +5761,30 @@ async function showStudentDetail(userId) {
                 </div>
                 
                 <div style="margin-bottom:16px;">
-                    <h3 style="font-size:0.9rem; color:#2e0f5a; margin-bottom:6px;">📖 章節進度</h3>
-                    <div style="max-height:200px; overflow-y:auto;">
-                        ${chapterProgress.map(ch => `
-                            <div style="display:flex; align-items:center; gap:8px; padding:3px 0;">
-                                <span style="font-size:0.7rem; color:#888; min-width:40px;">Ch.${ch.chapterNum}</span>
-                                <span style="font-size:0.7rem; flex:1;">${ch.chapterName}</span>
-                                <div style="width:80px; height:6px; background:#ddd; border-radius:10px; overflow:hidden;">
-                                    <div style="height:100%; width:${ch.progress}%; background:${ch.progress >= 80 ? '#10b981' : (ch.progress >= 40 ? '#f59e0b' : '#dc2626')}; border-radius:10px;"></div>
-                                </div>
-                                <span style="font-size:0.6rem; color:#888; min-width:35px;">${ch.progress}%</span>
-                            </div>
-                        `).join('')}
+                    <h3 style="font-size:0.9rem; color:#2e0f5a; margin-bottom:6px;">📖 章節進度（含難度拆解）</h3>
+                    <div style="max-height:300px; overflow-y:auto;">
+                        ${chapterProgress.map(ch => {
+                            const dRows = [0, 1, 2, 3].map(dl => {
+                                const s = ch.diff[dl];
+                                if (!s || s.total === 0) return '';
+                                const color = s.done >= s.total * 0.7 ? '#10b981' : (s.done >= s.total * 0.4 ? '#f59e0b' : '#dc2626');
+                                return `<span style="font-size:0.62rem; color:${color}; margin-right:8px;">${dl === 0 ? '🌐' : dl === 1 ? '✅' : dl === 2 ? '📈' : '🔥'} ${s.done}/${s.total}</span>`;
+                            }).join('');
+                            return `
+                                <div style="padding:5px 0; border-bottom:1px solid #f0edf8;">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <span style="font-size:0.7rem; color:#888; min-width:40px;">Ch.${ch.chapterNum}</span>
+                                        <span style="font-size:0.7rem; flex:1;">${ch.chapterName}</span>
+                                        <div style="width:80px; height:6px; background:#ddd; border-radius:10px; overflow:hidden;">
+                                            <div style="height:100%; width:${ch.progress}%; background:${ch.progress >= 80 ? '#10b981' : (ch.progress >= 40 ? '#f59e0b' : '#dc2626')}; border-radius:10px;"></div>
+                                        </div>
+                                        <span style="font-size:0.6rem; color:#888; min-width:35px;">${ch.progress}%</span>
+                                    </div>
+                                    <div style="padding-left:48px; margin-top:2px;">${dRows}</div>
+                                </div>`;
+                        }).join('')}
                     </div>
+                    <div style="font-size:0.65rem; color:#888; margin-top:4px;">每章下方顯示翻譯/基礎/進階/挑戰完成數，看出學生卡在哪一課</div>
                 </div>
                 
                 <div style="margin-bottom:16px;">
@@ -5798,25 +5798,6 @@ async function showStudentDetail(userId) {
                         `).join('')}
                         ${lockedAchievements.length > 5 ? `<span style="font-size:0.7rem; color:#999;">+${lockedAchievements.length - 5} 更多</span>` : ''}
                     </div>
-                </div>
-                
-                <div style="margin-bottom:16px;">
-                    <h3 style="font-size:0.9rem; color:#2e0f5a; margin-bottom:6px;">📊 按難度完成度</h3>
-                    <div style="display:flex; flex-direction:column; gap:5px;">
-                        ${[0, 1, 2, 3].map(dl => {
-                            const s = diffStats[dl];
-                            if (!s || s.total === 0) return '';
-                            const pct = Math.round(s.done / s.total * 100);
-                            const color = pct >= 70 ? '#10b981' : (pct >= 40 ? '#f59e0b' : '#dc2626');
-                            return `
-                                <div style="display:flex; align-items:center; gap:8px; font-size:0.75rem;">
-                                    <span style="min-width:70px; color:#333;">${s.label}</span>
-                                    <div class="progress-bar-container" style="flex:1; height:8px;"><div class="progress-bar-fill" style="width:${pct}%; background:${color};"></div></div>
-                                    <span style="min-width:56px; text-align:right; font-weight:600; color:${color};">${s.done}/${s.total}</span>
-                                </div>`;
-                        }).join('')}
-                    </div>
-                    <div style="font-size:0.65rem; color:#888; margin-top:4px;">看出學生卡在哪：翻譯題沒做？進階題停滯？挑戰題未碰？</div>
                 </div>
                 
                 <div>
