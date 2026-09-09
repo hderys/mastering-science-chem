@@ -1661,8 +1661,18 @@ async function performOfflineSync(userId, password) {
         try {
             await firebase.auth().signInWithEmailAndPassword(userId, password);
         } catch (e) {
-            if (e.code === 'auth/user-not-found') {
-                await firebase.auth().createUserWithEmailAndPassword(userId, password);
+            // 新版 Firebase SDK 對「email 不存在／密碼錯」統一回 auth/invalid-credential
+            // 雲端無此帳戶（離線帳戶從未同步過）時應建立雲端帳戶
+            if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+                try {
+                    await firebase.auth().createUserWithEmailAndPassword(userId, password);
+                } catch (e2) {
+                    // 建立失敗：可能是電郵已存在（雲端真有帳戶但密碼不同）
+                    if (e2.code === 'auth/email-already-in-use') {
+                        throw { code: 'auth/wrong-password', message: '此電郵雲端已有帳戶，但密碼不正確。請輸入離線註冊時相同的密碼。' };
+                    }
+                    throw e2;
+                }
             } else {
                 throw e;
             }
