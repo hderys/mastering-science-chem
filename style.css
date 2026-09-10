@@ -3201,3 +3201,18 @@ body {
 .iphone-orientation-overlay .btn-continue:hover {
     background: rgba(255,255,255,0.25);
 }
+
+/* ===== 測驗待作答：醒目閃爍提示 ===== */
+@keyframes testGlowPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(74, 29, 140, 0.55); border-color: #4a1d8c; }
+    50% { box-shadow: 0 0 0 10px rgba(74, 29, 140, 0); border-color: #7c3aed; }
+}
+.test-card-pending {
+    border: 2px solid #4a1d8c !important;
+    background: linear-gradient(145deg, #ffffff, #f5f0ff) !important;
+    animation: testGlowPulse 1.6s ease-in-out infinite;
+}
+.test-tab-notice {
+    animation: blink 1.2s ease-in-out infinite;
+    color: #dc2626 !important;
+}

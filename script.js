@@ -38,6 +38,9 @@ let startTime = null;
 let isReviewMode = false;   // 複習模式：不改 latestStatus、不觸發成就
 let reviewQids = [];         // 複習模式的題目 id 清單（供提交時判斷）
 let reviewLastShownDate = ''; // 每日複習彈窗最後顯示日期
+let isTestMode = false;      // 測驗模式
+let currentTestId = null;    // 進行中的測驗 id
+let currentTestTimeLimit = null; // 測驗限時（秒）
 
 // ==================== 更多資源：影片資料 ====================
 // 格式：{ unit: 單元編號, chapter: 章節編號, id: YouTube影片ID, title: 標題 }
@@ -346,7 +349,7 @@ async function loadAllStudentsFromFirebase(className) {
         let query = firebase.firestore().collection('users').where('isTeacher', '==', false);
         if (!isAll && !isS4Group) query = query.where('className', '==', className);
         if (isS4Group) query = firebase.firestore().collection('users').where('className', '>=', '4A').where('className', '<=', '4Z');
-        const snapshot = await query.get();
+        const snapshot = await withTimeout(query.get(), 8000);
         const firebaseStudents = [];
         snapshot.forEach(doc => {
             const u = doc.data();
@@ -536,10 +539,18 @@ function recordBatch(answers) {
     saveUserData();
 }
 
+// 中文班（isZhUser）排除翻譯題
+function isTranslateQuestion(q) {
+    return q.difficulty === '🌐 Translate' || q.difficulty_level === 0;
+}
+function shouldExcludeTranslate() {
+    return isZhUser();
+}
 function getUnitMastery(unit) {
     let total = 0, correct = 0;
     for (let ch in window.ALL_UNITS[unit].chapters) {
         for (let q of window.ALL_UNITS[unit].chapters[ch].questions) {
+            if (shouldExcludeTranslate() && isTranslateQuestion(q)) continue;
             total++;
             if (userData.latestStatus[q.id] === true) correct++;
         }
@@ -548,11 +559,14 @@ function getUnitMastery(unit) {
 }
 
 function getChapterTotalQuestions(unit, chapter) {
-    return window.ALL_UNITS[unit]?.chapters[chapter]?.questions.length || 0;
+    const qs = window.ALL_UNITS[unit]?.chapters[chapter]?.questions || [];
+    if (shouldExcludeTranslate()) return qs.filter(q => !isTranslateQuestion(q)).length;
+    return qs.length;
 }
 
 function getChapterMastery(unit, chapter) {
     let questions = window.ALL_UNITS[unit]?.chapters[chapter]?.questions || [];
+    if (shouldExcludeTranslate()) questions = questions.filter(q => !isTranslateQuestion(q));
     if (questions.length === 0) return 0;
     let correct = 0;
     for (let q of questions) if (userData.latestStatus[q.id] === true) correct++;
@@ -1780,6 +1794,7 @@ function enterMainApp(user) {
         document.querySelector('.tab[data-tab="practice"]')?.click();
         setupLogout();
         setTimeout(() => maybeShowDailyReview(), 600);
+        setTimeout(() => refreshTestTabNotice(), 800);
     });
 }
 
@@ -1787,6 +1802,7 @@ function setupTabs() {
     const tabs = document.querySelectorAll('.tab');
     const panels = {
         practice: document.getElementById('practicePanel'),
+        test: document.getElementById('testPanel'),
         learning: document.getElementById('learningPanel'),
         pinned: document.getElementById('pinnedPanel'),
         achievements: document.getElementById('achievementsPanel'),
@@ -1833,6 +1849,7 @@ function setupTabs() {
             if (target === 'pinned') renderPinned();
             if (target === 'achievements') renderAchievements();
             if (target === 'resources') renderResources();
+            if (target === 'test') renderTestList();
             if (target === 'teacher') renderTeacherPanel();
         };
         tab.addEventListener('click', tab._clickHandler);
@@ -2371,6 +2388,541 @@ function toggleCollapsible(id) {
     if (el) {
         if (el.classList.contains('collapsed')) el.classList.remove('collapsed');
         else el.classList.add('collapsed');
+    }
+}
+
+// ===== 老師端：測驗管理 =====
+async function renderSubtabTests(className) {
+    const container = document.getElementById('subtab-tests');
+    if (!container) return;
+    const tests = await loadAllTests();
+    let html = `
+        <h3 style="margin-bottom:8px;">📝 測驗管理</h3>
+        <div style="margin-bottom:12px;">
+            <button onclick="openCreateTestModal()" style="padding:8px 18px; border:none; border-radius:40px; background:linear-gradient(135deg,#4a1d8c,#7c3aed); color:white; font-weight:600; cursor:pointer;">➕ 建立測驗</button>
+        </div>`;
+    if (tests.length === 0) {
+        html += `<div class="card" style="text-align:center; color:#999; padding:20px;">尚未建立任何測驗</div>`;
+    } else {
+        html += `<div class="card" style="padding:0.8rem;">
+            <table class="wrong-table" style="font-size:0.8rem;">
+                <thead><tr><th>測驗</th><th>狀態</th><th>班級</th><th>題數</th><th>截止</th><th>作答數</th><th>操作</th></tr></thead>
+                <tbody>`;
+        for (const t of tests) {
+            const doneCount = t.results ? Object.keys(t.results).length : 0;
+            const classText = (t.classNames || []).join('、');
+            const deadlineText = t.deadline ? new Date(t.deadline).toLocaleString('zh-HK') : '無';
+            const statusText = t.status === 'draft' ? '📄 草稿' : (t.status === 'scheduled' ? '⏰ 排期' : '✅ 已發佈');
+            const statusColor = t.status === 'draft' ? '#888' : (t.status === 'scheduled' ? '#b45309' : '#10b981');
+            html += `
+                <tr>
+                    <td style="font-weight:600;">${t.name}</td>
+                    <td style="font-weight:600; color:${statusColor};">${statusText}</td>
+                    <td>${classText}</td>
+                    <td>${t.questionCount}</td>
+                    <td>${deadlineText}</td>
+                    <td style="font-weight:600; color:#4a1d8c;">${doneCount}</td>
+                    <td>
+                        <button onclick="showTestDetail('${t.id}')" style="font-size:0.7rem; padding:3px 10px; border:none; border-radius:20px; background:#f0edf8; color:#4a1d8c; cursor:pointer; margin-right:4px;">📊 監測</button>
+                        <button onclick="exportTestCSV('${t.id}')" style="font-size:0.7rem; padding:3px 10px; border:none; border-radius:20px; background:#fef3c7; color:#92400e; cursor:pointer; margin-right:4px;">📥 匯出</button>
+                        ${t.status !== 'published' ? `<button onclick="publishTest('${t.id}')" style="font-size:0.7rem; padding:3px 10px; border:none; border-radius:20px; background:#d4edda; color:#065f46; cursor:pointer; margin-right:4px;">▶ 發佈</button>` : ''}
+                        <button onclick="deleteTest('${t.id}')" style="font-size:0.7rem; padding:3px 10px; border:none; border-radius:20px; background:#f8d7da; color:#7f1d1d; cursor:pointer;">🗑️ 刪除</button>
+                    </td>
+                </tr>`;
+        }
+        html += `</tbody></table></div>`;
+    }
+    container.innerHTML = html;
+}
+
+function getQuestionById(qid) {
+    for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) {
+        const q = window.ALL_UNITS[u].chapters[c].questions.find(qq => qq.id === qid);
+        if (q) return q;
+    }
+    return null;
+}
+
+function getQuestionShort(qid) {
+    const q = getQuestionById(qid);
+    if (!q) return qid;
+    const t = q.text.replace(/<br>/g, ' ').replace(/<[^>]+>/g, '');
+    return t.length > 40 ? t.substring(0, 40) + '...' : t;
+}
+
+function openCreateTestModal() {
+    const overlay = document.createElement('div');
+    overlay.id = 'createTestOverlay';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:999999; backdrop-filter:blur(3px);';
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background:white; border-radius:24px; padding:26px; max-width:520px; width:94%; max-height:88vh; overflow-y:auto; box-shadow:0 20px 70px rgba(0,0,0,0.35);';
+    modal.innerHTML = `
+        <h3 style="color:#2e0f5a; margin:0 0 4px 0;">➕ 建立測驗</h3>
+        <p style="color:#888; font-size:0.8rem; margin:0 0 14px 0;">所有學生做同一份題目，公平比較</p>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">📝 測驗名稱</label>
+            <input id="ctName" style="width:100%; padding:9px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:0.9rem;" placeholder="例如：Ch5-7 測驗">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">📚 適用班級</label>
+            <select id="ctClass" style="width:100%; padding:9px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:0.9rem;">
+                <option value="__all__">全部班級</option>
+                ${(() => {
+                    const opts = Array.from(document.querySelectorAll('#teacherClassSelector option')).filter(o => o.value !== '__all__').map(o => `<option value="${o.value}">${o.value}</option>`);
+                    if (opts.length > 0) return opts.join('');
+                    return '<option value="S4(中)">S4(中)</option><option value="S4(Eng)">S4(Eng)</option>';
+                })()}
+            </select>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">📖 章節範圍（可多選）</label>
+            <div style="border:1px solid #e9e4f5; border-radius:10px; padding:8px; max-height:150px; overflow-y:auto;" id="ctChapterWrap">
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; padding:3px 0; cursor:pointer;">
+                    <input type="checkbox" id="ctChapterAll" checked> <b>全部章節</b>
+                </label>
+                ${(() => {
+                    let html = '';
+                    for (let u in window.ALL_UNITS) {
+                        const unitObj = window.ALL_UNITS[u];
+                        html += `<div style="font-size:0.72rem; color:#888; margin-top:5px; font-weight:600;">${unitObj.name}</div>`;
+                        for (let c in unitObj.chapters) {
+                            html += `<label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; padding:2px 0; cursor:pointer;">
+                                <input type="checkbox" class="ct-chapter" value="${u}_${c}" checked> ${unitObj.chapters[c].name}
+                            </label>`;
+                        }
+                    }
+                    return html;
+                })()}
+            </div>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:6px;">🎯 選題方式</label>
+            <div style="display:flex; gap:8px;">
+                <label style="flex:1; border:2px solid #4a1d8c; border-radius:12px; padding:10px; cursor:pointer; text-align:center; font-size:0.85rem; font-weight:600; color:#2e0f5a; background:#f5f0ff;">
+                    <input type="radio" name="ctSelectMode" value="auto" checked style="accent-color:#4a1d8c;"> 🤖 系統按下列原則抽題
+                </label>
+                <label style="flex:1; border:2px solid #e0d6f5; border-radius:12px; padding:10px; cursor:pointer; text-align:center; font-size:0.85rem; font-weight:600; color:#666; background:white;">
+                    <input type="radio" name="ctSelectMode" value="manual" style="accent-color:#4a1d8c;"> 🖐️ 老師自行選題
+                </label>
+            </div>
+            <div id="ctManualArea" style="display:none; margin-top:8px;">
+                <div style="margin-bottom:8px; font-size:0.75rem; color:#666;">
+                    <div style="margin-bottom:5px;">
+                        篩選：
+                        <label style="margin-right:8px;"><input type="checkbox" id="ctFilterExam"> 只顯示公開考試題</label>
+                        <label style="margin-right:8px;"><input type="checkbox" id="ctSortByWrong" checked> 按該班錯題人數排序</label>
+                    </div>
+                    <div>
+                        公開考試題年份：
+                        <select id="ctExamYear" style="font-size:0.75rem; padding:2px 6px; border-radius:8px; border:1px solid #e0d6f5;">
+                            <option value="__all__">全部年份</option>
+                            ${(() => {
+                                const years = new Set();
+                                for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) {
+                                    for (const q of window.ALL_UNITS[u].chapters[c].questions) {
+                                        const m = q.text.match(/<(19|20)\d\d[^>]*?(CE|DSE|HKCEE|HKALE|AL)[^>]*>/i);
+                                        if (m) years.add(m[0].replace(/[^0-9]/g, '').slice(0, 4));
+                                    }
+                                }
+                                return [...years].sort().reverse().map(y => `<option value="${y}">${y} 年</option>`).join('');
+                            })()}
+                        </select>
+                        <label style="margin-left:8px;"><input type="checkbox" id="ctSortByYear"> 按年份排列</label>
+                    </div>
+                </div>
+                <div id="ctManualListWrap" style="max-height:220px; overflow-y:auto; border:1px solid #e9e4f5; border-radius:10px; padding:8px;">
+                    <div id="ctManualList"></div>
+                </div>
+            </div>
+            <div id="ctCountWrap" style="margin-top:8px;">
+                <div style="font-size:0.85rem; font-weight:600; color:#2e0f5a; margin-bottom:4px;">🎯 各難度題數（留空＝不取該難度）</div>
+                <div style="display:flex; gap:8px; align-items:stretch;">
+                <div style="flex:1; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:8px;">
+                    <div style="font-size:0.72rem; color:#15803d; font-weight:600; margin-bottom:4px;">✅ 基礎<br><span style="font-weight:400; color:#888;">Basic</span></div>
+                    <input type="number" id="ctCountBasic" min="0" placeholder="0" style="width:100%; padding:6px 8px; border:1px solid #bbf7d0; border-radius:8px; font-size:0.9rem;">
+                </div>
+                <div style="flex:1; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:8px;">
+                    <div style="font-size:0.72rem; color:#b45309; font-weight:600; margin-bottom:4px;">📈 進階<br><span style="font-weight:400; color:#888;">Advanced</span></div>
+                    <input type="number" id="ctCountAdv" min="0" placeholder="0" style="width:100%; padding:6px 8px; border:1px solid #fde68a; border-radius:8px; font-size:0.9rem;">
+                </div>
+                <div style="flex:1; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:8px;">
+                    <div style="font-size:0.72rem; color:#b91c1c; font-weight:600; margin-bottom:4px;">🔥 挑戰<br><span style="font-weight:400; color:#888;">Challenge</span></div>
+                    <input type="number" id="ctCountCha" min="0" placeholder="0" style="width:100%; padding:6px 8px; border:1px solid #fecaca; border-radius:8px; font-size:0.9rem;">
+                </div>
+                <div style="flex:1; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:8px; display:flex; flex-direction:column; justify-content:center; align-items:center; min-width:60px;">
+                    <div style="font-size:0.72rem; color:#4a1d8c; font-weight:600; margin-bottom:4px;">🔢 總數</div>
+                    <div id="ctCountTotal" style="font-size:1.2rem; font-weight:700; color:#4a1d8c;">0</div>
+                </div>
+            </div>
+            <div style="font-size:0.68rem; color:#888; margin-top:4px;">例如：基礎 3 + 進階 4 + 挑戰 2 ＝ 9 題。留空全部＝自動平均抽 10 題</div>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">⏰ 截止日期（可留空＝無截止）</label>
+            <input type="datetime-local" id="ctDeadline" style="width:100%; padding:9px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:0.9rem;">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">⏱️ 限時（分鐘，可留空＝不限時）</label>
+            <input type="number" id="ctTimeLimit" min="1" placeholder="例如：20" style="width:100%; padding:9px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:0.9rem;">
+        </div>
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">🔄 作答規則</label>
+            <select id="ctRule" style="width:100%; padding:9px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:0.9rem;">
+                <option value="once">只能做一次</option>
+                <option value="best">可重做，取最高分</option>
+                <option value="last">可重做，取最後一次</option>
+            </select>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-weight:600; font-size:0.85rem; color:#2e0f5a; margin-bottom:4px;">📅 發佈</label>
+            <select id="ctPublishMode" onchange="document.getElementById('ctPublishTimeWrap').style.display = this.value === 'scheduled' ? 'block' : 'none';" style="width:100%; padding:9px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:0.9rem;">
+                <option value="now">立即發佈</option>
+                <option value="draft">存為草稿（稍後發佈）</option>
+                <option value="scheduled">排期發佈（指定時間）</option>
+            </select>
+            <div id="ctPublishTimeWrap" style="display:none; margin-top:6px;">
+                <input type="datetime-local" id="ctPublishTime" style="width:100%; padding:9px 12px; border-radius:10px; border:2px solid #e0d6f5; font-size:0.9rem;">
+            </div>
+        </div>
+        <div id="ctError" style="color:#dc2626; font-size:0.85rem; margin-bottom:10px; display:none;"></div>
+        <div style="display:flex; gap:10px;">
+            <button id="ctCancelBtn" style="flex:1; padding:11px 0; border:2px solid #e0d6f5; border-radius:40px; background:white; color:#666; font-size:0.95rem; font-weight:600; cursor:pointer;">取消</button>
+            <button id="ctCreateBtn" style="flex:2; padding:11px 0; border:none; border-radius:40px; background:linear-gradient(135deg,#4a1d8c,#7c3aed); color:white; font-size:0.95rem; font-weight:700; cursor:pointer;">✅ 建立測驗</button>
+        </div>
+    `;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    document.getElementById('ctCancelBtn').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    // 選題方式切換
+    function ctUpdateMode() {
+        const mode = document.querySelector('input[name="ctSelectMode"]:checked').value;
+        const manualArea = document.getElementById('ctManualArea');
+        const countWrap = document.getElementById('ctCountWrap');
+        if (mode === 'manual') {
+            manualArea.style.display = 'block';
+            countWrap.style.display = 'none';
+            renderManualSelectList();
+        } else {
+            manualArea.style.display = 'none';
+            countWrap.style.display = 'block';
+        }
+    }
+    // 各難度題數總數自動計算
+    function ctUpdateTotal() {
+        const b = parseInt(document.getElementById('ctCountBasic').value) || 0;
+        const a = parseInt(document.getElementById('ctCountAdv').value) || 0;
+        const c = parseInt(document.getElementById('ctCountCha').value) || 0;
+        const totalEl = document.getElementById('ctCountTotal');
+        if (totalEl) totalEl.textContent = b + a + c;
+    }
+    ['ctCountBasic', 'ctCountAdv', 'ctCountCha'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', ctUpdateTotal);
+    });
+    ctUpdateTotal();
+    document.querySelectorAll('input[name="ctSelectMode"]').forEach(rb => {
+        rb.addEventListener('change', function() {
+            document.querySelectorAll('input[name="ctSelectMode"]').forEach(r => {
+                const lbl = r.closest('label');
+                const active = r.checked;
+                lbl.style.borderColor = active ? '#4a1d8c' : '#e0d6f5';
+                lbl.style.background = active ? '#f5f0ff' : 'white';
+                lbl.style.color = active ? '#2e0f5a' : '#666';
+            });
+            ctUpdateMode();
+        });
+    });
+    // 章節全選／取消
+    document.getElementById('ctChapterAll').addEventListener('change', function() {
+        document.querySelectorAll('.ct-chapter').forEach(cb => cb.checked = this.checked);
+        if (document.querySelector('input[name="ctSelectMode"]:checked').value === 'manual') renderManualSelectList();
+    });
+    document.querySelectorAll('.ct-chapter').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const allChecked = Array.from(document.querySelectorAll('.ct-chapter')).every(c => c.checked);
+            document.getElementById('ctChapterAll').checked = allChecked;
+            if (document.querySelector('input[name="ctSelectMode"]:checked').value === 'manual') renderManualSelectList();
+        });
+    });
+    // 篩選
+    document.getElementById('ctFilterExam').addEventListener('change', renderManualSelectList);
+    document.getElementById('ctSortByWrong').addEventListener('change', renderManualSelectList);
+    document.getElementById('ctSortByYear').addEventListener('change', renderManualSelectList);
+    document.getElementById('ctExamYear').addEventListener('change', renderManualSelectList);
+    document.getElementById('ctCreateBtn').addEventListener('click', async function() {
+        const err = document.getElementById('ctError');
+        const name = document.getElementById('ctName').value.trim();
+        if (!name) { err.textContent = '⚠️ 請輸入測驗名稱'; err.style.display = 'block'; return; }
+        const classVal = document.getElementById('ctClass').value;
+        // 章節多選
+        const selectedCh = Array.from(document.querySelectorAll('.ct-chapter:checked')).map(cb => cb.value);
+        const selectMode = document.querySelector('input[name="ctSelectMode"]:checked').value;
+        const basicN = parseInt(document.getElementById('ctCountBasic').value) || 0;
+        const advN = parseInt(document.getElementById('ctCountAdv').value) || 0;
+        const chaN = parseInt(document.getElementById('ctCountCha').value) || 0;
+        const deadlineVal = document.getElementById('ctDeadline').value;
+        const timeLimitVal = document.getElementById('ctTimeLimit').value;
+        const ruleVal = document.getElementById('ctRule').value;
+        const manual = selectMode === 'manual';
+        let questions = [];
+        if (manual) {
+            questions = Array.from(document.querySelectorAll('#ctManualList input:checked')).map(cb => cb.value);
+        } else {
+            // 依章節收集各難度的題目池（多章節）
+            const chSet = new Set(selectedCh);
+            const pools = { 1: [], 2: [], 3: [] };
+            for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) {
+                if (chSet.size > 0 && !chSet.has(`${u}_${c}`)) continue;
+                for (const q of window.ALL_UNITS[u].chapters[c].questions) {
+                    if (q.difficulty_level === 0) continue;
+                    if (pools[q.difficulty_level]) pools[q.difficulty_level].push(q.id);
+                }
+            }
+            // 若未填任何題數 → 平均抽 10 題
+            if (basicN === 0 && advN === 0 && chaN === 0) {
+                const all = [...pools[1], ...pools[2], ...pools[3]];
+                if (all.length === 0) { err.textContent = '⚠️ 所選章節下沒有可用題目'; err.style.display = 'block'; return; }
+                questions = shuffleArray(all).slice(0, 10);
+            } else {
+                const counts = { 1: basicN, 2: advN, 3: chaN };
+                for (const dl of [1, 2, 3]) {
+                    const n = counts[dl];
+                    if (n > 0) {
+                        if (pools[dl].length < n) { err.textContent = `⚠️ 章節下基礎/進階/挑戰題不足（${dl === 1 ? '基礎' : dl === 2 ? '進階' : '挑戰'}需 ${n} 題，只有 ${pools[dl].length} 題）`; err.style.display = 'block'; return; }
+                        questions = questions.concat(shuffleArray(pools[dl]).slice(0, n));
+                    }
+                }
+            }
+        }
+        if (questions.length === 0) { err.textContent = '⚠️ 請選擇題目'; err.style.display = 'block'; return; }
+        const classNames = classVal === '__all__' ? ['S4(中)', 'S4(Eng)'] : [classVal];
+        const publishMode = document.getElementById('ctPublishMode').value;
+        const publishTimeVal = document.getElementById('ctPublishTime').value;
+        const status = publishMode === 'now' ? 'published' : (publishMode === 'draft' ? 'draft' : 'scheduled');
+        const testData = {
+            name, classNames, questionCount: questions.length, questions,
+            deadline: deadlineVal ? new Date(deadlineVal).toISOString() : null,
+            timeLimit: timeLimitVal ? parseInt(timeLimitVal) : null,
+            attemptRule: ruleVal, createdBy: currentUser.userId, createdAt: new Date().toISOString(),
+            status: status,
+            publishTime: publishMode === 'scheduled' && publishTimeVal ? new Date(publishTimeVal).toISOString() : null,
+            results: {}
+        };
+        const id = await createTestInFirestore(testData);
+        if (id) {
+            const statusText = status === 'draft' ? '已存為草稿' : (status === 'scheduled' ? '已排期發佈' : '已發佈');
+            alert(`✅ 測驗「${name}」已建立（${statusText}）！共 ${questions.length} 題，派發給 ${classNames.join('、')}`);
+            overlay.remove();
+            renderSubtabTests();
+        }
+    });
+}
+
+async function renderManualSelectList() {
+    const list = document.getElementById('ctManualList');
+    const classVal = document.getElementById('ctClass').value;
+    const filterExam = document.getElementById('ctFilterExam') ? document.getElementById('ctFilterExam').checked : false;
+    const sortByWrong = document.getElementById('ctSortByWrong') ? document.getElementById('ctSortByWrong').checked : true;
+    const sortByYear = document.getElementById('ctSortByYear') ? document.getElementById('ctSortByYear').checked : false;
+    const examYear = document.getElementById('ctExamYear') ? document.getElementById('ctExamYear').value : '__all__';
+    // 章節多選
+    const chSet = new Set(Array.from(document.querySelectorAll('.ct-chapter:checked')).map(cb => cb.value));
+    // 載入該班學生的錯題統計（每題錯誤人數）
+    let wrongCount = {};
+    try {
+        const className = classVal === '__all__' ? '__all__' : classVal;
+        const students = await loadAllStudentsFromFirebase(className);
+        for (const s of students) {
+            const attempts = s.allAttempts || [];
+            for (const att of attempts) {
+                if (!att.isCorrect) wrongCount[att.qid] = (wrongCount[att.qid] || 0) + 1;
+            }
+        }
+    } catch(e) { console.warn('⚠️ 載入錯題統計失敗:', e); }
+    // 收集題目
+    const items = [];
+    for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) {
+        if (chSet.size > 0 && !chSet.has(`${u}_${c}`)) continue;
+        for (const q of window.ALL_UNITS[u].chapters[c].questions) {
+            if (q.difficulty_level === 0) continue;
+            const examMatch = q.text.match(/<((19|20)\d\d)[^>]*?(CE|DSE|HKCEE|HKALE|AL)[^>]*>/i);
+            const isExam = !!examMatch;
+            if (filterExam && !isExam) continue;
+            if (examYear !== '__all__' && (!examMatch || !examMatch[1] || examMatch[1] !== examYear)) continue;
+            items.push({ q, wc: wrongCount[q.id] || 0, isExam, examMatch });
+        }
+    }
+    // 排序：按年份（新→舊）或錯題人數（大→小）
+    if (sortByYear) {
+        items.sort((a, b) => {
+            const ay = a.examMatch ? parseInt(a.examMatch[1]) : -1;
+            const by = b.examMatch ? parseInt(b.examMatch[1]) : -1;
+            return (by - ay) || (b.wc - a.wc);
+        });
+    } else if (sortByWrong) {
+        items.sort((a, b) => (b.wc - a.wc) || (b.isExam ? 1 : 0) - (a.isExam ? 1 : 0));
+    }
+    let html = '';
+    for (const it of items) {
+        const q = it.q;
+        const short = q.text.replace(/<br>/g, ' ').replace(/<[^>]+>/g, '');
+        const diffBadge = q.difficulty_level === 1 ? '<span style="font-size:0.62rem; background:#f0fdf4; color:#15803d; padding:1px 5px; border-radius:8px;">✅ 基礎</span>' : q.difficulty_level === 2 ? '<span style="font-size:0.62rem; background:#fffbeb; color:#b45309; padding:1px 5px; border-radius:8px;">📈 進階</span>' : '<span style="font-size:0.62rem; background:#fef2f2; color:#b91c1c; padding:1px 5px; border-radius:8px;">🔥 挑戰</span>';
+        const examBadge = it.examMatch ? `<span style="font-size:0.62rem; background:#fef3c7; color:#92400e; padding:1px 6px; border-radius:8px; font-weight:600;">${it.examMatch[1]} ${it.examMatch[3].toUpperCase()}</span>` : '';
+        const wrongBadge = it.wc > 0 ? `<span style="font-size:0.62rem; background:#fee2e2; color:#b91c1c; padding:1px 6px; border-radius:8px; font-weight:600;">${it.wc} 人錯</span>` : '';
+        html += `<div style="display:flex; align-items:center; gap:6px; padding:4px; font-size:0.75rem; border-bottom:1px solid #f0edf8;">
+            <input type="checkbox" value="${q.id}" style="margin-top:0;"> <span>${diffBadge} ${examBadge} ${wrongBadge} ${short.length > 50 ? short.substring(0,50)+'...' : short}</span>
+            <button onclick="previewQuestion('${q.id}')" style="margin-left:auto; font-size:0.68rem; padding:2px 8px; border:none; border-radius:12px; background:#eef2ff; color:#4338ca; cursor:pointer;">👁️ 查看</button>
+        </div>`;
+    }
+    list.innerHTML = html || '<div style="color:#999; font-size:0.8rem;">此條件下無題目</div>';
+}
+
+// 逐題挑選：預覽題目（含圖片與選項）
+function previewQuestion(qid) {
+    const q = getQuestionById(qid);
+    if (!q) { alert('找不到題目'); return; }
+    const overlay = document.createElement('div');
+    overlay.id = 'questionPreviewOverlay';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:9999999; backdrop-filter:blur(3px);';
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background:white; border-radius:20px; padding:24px; max-width:560px; width:94%; max-height:88vh; overflow-y:auto; box-shadow:0 20px 70px rgba(0,0,0,0.35);';
+    let imgHtml = '';
+    if (q.imageUrl) {
+        imgHtml = `<div style="text-align:center; margin:10px 0;"><img src="${q.imageUrl}" style="max-width:100%; max-height:40vh; border-radius:10px; object-fit:contain;"></div>`;
+    }
+    modal.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <span style="font-weight:700; color:#2e0f5a;">👁️ 題目預覽</span>
+            <button onclick="document.getElementById('questionPreviewOverlay').remove()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#888;">✕</button>
+        </div>
+        <div style="font-size:0.9rem; color:#333; line-height:1.6;">${q.text}</div>
+        ${imgHtml}
+        <div style="margin-top:10px; font-size:0.85rem;">
+            ${q.options.map((opt, i) => `<div style="padding:6px 10px; border:1px solid #e9e4f5; border-radius:8px; margin-bottom:4px;"><b>${String.fromCharCode(65+i)}.</b> ${opt.replace(/^[A-D]\.\s*/, '')}</div>`).join('')}
+        </div>
+        <div style="margin-top:12px; font-size:0.8rem; color:#10b981;"><b>✓ 正確答案：${q.correct}. ${q.options.find(o => o.startsWith(q.correct)).replace(/^[A-D]\.\s*/, '')}</b></div>
+        <div style="margin-top:14px; text-align:center;">
+            <button onclick="document.getElementById('questionPreviewOverlay').remove()" style="background:#4a1d8c; color:white; border:none; padding:7px 28px; border-radius:40px; cursor:pointer;">關閉</button>
+        </div>
+    `;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+async function showTestDetail(testId) {
+    if (!firestoreEnabled) { alert('⚠️ 需連線雲端'); return; }
+    let test = null;
+    try {
+        const doc = await firebase.firestore().collection('tests').doc(testId).get();
+        if (doc.exists) test = { id: doc.id, ...doc.data() };
+    } catch(e) { alert('❌ 讀取失敗'); return; }
+    if (!test) { alert('❌ 找不到測驗'); return; }
+    const results = test.results || {};
+    const studentIds = Object.keys(results);
+    const overlay = document.createElement('div');
+    overlay.id = 'testDetailOverlay';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:999999; backdrop-filter:blur(3px);';
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background:white; border-radius:24px; padding:24px; max-width:720px; width:94%; max-height:88vh; overflow-y:auto; box-shadow:0 20px 70px rgba(0,0,0,0.35);';
+    let scoreRows = '';
+    for (const sid of studentIds) {
+        const r = results[sid];
+        scoreRows += `<tr><td>${sid}</td><td style="font-weight:600; color:#4a1d8c;">${r.score}/${r.total}</td><td>${new Date(r.submittedAt).toLocaleString('zh-HK')}</td></tr>`;
+    }
+    let qStats = '';
+    for (const qid of test.questions) {
+        let correctCount = 0;
+        for (const sid of studentIds) {
+            const ans = results[sid].answers[qid];
+            if (ans && ans.correct) correctCount++;
+        }
+        const pct = studentIds.length > 0 ? Math.round(correctCount / studentIds.length * 100) : 0;
+        qStats += `<tr>
+            <td>${getQuestionShort(qid)}</td>
+            <td style="font-weight:600; color:${pct >= 70 ? '#10b981' : (pct >= 40 ? '#f59e0b' : '#dc2626')};">${correctCount}/${studentIds.length}（${pct}%）</td>
+        </tr>`;
+    }
+    modal.innerHTML = `
+        <h3 style="color:#2e0f5a; margin:0 0 4px 0;">📊 ${test.name}</h3>
+        <p style="color:#888; font-size:0.8rem; margin:0 0 12px 0;">作答 ${studentIds.length} 人 / 共 ${test.questionCount} 題</p>
+        <div style="margin-bottom:14px;">
+            <div style="font-weight:700; color:#2e0f5a; margin-bottom:6px;">👥 學生成績</div>
+            <table class="wrong-table" style="font-size:0.78rem;">
+                <thead><tr><th>學生</th><th>得分</th><th>提交時間</th></tr></thead>
+                <tbody>${scoreRows || '<tr><td colspan="3" style="color:#999;">尚無人作答</td></tr>'}</tbody>
+            </table>
+        </div>
+        <div>
+            <div style="font-weight:700; color:#2e0f5a; margin-bottom:6px;">📖 每題答對統計</div>
+            <table class="wrong-table" style="font-size:0.78rem;">
+                <thead><tr><th>題目</th><th>答對</th></tr></thead>
+                <tbody>${qStats || '<tr><td colspan="2" style="color:#999;">尚無人作答</td></tr>'}</tbody>
+            </table>
+        </div>
+        <div style="margin-top:16px; text-align:center;">
+            <button onclick="document.getElementById('testDetailOverlay').remove()" style="background:#4a1d8c; color:white; border:none; padding:8px 32px; border-radius:40px; cursor:pointer;">關閉</button>
+        </div>
+    `;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+async function exportTestCSV(testId) {
+    if (!firestoreEnabled) { alert('⚠️ 需連線雲端'); return; }
+    let test = null;
+    try {
+        const doc = await firebase.firestore().collection('tests').doc(testId).get();
+        if (doc.exists) test = { id: doc.id, ...doc.data() };
+    } catch(e) { alert('❌ 讀取失敗'); return; }
+    if (!test) { alert('❌ 找不到測驗'); return; }
+    const results = test.results || {};
+    const header = ['學生', '得分', '總分', ...test.questions.map(qid => getQuestionShort(qid))];
+    const matrix = [header];
+    for (const sid in results) {
+        const r = results[sid];
+        const row = [sid, r.score, r.total];
+        for (const qid of test.questions) {
+            const ans = r.answers[qid];
+            row.push(ans ? (ans.correct ? '✓' : `✗(${ans.chosen || '未答'})`) : '未作答');
+        }
+        matrix.push(row);
+    }
+    const csv = matrix.map(r => r.join(',')).join('\n');
+    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `測驗_${test.name}_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+// 發佈測驗（草稿/排期 → 立即發佈）
+async function publishTest(testId) {
+    if (!confirm('確定立即發佈此測驗？學生將可看到並作答。')) return;
+    if (!firestoreEnabled) { alert('⚠️ 需連線雲端'); return; }
+    try {
+        await firebase.firestore().collection('tests').doc(testId).update({ status: 'published', publishTime: new Date().toISOString() });
+        alert('✅ 測驗已發佈！');
+        renderSubtabTests();
+    } catch(e) {
+        console.error('❌ 發佈失敗:', e);
+        alert('❌ 發佈失敗：' + e.message);
+    }
+}
+
+// 刪除測驗
+async function deleteTest(testId) {
+    if (!confirm('⚠️ 確定刪除此測驗？所有作答紀錄將一併刪除，且無法復原！')) return;
+    if (!firestoreEnabled) { alert('⚠️ 需連線雲端'); return; }
+    try {
+        await firebase.firestore().collection('tests').doc(testId).delete();
+        alert('🗑️ 測驗已刪除');
+        renderSubtabTests();
+    } catch(e) {
+        console.error('❌ 刪除失敗:', e);
+        alert('❌ 刪除失敗：' + e.message);
     }
 }
 
@@ -3273,6 +3825,293 @@ function attachRemoveEvents() {
             renderMyMistakes();
         }
     }));
+}
+
+// ===== 測驗模式：資料層 =====
+async function createTestInFirestore(testData) {
+    if (!firestoreEnabled) { alert('⚠️ 需連線雲端才能建立測驗'); return null; }
+    try {
+        const ref = await firebase.firestore().collection('tests').add(testData);
+        return ref.id;
+    } catch(e) {
+        console.error('❌ 建立測驗失敗:', e);
+        alert('❌ 建立測驗失敗：' + e.message);
+        return null;
+    }
+}
+
+async function loadTestsForClass(className) {
+    if (!firestoreEnabled) return [];
+    try {
+        const snapshot = await firebase.firestore().collection('tests').where('classNames', 'array-contains', className).get();
+        const tests = [];
+        snapshot.forEach(doc => tests.push({ id: doc.id, ...doc.data() }));
+        return tests;
+    } catch(e) {
+        console.warn('⚠️ 載入測驗失敗:', e.message);
+        return [];
+    }
+}
+
+async function loadAllTests() {
+    if (!firestoreEnabled) return [];
+    try {
+        const snapshot = await firebase.firestore().collection('tests').get();
+        const tests = [];
+        snapshot.forEach(doc => tests.push({ id: doc.id, ...doc.data() }));
+        return tests;
+    } catch(e) {
+        console.warn('⚠️ 載入全部測驗失敗:', e.message);
+        return [];
+    }
+}
+
+async function submitTestResult(testId, studentId, result) {
+    if (!firestoreEnabled) return false;
+    try {
+        const ref = firebase.firestore().collection('tests').doc(testId);
+        await ref.set({ results: { [studentId]: result } }, { merge: true });
+        return true;
+    } catch(e) {
+        console.error('❌ 提交測驗結果失敗:', e);
+        return false;
+    }
+}
+
+// ===== 測驗列表（學生：待作答；老師：答題狀況） =====
+async function renderTestList() {
+    const container = document.getElementById('testPanel');
+    if (!container) return;
+    // 老師：顯示測驗答題狀況（等同後台測驗管理）
+    if (currentUser.isTeacher) {
+        const tests = await loadAllTests();
+        if (tests.length === 0) {
+            container.innerHTML = '<div class="card">📝 尚未建立任何測驗。請到「🧑🏫 老師後台 → 📝 測驗管理」建立。</div>';
+            return;
+        }
+        let html = `<div class="card"><h3>📝 測驗答題狀況</h3><p style="color:#888; font-size:0.8rem;">各測驗的學生作答進度與成績</p>`;
+        for (const t of tests) {
+            const results = t.results || {};
+            const doneCount = Object.keys(results).length;
+            const classText = (t.classNames || []).join('、');
+            let scoreSummary = '';
+            const scores = Object.values(results).map(r => r.score);
+            if (scores.length > 0) {
+                const avg = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length * 10) / 10;
+                scoreSummary = `· 平均 ${avg} 分`;
+            }
+            html += `
+                <div style="border:1px solid #e9e4f5; border-radius:14px; padding:12px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <span style="font-weight:700; color:#2e0f5a;">📝 ${t.name}</span>
+                        <span style="font-size:0.75rem; color:#4a1d8c; font-weight:600;">${doneCount} 人已作答 ${scoreSummary}</span>
+                    </div>
+                    <div style="font-size:0.78rem; color:#666; margin-top:4px;">班級：${classText} · ${t.questionCount} 題</div>
+                    <div style="margin-top:8px;">
+                        <button onclick="showTestDetail('${t.id}')" style="font-size:0.75rem; padding:4px 12px; border:none; border-radius:20px; background:#f0edf8; color:#4a1d8c; cursor:pointer;">📊 監測</button>
+                        <button onclick="exportTestCSV('${t.id}')" style="font-size:0.75rem; padding:4px 12px; border:none; border-radius:20px; background:#fef3c7; color:#92400e; cursor:pointer; margin-left:6px;">📥 匯出</button>
+                    </div>
+                </div>`;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+        return;
+    }
+    const className = groupClassName(currentUser.className, currentUser.language);
+    const tests = await loadTestsForClass(className);
+    if (tests.length === 0) {
+        container.innerHTML = '<div class="card">📝 目前沒有派發的測驗</div>';
+        return;
+    }
+    const now = new Date();
+    // 只顯示已發佈或已到排期時間的測驗
+    const visibleTests = tests.filter(t => {
+        if (t.status === 'draft') return false;
+        if (t.status === 'scheduled' && t.publishTime && now < new Date(t.publishTime)) return false;
+        return true;
+    });
+    if (visibleTests.length === 0) {
+        container.innerHTML = '<div class="card">📝 目前沒有派發的測驗</div>';
+        return;
+    }
+    let html = `<div class="card"><h3>📝 測驗</h3><p style="color:#888; font-size:0.8rem;">老師派發的測驗，大家做同一份題目，公平比較</p>`;
+    for (const t of visibleTests) {
+        const deadline = t.deadline ? new Date(t.deadline) : null;
+        const expired = deadline && now > deadline;
+        const myResult = t.results && t.results[currentUser.userId];
+        const statusColor = expired ? '#dc2626' : (myResult ? '#10b981' : '#4a1d8c');
+        const statusText = expired ? '已截止' : (myResult ? `已完成 ${myResult.score}/${myResult.total}` : '待作答');
+        const deadlineText = deadline ? `截止：${format(deadline, 'yyyy-MM-dd HH:mm')}` : '無截止日期';
+        const timeText = t.timeLimit ? `限時：${t.timeLimit} 分鐘` : '不限時';
+        const pending = !myResult && !expired;
+        const cardClass = pending ? 'test-card-pending' : '';
+        html += `
+            <div class="${cardClass}" style="border:1px solid #e9e4f5; border-radius:14px; padding:12px; margin-bottom:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                    <span style="font-weight:700; color:#2e0f5a;">📝 ${t.name} ${pending ? '<span style="font-size:0.7rem; color:#dc2626;">🔔 待作答</span>' : ''}</span>
+                    <span style="font-size:0.75rem; font-weight:600; color:${statusColor};">${statusText}</span>
+                </div>
+                <div style="font-size:0.78rem; color:#666; margin-top:4px;">
+                    ${t.questionCount} 題 · ${deadlineText} · ${timeText}
+                </div>
+                <div style="margin-top:8px;">
+                    ${myResult || expired
+                        ? `<button class="btn btn-small" disabled style="opacity:0.5; cursor:not-allowed; font-size:0.75rem; padding:4px 12px;">${expired ? '已截止' : '已完成'}</button>`
+                        : `<button class="btn btn-small" onclick="startTest('${t.id}')" style="font-size:0.75rem; padding:4px 12px; background:linear-gradient(135deg,#4a1d8c,#7c3aed); color:white; border:none; border-radius:40px; cursor:pointer;">▶ 開始測驗</button>`}
+                </div>
+            </div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+    // 更新測驗 tab 閃爍提示（有待作答測驗時）
+    const testTab = document.querySelector('.tab[data-tab="test"]');
+    if (testTab) {
+        const hasPending = visibleTests.some(t => {
+            const myResult = t.results && t.results[currentUser.userId];
+            const dl = t.deadline ? new Date(t.deadline) : null;
+            return !myResult && !(dl && now > dl);
+        });
+        if (hasPending) {
+            testTab.classList.add('test-tab-notice');
+            testTab.textContent = '📝 測驗 🔔';
+        } else {
+            testTab.classList.remove('test-tab-notice');
+            testTab.textContent = '📝 測驗';
+        }
+    }
+}
+
+// 進入主程式時：若有待作答測驗，讓測驗 tab 閃爍
+async function refreshTestTabNotice() {
+    if (!currentUser || currentUser.isTeacher) return;
+    const className = groupClassName(currentUser.className, currentUser.language);
+    const tests = await loadTestsForClass(className);
+    const now = new Date();
+    const visibleTests = tests.filter(t => {
+        if (t.status === 'draft') return false;
+        if (t.status === 'scheduled' && t.publishTime && now < new Date(t.publishTime)) return false;
+        return true;
+    });
+    const hasPending = visibleTests.some(t => {
+        const myResult = t.results && t.results[currentUser.userId];
+        const dl = t.deadline ? new Date(t.deadline) : null;
+        return !myResult && !(dl && now > dl);
+    });
+    const testTab = document.querySelector('.tab[data-tab="test"]');
+    if (testTab) {
+        if (hasPending) {
+            testTab.classList.add('test-tab-notice');
+            testTab.textContent = '📝 測驗 🔔';
+        } else {
+            testTab.classList.remove('test-tab-notice');
+            testTab.textContent = '📝 測驗';
+        }
+    }
+}
+
+// 開始測驗
+async function startTest(testId) {
+    if (!firestoreEnabled) { alert('⚠️ 需連線雲端才能進行測驗'); return; }
+    let test = null;
+    try {
+        const doc = await firebase.firestore().collection('tests').doc(testId).get();
+        if (doc.exists) test = { id: doc.id, ...doc.data() };
+    } catch(e) { console.error('❌ 讀取測驗失敗:', e); alert('❌ 讀取測驗失敗'); return; }
+    if (!test) { alert('❌ 找不到測驗'); return; }
+    // 檢查截止
+    const now = new Date();
+    if (test.deadline && now > new Date(test.deadline)) { alert('⏰ 此測驗已截止'); renderTestList(); return; }
+    // 檢查作答規則
+    const myResult = test.results && test.results[currentUser.userId];
+    if (myResult && test.attemptRule !== 'best' && test.attemptRule !== 'last') {
+        alert('⚠️ 你已完成此測驗，不可重做');
+        return;
+    }
+    // 取得題目（依固定清單）
+    const questions = [];
+    for (const qid of test.questions) {
+        let found = null;
+        for (let u in window.ALL_UNITS) for (let c in window.ALL_UNITS[u].chapters) {
+            const q = window.ALL_UNITS[u].chapters[c].questions.find(qq => qq.id === qid);
+            if (q) { found = q; break; }
+        }
+        if (found) questions.push(found);
+    }
+    if (questions.length === 0) { alert('⚠️ 測驗題目無法載入'); return; }
+    currentTestId = testId;
+    currentTestTimeLimit = test.timeLimit ? test.timeLimit * 60 : null;
+    startTestQuestions(questions);
+}
+
+// 測驗作答流程（全螢幕，限時）
+function startTestQuestions(questions) {
+    currentQuestions = questions.map(q => localizeQuestion(q));
+    currentOptionsMapping = currentQuestions.map(q => {
+        if (q.sf === 0) {
+            let letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) { let optText = q.options[i].substring(3); map[letters[i]] = optText; }
+            return { letterToText: map, correctLetter: q.correct };
+        } else {
+            let texts = q.options.map(opt => opt.replace(/^[A-D]\.\s*/, '')), shuffled = shuffleArray([...texts]), letters = ['A', 'B', 'C', 'D'], map = {};
+            for (let i = 0; i < 4; i++) map[letters[i]] = shuffled[i];
+            let correctText = q.options.find(opt => opt.startsWith(q.correct)).replace(/^[A-D]\.\s*/, ''), correctLetter = null;
+            for (let [l, t] of Object.entries(map)) if (t === correctText) { correctLetter = l; break; }
+            return { letterToText: map, correctLetter: correctLetter };
+        }
+    });
+    currentAnswers = new Array(currentQuestions.length).fill(null);
+    currentQIndex = 0;
+    isTrialMode = false;
+    isSingleQuestionMode = false;
+    isReviewMode = false;
+    isTestMode = true;
+    currentUnit = null;
+    currentChapter = null;
+    selectedCount = currentQuestions.length;
+    timeRemaining = currentTestTimeLimit || (currentQuestions.length * 90);
+    updateDesktopTimerDisplay();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (timeRemaining <= 0) submitTest();
+        else { timeRemaining--; updateDesktopTimerDisplay(); }
+    }, 1000);
+    if (blinkInterval) { clearInterval(blinkInterval); blinkInterval = null; }
+    const submitBtn = document.getElementById('desktopSubmitBtn');
+    if (submitBtn) submitBtn.style.animation = '';
+    document.getElementById('settingsModal').style.display = 'none';
+    document.getElementById('explainModal').style.display = 'none';
+    document.getElementById('resultModal').style.display = 'none';
+    startTime = Date.now();
+    if (isIPhone() && !isLandscape()) { showIPhoneOrientationPrompt(); return; }
+    forceLandscapeAndFullscreen().then(() => { showDesktopQuizModal(); });
+}
+
+// 提交測驗
+async function submitTest() {
+    if (timerInterval) clearInterval(timerInterval);
+    if (!currentTestId) { submitDesktopAll(); return; }
+    // 計算結果
+    let score = 0;
+    const answers = {};
+    for (let i = 0; i < currentQuestions.length; i++) {
+        const q = currentQuestions[i];
+        const map = currentOptionsMapping[i];
+        const chosen = currentAnswers[i];
+        const isCorrect = chosen === map.correctLetter;
+        if (isCorrect) score++;
+        answers[q.id] = { chosen: chosen || null, correct: isCorrect };
+    }
+    const myUserId = currentUser.userId || currentUser.id;
+    const result = { score, total: currentQuestions.length, answers, submittedAt: new Date().toISOString() };
+    const ok = await submitTestResult(currentTestId, myUserId, result);
+    if (ok) alert(`📝 測驗已提交！得分：${score}/${currentQuestions.length}`);
+    else alert(`📝 測驗已提交（本機記錄），但雲端同步失敗`);
+    isTestMode = false;
+    currentTestId = null;
+    document.getElementById('desktopQuizModal').style.display = 'none';
+    exitFullscreenMode();
+    renderTestList();
+    renderPractice();
 }
 
 // ===== 更多資源：依章節分類顯示影片 =====
@@ -4403,6 +5242,11 @@ function updateDesktopPeriodicButton() {
 }
 
 function submitDesktopAll() {
+    // 測驗模式：直接提交（限時到自動呼叫，或學生按提交）
+    if (isTestMode && currentTestId) {
+        submitTest();
+        return;
+    }
     let answeredCount = currentAnswers.filter(a => a !== null && a !== undefined).length;
     let unansweredCount = currentQuestions.length - answeredCount;
     if (unansweredCount > 0) {
@@ -4863,6 +5707,7 @@ async function renderTeacherPanel() {
                 <button class="sub-tab" data-subtab="lastlogin" onclick="switchSubtab('lastlogin', '${currentClass}')">🕐 最後上線</button>
                 <button class="sub-tab" data-subtab="rank" onclick="switchSubtab('rank', '${currentClass}')">🏆 成就排名</button>
                 <button class="sub-tab" data-subtab="chapters" onclick="switchSubtab('chapters', '${currentClass}')">📖 章節管理</button>
+                <button class="sub-tab" data-subtab="tests" onclick="switchSubtab('tests', '${currentClass}')">📝 測驗管理</button>
             </div>
             <div class="subtab-select-wrapper mobile-select">
                 <select id="subtabSelector" class="subtab-select" onchange="switchSubtab(this.value, '${currentClass}')">
@@ -4872,6 +5717,7 @@ async function renderTeacherPanel() {
                     <option value="lastlogin">🕐 最後上線</option>
                     <option value="rank">🏆 成就排名</option>
                     <option value="chapters">📖 章節管理</option>
+                    <option value="tests">📝 測驗管理</option>
                 </select>
             </div>
         </div>
@@ -4882,6 +5728,7 @@ async function renderTeacherPanel() {
         <div id="subtab-lastlogin" class="subtab-content" style="display:none;"></div>
         <div id="subtab-rank" class="subtab-content" style="display:none;"></div>
         <div id="subtab-chapters" class="subtab-content" style="display:none;"></div>
+        <div id="subtab-tests" class="subtab-content" style="display:none;"></div>
     `;
     container.innerHTML = html;
     bindTeacherEvents();
@@ -4911,6 +5758,7 @@ function renderSubtab(subtabId, className) {
         case 'lastlogin': renderSubtabLastLogin(className); break;
         case 'rank': renderSubtabRank(className); break;
         case 'chapters': renderSubtabChapters(className); break;
+        case 'tests': renderSubtabTests(className); break;
     }
 }
 
@@ -5085,12 +5933,18 @@ async function renderSubtabByChapter(className) {
         const rows = [];
         for (const s of students) {
             const latest = s.latestStatus || {};
+            const isZhStudent = s.language === 'zh';
             let correct = 0;
+            const diffDone = { 0: 0, 1: 0, 2: 0, 3: 0 };
+            const diffTotal = { 0: 0, 1: 0, 2: 0, 3: 0 };
             for (const q of window.ALL_UNITS[chInfo.unit].chapters[chInfo.chapter].questions) {
-                if (latest[q.id] === true) correct++;
+                if (isZhStudent && isTranslateQuestion(q)) continue;
+                diffTotal[q.difficulty_level] = (diffTotal[q.difficulty_level] || 0) + 1;
+                if (latest[q.id] === true) { correct++; diffDone[q.difficulty_level] = (diffDone[q.difficulty_level] || 0) + 1; }
             }
-            const pct = chInfo.total > 0 ? Math.round(correct / chInfo.total * 100) : 0;
-            rows.push({ name: s.name, userId: s.userId, pct, correct, total: chInfo.total, lastLogin: s.lastLogin });
+            const effectiveTotal = isZhStudent ? diffTotal[1] + diffTotal[2] + diffTotal[3] : chInfo.total;
+            const pct = effectiveTotal > 0 ? Math.round(correct / effectiveTotal * 100) : 0;
+            rows.push({ name: s.name, userId: s.userId, pct, correct, total: effectiveTotal, lastLogin: s.lastLogin, isZhStudent, diffDone, diffTotal });
         }
         // 依完成度排序
         rows.sort((a, b) => b.pct - a.pct);
@@ -5108,15 +5962,25 @@ async function renderSubtabByChapter(className) {
                 </div>
                 <div class="collapsible-content collapsed" id="bc-${chInfo.unit}-${chInfo.chapter}" style="padding-top:4px;">
                     <table class="wrong-table" style="font-size:0.75rem;">
-                        <thead><tr><th>姓名</th><th>學號</th><th>完成度</th><th>進度條</th><th>最後上線</th></tr></thead>
+                        <thead><tr><th>姓名</th><th>學號</th><th>完成度</th><th>進度條</th><th>🌐翻譯</th><th>✅基礎</th><th>📈進階</th><th>🔥挑戰</th><th>最後上線</th></tr></thead>
                         <tbody>`;
         for (const r of rows) {
             const rowColor = r.pct >= 50 ? '#10b981' : (r.pct >= 30 ? '#f59e0b' : '#dc2626');
+            const diffCell = (dl) => {
+                if (r.isZhStudent && dl === 0) return '<span style="color:#ccc;">—</span>';
+                const done = r.diffDone[dl] || 0;
+                const total = r.diffTotal[dl] || 0;
+                return `${done}/${total}`;
+            };
             html += `<tr>
                 <td>${r.name}</td>
                 <td>${r.userId}</td>
                 <td style="font-weight:600; color:${rowColor};">${r.pct}% (${r.correct}/${r.total})</td>
                 <td style="width:120px;"><div class="progress-bar-container" style="width:100px; height:8px;"><div class="progress-bar-fill" style="width:${r.pct}%; background:${rowColor};"></div></div></td>
+                <td style="font-size:0.7rem;">${diffCell(0)}</td>
+                <td style="font-size:0.7rem;">${diffCell(1)}</td>
+                <td style="font-size:0.7rem;">${diffCell(2)}</td>
+                <td style="font-size:0.7rem;">${diffCell(3)}</td>
                 <td style="font-size:0.7rem; color:#666;">${r.lastLogin ? formatLastLogin(r.lastLogin) : '-'}</td>
             </tr>`;
         }
@@ -5599,7 +6463,7 @@ async function showStudentDetail(userId) {
     
     if (firestoreEnabled) {
         try {
-            const cloudData = await loadFromFirestore('users', userId);
+            const cloudData = await withTimeout(loadFromFirestore('users', userId), 8000);
             if (cloudData) {
                 studentData = cloudData;
                 user = cloudData;
@@ -5650,6 +6514,8 @@ async function showStudentDetail(userId) {
     }
     
     let chapterProgress = [];
+    // 中文班學生：跳過翻譯題
+    const isZhStudent = studentData.language === 'zh';
     for (let u in window.ALL_UNITS) {
         for (let ch in window.ALL_UNITS[u].chapters) {
             const questions = window.ALL_UNITS[u].chapters[ch].questions;
@@ -5657,6 +6523,7 @@ async function showStudentDetail(userId) {
             // 該章節按難度拆解
             const chDiff = { 0: { done: 0, total: 0 }, 1: { done: 0, total: 0 }, 2: { done: 0, total: 0 }, 3: { done: 0, total: 0 } };
             for (const q of questions) {
+                if (isZhStudent && isTranslateQuestion(q)) continue;
                 if (studentData.latestStatus && studentData.latestStatus[q.id] === true) correct++;
                 const dl = q.difficulty_level;
                 if (chDiff[dl]) { chDiff[dl].total++; if (studentData.latestStatus && studentData.latestStatus[q.id] === true) chDiff[dl].done++; }
@@ -5767,6 +6634,7 @@ async function showStudentDetail(userId) {
                             const dRows = [0, 1, 2, 3].map(dl => {
                                 const s = ch.diff[dl];
                                 if (!s || s.total === 0) return '';
+                                if (isZhStudent && dl === 0) return '';
                                 const color = s.done >= s.total * 0.7 ? '#10b981' : (s.done >= s.total * 0.4 ? '#f59e0b' : '#dc2626');
                                 return `<span style="font-size:0.62rem; color:${color}; margin-right:8px;">${dl === 0 ? '🌐' : dl === 1 ? '✅' : dl === 2 ? '📈' : '🔥'} ${s.done}/${s.total}</span>`;
                             }).join('');
