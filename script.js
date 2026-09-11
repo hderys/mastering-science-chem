@@ -2788,9 +2788,10 @@ async function renderManualSelectList() {
 function previewQuestion(qid) {
     const q = getQuestionById(qid);
     if (!q) { alert('找不到題目'); return; }
-    // 依所選班級顯示中文或英文
+    // 依所選班級顯示中文或英文（可傳入第二參數強制語言）
     const ctClass = document.getElementById('ctClass') ? document.getElementById('ctClass').value : '';
-    const zhClass = ctClass === 'S4(中)';
+    const forceZh = arguments.length > 1 && arguments[1] === 'zh';
+    const zhClass = forceZh || ctClass === 'S4(中)';
     const previewText = zhClass && q.textZh ? q.textZh : q.text;
     const previewOptions = zhClass && q.optionsZh ? q.optionsZh : q.options;
     const overlay = document.createElement('div');
@@ -6071,11 +6072,12 @@ async function renderSubtabWrong(className) {
                             <tbody>`;
             let rank = 1;
             for (const e of ch.entries) {
-                const shortText = e.text.length > 70 ? e.text.substring(0, 70) + '...' : e.text;
+                const shortText = e.text.replace(/<br>/g, ' ').replace(/<[^>]+>/g, '');
+                const displayText = shortText.length > 60 ? shortText.substring(0, 60) + '...' : shortText;
                 html += `
                     <tr>
                         <td>${rank}</td>
-                        <td>${shortText}</td>
+                        <td style="cursor:pointer;" onclick="previewQuestion('${e.qid}')">${displayText} <span style="font-size:0.62rem; color:#4338ca; white-space:nowrap;">👁️ 查看</span></td>
                         <td style="font-weight:600; color:#dc2626;">${e.count} 人</td>
                         <td style="font-size:0.7rem; color:#555;">${e.students.join('、')}</td>
                     </tr>`;
