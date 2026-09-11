@@ -2486,8 +2486,9 @@ function openCreateTestModal() {
                         const unitObj = window.ALL_UNITS[u];
                         html += `<div style="font-size:0.72rem; color:#888; margin-top:5px; font-weight:600;">${unitObj.name}</div>`;
                         for (let c in unitObj.chapters) {
+                            const ch = unitObj.chapters[c];
                             html += `<label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; padding:2px 0; cursor:pointer;">
-                                <input type="checkbox" class="ct-chapter" value="${u}_${c}" checked> ${unitObj.chapters[c].name}
+                                <input type="checkbox" class="ct-chapter" value="${u}_${c}" checked> ${ch.nameZh || ch.name}
                             </label>`;
                         }
                     }
@@ -2725,6 +2726,12 @@ async function renderManualSelectList() {
     const sortByWrong = document.getElementById('ctSortByWrong') ? document.getElementById('ctSortByWrong').checked : true;
     const sortByYear = document.getElementById('ctSortByYear') ? document.getElementById('ctSortByYear').checked : false;
     const examYear = document.getElementById('ctExamYear') ? document.getElementById('ctExamYear').value : '__all__';
+    // 所選班級為中文班時，題目顯示中文
+    const isZhClass = classVal === 'S4(中)';
+    const qText = (q) => {
+        const t = isZhClass && q.textZh ? q.textZh : q.text;
+        return t.replace(/<br>/g, ' ').replace(/<[^>]+>/g, '');
+    };
     // 章節多選
     const chSet = new Set(Array.from(document.querySelectorAll('.ct-chapter:checked')).map(cb => cb.value));
     // 載入該班學生的錯題統計（每題錯誤人數）
@@ -2765,7 +2772,7 @@ async function renderManualSelectList() {
     let html = '';
     for (const it of items) {
         const q = it.q;
-        const short = q.text.replace(/<br>/g, ' ').replace(/<[^>]+>/g, '');
+        const short = qText(q);
         const diffBadge = q.difficulty_level === 1 ? '<span style="font-size:0.62rem; background:#f0fdf4; color:#15803d; padding:1px 5px; border-radius:8px;">✅ 基礎</span>' : q.difficulty_level === 2 ? '<span style="font-size:0.62rem; background:#fffbeb; color:#b45309; padding:1px 5px; border-radius:8px;">📈 進階</span>' : '<span style="font-size:0.62rem; background:#fef2f2; color:#b91c1c; padding:1px 5px; border-radius:8px;">🔥 挑戰</span>';
         const examBadge = it.examMatch ? `<span style="font-size:0.62rem; background:#fef3c7; color:#92400e; padding:1px 6px; border-radius:8px; font-weight:600;">${it.examMatch[1]} ${it.examMatch[3].toUpperCase()}</span>` : '';
         const wrongBadge = it.wc > 0 ? `<span style="font-size:0.62rem; background:#fee2e2; color:#b91c1c; padding:1px 6px; border-radius:8px; font-weight:600;">${it.wc} 人錯</span>` : '';
@@ -2781,6 +2788,11 @@ async function renderManualSelectList() {
 function previewQuestion(qid) {
     const q = getQuestionById(qid);
     if (!q) { alert('找不到題目'); return; }
+    // 依所選班級顯示中文或英文
+    const ctClass = document.getElementById('ctClass') ? document.getElementById('ctClass').value : '';
+    const zhClass = ctClass === 'S4(中)';
+    const previewText = zhClass && q.textZh ? q.textZh : q.text;
+    const previewOptions = zhClass && q.optionsZh ? q.optionsZh : q.options;
     const overlay = document.createElement('div');
     overlay.id = 'questionPreviewOverlay';
     overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:9999999; backdrop-filter:blur(3px);';
@@ -2795,12 +2807,12 @@ function previewQuestion(qid) {
             <span style="font-weight:700; color:#2e0f5a;">👁️ 題目預覽</span>
             <button onclick="document.getElementById('questionPreviewOverlay').remove()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#888;">✕</button>
         </div>
-        <div style="font-size:0.9rem; color:#333; line-height:1.6;">${q.text}</div>
+        <div style="font-size:0.9rem; color:#333; line-height:1.6;">${previewText}</div>
         ${imgHtml}
         <div style="margin-top:10px; font-size:0.85rem;">
-            ${q.options.map((opt, i) => `<div style="padding:6px 10px; border:1px solid #e9e4f5; border-radius:8px; margin-bottom:4px;"><b>${String.fromCharCode(65+i)}.</b> ${opt.replace(/^[A-D]\.\s*/, '')}</div>`).join('')}
+            ${previewOptions.map((opt, i) => `<div style="padding:6px 10px; border:1px solid #e9e4f5; border-radius:8px; margin-bottom:4px;"><b>${String.fromCharCode(65+i)}.</b> ${opt.replace(/^[A-D]\.\s*/, '')}</div>`).join('')}
         </div>
-        <div style="margin-top:12px; font-size:0.8rem; color:#10b981;"><b>✓ 正確答案：${q.correct}. ${q.options.find(o => o.startsWith(q.correct)).replace(/^[A-D]\.\s*/, '')}</b></div>
+        <div style="margin-top:12px; font-size:0.8rem; color:#10b981;"><b>✓ 正確答案：${q.correct}. ${previewOptions.find(o => o.startsWith(q.correct)).replace(/^[A-D]\.\s*/, '')}</b></div>
         <div style="margin-top:14px; text-align:center;">
             <button onclick="document.getElementById('questionPreviewOverlay').remove()" style="background:#4a1d8c; color:white; border:none; padding:7px 28px; border-radius:40px; cursor:pointer;">關閉</button>
         </div>
@@ -2959,6 +2971,9 @@ async function renderPractice() {
             <span style="font-size:0.8rem; color:#888;">請使用學校電郵登入，或請老師在後台為您開通完整內容。</span>
         </div>`;
     }
+    // 預設展開第一個單元
+    let firstUnit = null;
+    for (let firstU in window.ALL_UNITS) { firstUnit = firstU; break; }
     for (let unit in window.ALL_UNITS) {
         // 試用者只顯示 Unit 1
         if (isTrialUser && unit !== '1') continue;
@@ -2989,7 +3004,12 @@ async function renderPractice() {
             html += `<button class="btn btn-small unit-test-btn" data-unit="${unit}" disabled style="background:#ccc; padding:0.15rem 0.5rem; font-size:0.7rem; cursor:not-allowed; opacity:0.6;" title="所有章節完成度需超過 50% 才可挑戰單元測驗">📝 單元測驗 🔒</button>`;
         }
         html += `</div>
-        </div><div class="chapters-container" id="chapters-${unit}">`;
+        </div><div class="chapters-container ${unit === firstUnit ? 'open' : ''}" id="chapters-${unit}">`;
+        if (unit === firstUnit) {
+            // 讓 toggle 圖示反映展開狀態
+            const toggleHtml = `<span class="unit-toggle" id="toggle-${unit}">▼</span>`;
+            html = html.replace(`<span class="unit-toggle" id="toggle-${unit}">▶</span>`, toggleHtml);
+        }
         for (let ch in filteredChapters) {
             let chMastery = getChapterMastery(unit, ch), chTotal = getChapterTotalQuestions(unit, ch);
             let chNameDisplay = qChapterName(unit, ch);
