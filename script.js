@@ -332,6 +332,11 @@ function isS4RealClass(cn) {
 
 async function loadAllStudentsFromFirebase(className) {
     console.log('📥 從 Firebase 讀取學生數據:', className);
+    // 快取：30 秒內不重複查 Firestore（後台分頁切換加速）
+    if (window.__studentsCache && window.__studentsCache[className] && Date.now() - window.__studentsCacheTime[className] < 30000) {
+        console.log(`⚡ 使用快取: ${className} (${window.__studentsCache[className].length} 位)`);
+        return window.__studentsCache[className];
+    }
     const db = getUsers();
     const isAll = className === '__all__';
     const isS4Group = isS4GroupClass(className);
@@ -367,9 +372,19 @@ async function loadAllStudentsFromFirebase(className) {
                 if (!existing.lastLogin && s.lastLogin) existing.lastLogin = s.lastLogin;
             }
         }
+        // 存快取
+        if (!window.__studentsCache) window.__studentsCache = {};
+        if (!window.__studentsCacheTime) window.__studentsCacheTime = {};
+        window.__studentsCache[className] = merged;
+        window.__studentsCacheTime[className] = Date.now();
         return merged;
     } catch(e) {
         console.warn('⚠️ Firebase 讀取失敗，使用 localStorage:', e.message);
+        // 失敗時也存快取（localStorage 資料）
+        if (!window.__studentsCache) window.__studentsCache = {};
+        if (!window.__studentsCacheTime) window.__studentsCacheTime = {};
+        window.__studentsCache[className] = localStudents;
+        window.__studentsCacheTime[className] = Date.now();
         return localStudents;
     }
 }
@@ -1074,71 +1089,15 @@ async function handleGoogleLogin() {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         
+        // iPad/iPhone（iOS Safari）用 Redirect，其他用 Popup
+        if (isIOS()) {
+            await firebase.auth().signInWithRedirect(provider);
+            return;  // 跳轉後頁面會重新載入，由 handleRedirectResult 接手
+        }
         const result = await firebase.auth().signInWithPopup(provider);
         const user = result.user;
         console.log('✅ Google 登入成功:', user.displayName, user.email);
-        
-        const userId = user.email;
-        const isTeacher = isTeacherEmail(userId);
-        let existingUser = await findUserAcrossDevices(userId);
-        
-        if (!existingUser) {
-            let name, className = null, studentId = null;
-
-            if (isTeacher) {
-                // 教師：不需填寫班別/學號，但選擇檢視題目語言
-                const emailPrefix = userId.split('@')[0];
-                name = user.displayName || emailPrefix.toUpperCase();
-                const teacherLang = await showLanguagePrompt();
-                const newUser = await createUser(
-                    name,
-                    className,
-                    studentId,
-                    userId,
-                    isTeacher,
-                    emailPrefix.toUpperCase(),
-                    teacherLang
-                );
-                existingUser = newUser;
-                try {
-                    await firebase.auth().currentUser.updateProfile({ displayName: name });
-                } catch(e) { console.warn('⚠️ 更新 displayName 失敗:', e); }
-                alert(`✅ 教師帳戶已建立！\n\n👤 ${newUser.name}\n🆔 教師代號：${newUser.teacherCode}\n\n您可以查看所有班級的學生。`);
-            } else {
-                // 學生：首次登入填寫姓名/班別/學號
-                const userInfo = await showCustomPrompt();
-                if (!userInfo) {
-                    await firebase.auth().signOut();
-                    updateStatusDot('offline', '❌ 登入取消', '#f8d7da', '#7f1d1d');
-                    return;
-                }
-                
-                name = userInfo.name || user.displayName || userId;
-                className = userInfo.className;
-                studentId = userInfo.studentId;
-                const language = userInfo.language || 'en';
-                
-                const newUser = await createUser(
-                    name,
-                    className,
-                    studentId,
-                    userId,
-                    isTeacher,
-                    null,
-                    language
-                );
-                existingUser = newUser;
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                try {
-                    await firebase.auth().currentUser.updateProfile({ displayName: name });
-                } catch(e) { console.warn('⚠️ 更新 displayName 失敗:', e); }
-                
-                alert(`✅ 帳戶已建立！\n\n👤 ${newUser.name}\n🆔 學號：${newUser.studentId || '-'}\n📚 班別：${newUser.className}\n\n以後您可以用 Google 帳戶直接登入！`);
-            }
-        }
-        
-        await finalizeLogin(existingUser);
+        await processGoogleLogin(user);
         
     } catch (error) {
         console.error('❌ Google 登入失敗:', error);
@@ -1146,7 +1105,92 @@ async function handleGoogleLogin() {
         
         if (error.code === 'auth/popup-closed-by-user') {
             showLoginError('⚠️ 您關閉了登入視窗，請重新嘗試');
+        } else if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/redirect-cancelled-by-user') {
+            showLoginError('⚠️ 登入已取消，請重新嘗試');
         } else {
+            showLoginError('❌ Google 登入失敗：' + error.message);
+        }
+    }
+}
+
+// 共用：Google 登入成功後的流程（popup 與 redirect 都走這裡）
+async function processGoogleLogin(user) {
+    const userId = user.email;
+    const isTeacher = isTeacherEmail(userId);
+    let existingUser = await findUserAcrossDevices(userId);
+    
+    if (!existingUser) {
+        let name, className = null, studentId = null;
+
+        if (isTeacher) {
+            // 教師：不需填寫班別/學號，但選擇檢視題目語言
+            const emailPrefix = userId.split('@')[0];
+            name = user.displayName || emailPrefix.toUpperCase();
+            const teacherLang = await showLanguagePrompt();
+            const newUser = await createUser(
+                name,
+                className,
+                studentId,
+                userId,
+                isTeacher,
+                emailPrefix.toUpperCase(),
+                teacherLang
+            );
+            existingUser = newUser;
+            try {
+                await firebase.auth().currentUser.updateProfile({ displayName: name });
+            } catch(e) { console.warn('⚠️ 更新 displayName 失敗:', e); }
+            alert(`✅ 教師帳戶已建立！\n\n👤 ${newUser.name}\n🆔 教師代號：${newUser.teacherCode}\n\n您可以查看所有班級的學生。`);
+        } else {
+            // 學生：首次登入填寫姓名/班別/學號
+            const userInfo = await showCustomPrompt();
+            if (!userInfo) {
+                await firebase.auth().signOut();
+                updateStatusDot('offline', '❌ 登入取消', '#f8d7da', '#7f1d1d');
+                return;
+            }
+            
+            name = userInfo.name || user.displayName || userId;
+            className = userInfo.className;
+            studentId = userInfo.studentId;
+            const language = userInfo.language || 'en';
+            
+            const newUser = await createUser(
+                name,
+                className,
+                studentId,
+                userId,
+                isTeacher,
+                null,
+                language
+            );
+            existingUser = newUser;
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            try {
+                await firebase.auth().currentUser.updateProfile({ displayName: name });
+            } catch(e) { console.warn('⚠️ 更新 displayName 失敗:', e); }
+            
+            alert(`✅ 帳戶已建立！\n\n👤 ${newUser.name}\n🆔 學號：${newUser.studentId || '-'}\n📚 班別：${newUser.className}\n\n以後您可以用 Google 帳戶直接登入！`);
+        }
+    }
+    
+    await finalizeLogin(existingUser);
+}
+
+// iPad/iPhone Redirect 登入結果處理（頁面載入時呼叫）
+async function handleRedirectResult() {
+    // 僅在 http/https 環境檢查（避免 file:// 或無儲存環境報錯）
+    if (!/^https?:/.test(location.protocol || '')) return;
+    try {
+        const result = await firebase.auth().getRedirectResult();
+        if (result && result.user) {
+            console.log('✅ Google Redirect 登入成功:', result.user.displayName, result.user.email);
+            await processGoogleLogin(result.user);
+        }
+    } catch (error) {
+        console.error('❌ Google Redirect 登入失敗:', error);
+        if (error.code && error.code !== 'auth/redirect-cancelled-by-user') {
             showLoginError('❌ Google 登入失敗：' + error.message);
         }
     }
@@ -3200,6 +3244,12 @@ function startUnitTest(unit) {
 
 function isIPhone() {
     return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+// iOS 裝置（iPad/iPhone Safari）：Google 登入用 Redirect
+function isIOS() {
+    return /iPad|iPhone|iPod/i.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
 function isLandscape() {
@@ -5581,6 +5631,8 @@ async function saveClassSettings(className, settings) {
 
 document.addEventListener('DOMContentLoaded', function() {
     checkFirebase();
+    // iOS Redirect 登入：從 Google 跳回後處理結果
+    handleRedirectResult();
     document.getElementById('diff-easy').addEventListener('click', () => { selectedDifficulty = 0; document.getElementById('diff-easy').classList.add('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
     document.getElementById('diff-medium').addEventListener('click', () => { if (document.getElementById('diff-medium').disabled) return; selectedDifficulty = 1; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.add('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
     document.getElementById('diff-hard').addEventListener('click', () => { if (document.getElementById('diff-hard').disabled) return; selectedDifficulty = 2; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.add('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
