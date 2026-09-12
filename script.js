@@ -1182,7 +1182,25 @@ async function processGoogleLogin(user) {
 async function handleRedirectResult() {
     // 僅在 http/https 環境檢查（避免 file:// 或無儲存環境報錯）
     if (!/^https?:/.test(location.protocol || '')) return;
+    // 防重複處理
+    if (window.__authHandled) return;
+    window.__authHandled = true;
     try {
+        // 監聽登入狀態：Redirect 跳回後，若已登入且未進入主程式 → 處理
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (user && !currentUser && !window.__authProcessing) {
+                window.__authProcessing = true;
+                console.log('✅ 偵測到已登入（Redirect 回程）:', user.email);
+                try {
+                    await processGoogleLogin({ email: user.email, displayName: user.displayName });
+                } catch(e) {
+                    console.error('❌ Redirect 登入後處理失敗:', e);
+                    showLoginError('❌ 登入後處理失敗：' + e.message);
+                }
+                window.__authProcessing = false;
+            }
+        });
+        // 也嘗試 getRedirectResult（處理剛跳回的首次登入）
         const result = await firebase.auth().getRedirectResult();
         if (result && result.user) {
             console.log('✅ Google Redirect 登入成功:', result.user.displayName, result.user.email);
@@ -1190,7 +1208,7 @@ async function handleRedirectResult() {
         }
     } catch (error) {
         console.error('❌ Google Redirect 登入失敗:', error);
-        if (error.code && error.code !== 'auth/redirect-cancelled-by-user') {
+        if (error.code && error.code !== 'auth/redirect-cancelled-by-user' && error.code !== 'auth/operation-not-supported-in-this-environment') {
             showLoginError('❌ Google 登入失敗：' + error.message);
         }
     }
