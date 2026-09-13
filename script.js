@@ -3209,6 +3209,14 @@ function showUnitTestConfirm(unit) {
 }
 
 function startUnitTest(unit) {
+    // 鎖定檢查：所有章節完成度 >50% 才可挑戰單元測驗（防止繞過）
+    const unitObj = window.ALL_UNITS[unit];
+    if (!unitObj) { alert('此單元不存在'); return; }
+    const unitChs = Object.keys(unitObj.chapters);
+    if (unitChs.length === 0 || !unitChs.every(ch => getChapterMastery(unit, ch) > 50)) {
+        alert('⚠️ 所有章節完成度需超過 50% 才可挑戰單元測驗');
+        return;
+    }
     let allQuestions = [];
     for (let ch in window.ALL_UNITS[unit].chapters) allQuestions = allQuestions.concat(window.ALL_UNITS[unit].chapters[ch].questions);
     if (allQuestions.length === 0) { alert('此單元暫無題目'); return; }
@@ -3453,6 +3461,27 @@ function addUnlockEffects(type, card) {
     }
     card.appendChild(container);
     setTimeout(() => { if (container.parentNode) container.remove(); }, 2000);
+}
+
+// 計算章節難度解鎖狀態（不含 UI 持久化，純即時計算）
+function computeChapterUnlock(unit, chapter) {
+    const questions = window.ALL_UNITS[unit]?.chapters[chapter]?.questions || [];
+    const availableQuestions = excludeTranslate ? questions.filter(q => q.difficulty !== "🌐 Translate") : [...questions];
+    const basicQ = availableQuestions.filter(q => q.difficulty_level === 1);
+    const advQ = availableQuestions.filter(q => q.difficulty_level === 2);
+    const chalQ = availableQuestions.filter(q => q.difficulty_level === 3);
+    const basicCorrect = basicQ.filter(q => userData.latestStatus[q.id] === true).length;
+    const advCorrect = advQ.filter(q => userData.latestStatus[q.id] === true).length;
+    const chalCorrect = chalQ.filter(q => userData.latestStatus[q.id] === true).length;
+    const basicPercent = basicQ.length === 0 ? 0 : Math.round(basicCorrect / basicQ.length * 100);
+    const advPercent = advQ.length === 0 ? 0 : Math.round(advCorrect / advQ.length * 100);
+    const chalPercent = chalQ.length === 0 ? 0 : Math.round(chalCorrect / chalQ.length * 100);
+    return {
+        star3Unlocked: basicPercent >= 80,
+        star5Unlocked: basicPercent >= 80 && advPercent >= 80,
+        trialUnlocked: basicPercent >= 80 && advPercent >= 80 && chalPercent >= 80,
+        basicPercent, advPercent, chalPercent
+    };
 }
 
 function updateSettingsUnlockStatus() {
@@ -5009,6 +5038,30 @@ function startTranslatePractice(unit, chapter) {
 
 function startPracticeWithSettings() {
     let unit = pendingUnit, chapter = pendingChapter;
+    // 強制檢查難度鎖定：防止透過狀態殘留跳級（如試煉模式在未解鎖章節使用）
+    if (!unit || !chapter || !window.ALL_UNITS[unit] || !window.ALL_UNITS[unit].chapters[chapter]) {
+        alert('⚠️ 請選擇章節後再開始練習');
+        return;
+    }
+    const lockCheck = computeChapterUnlock(unit, chapter);
+    if (isTrialMode && !lockCheck.trialUnlocked) {
+        alert('⚠️ 試煉模式尚未解鎖：需完成基礎、進階、挑戰各 80% 才可挑戰試煉模式');
+        isTrialMode = false; selectedDifficulty = 0;
+        renderPractice();
+        return;
+    }
+    if (selectedDifficulty === 2 && !lockCheck.star5Unlocked) {
+        alert('⚠️ 五星（進階）難度尚未解鎖：需基礎題 80% 才可練習進階難度');
+        selectedDifficulty = 0;
+        renderPractice();
+        return;
+    }
+    if (selectedDifficulty === 1 && !lockCheck.star3Unlocked) {
+        alert('⚠️ 三星難度尚未解鎖：需先完成基礎題 80%');
+        selectedDifficulty = 0;
+        renderPractice();
+        return;
+    }
     let allQuestions = [...window.ALL_UNITS[unit].chapters[chapter].questions], total = allQuestions.length;
     let count = customCount > 0 ? customCount : selectedCount;
     if (count > total) count = total;
