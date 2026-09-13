@@ -6798,6 +6798,30 @@ async function showStudentDetail(userId) {
                     </div>
                 </div>
                 
+                <div style="margin-top:14px;">
+                    <h3 style="font-size:0.9rem; color:#2e0f5a; margin-bottom:6px;">📋 做題紀錄 (${(studentData.practiceHistory || []).length})</h3>
+                    ${(studentData.practiceHistory || []).length === 0 ? '<div style="color:#999; font-size:0.7rem;">無做題紀錄</div>' : `
+                        <div style="max-height:200px; overflow-y:auto; font-size:0.7rem;">
+                            <table class="wrong-table" style="font-size:0.68rem;">
+                                <thead><tr><th>日期</th><th>模式</th><th>難度</th><th>題數</th><th>正確</th><th>正確率</th></tr></thead>
+                                <tbody>
+                                ${(studentData.practiceHistory || []).map(h => {
+                                    const modeText = h.mode === 'trial' ? '🔥試煉' : h.mode === 'review' ? '🔁複習' : h.mode === 'single' ? '🔂單題' : h.mode === 'unit' ? '📝單元' : '📖一般';
+                                    const accText = h.accuracy !== undefined ? `${h.accuracy}%` : (h.correctCount && h.questionCount ? `${Math.round(h.correctCount/h.questionCount*100)}%` : '-');
+                                    return `<tr>
+                                        <td>${h.date || '-'}</td>
+                                        <td>${modeText}</td>
+                                        <td>${h.difficulty || '-'}</td>
+                                        <td>${h.questionCount || '-'}</td>
+                                        <td>${h.correctCount || '-'}</td>
+                                        <td style="font-weight:600; color:${(h.accuracy||0) >= 70 ? '#10b981' : (h.accuracy||0) >= 40 ? '#f59e0b' : '#dc2626'};">${accText}</td>
+                                    </tr>`;
+                                }).join('')}
+                                </tbody>
+                            </table>
+                        </div>`}
+                </div>
+                
                 <div style="margin-top:16px; text-align:center;">
                     <button onclick="document.getElementById('studentDetailModal').remove()" style="
                         background:#4a1d8c; color:white; border:none; padding:8px 32px; border-radius:40px; font-size:0.9rem; cursor:pointer;
