@@ -6803,7 +6803,7 @@ async function showStudentDetail(userId) {
                     ${(studentData.practiceHistory || []).length === 0 ? '<div style="color:#999; font-size:0.7rem;">無做題紀錄</div>' : `
                         <div style="max-height:200px; overflow-y:auto; font-size:0.7rem;">
                             <table class="wrong-table" style="font-size:0.68rem;">
-                                <thead><tr><th>日期</th><th>模式</th><th>難度</th><th>題數</th><th>正確</th><th>正確率</th></tr></thead>
+                                <thead><tr><th>日期</th><th>模式</th><th>難度</th><th>章節</th><th>題數</th><th>正確</th><th>正確率</th></tr></thead>
                                 <tbody>
                                 ${(studentData.practiceHistory || []).map(h => {
                                     const modeText = h.mode === 'trial' ? '🔥試煉' : h.mode === 'review' ? '🔁複習' : h.mode === 'single' ? '🔂單題' : h.mode === 'unit' ? '📝單元' : '📖一般';
@@ -6812,6 +6812,7 @@ async function showStudentDetail(userId) {
                                         <td>${h.date || '-'}</td>
                                         <td>${modeText}</td>
                                         <td>${h.difficulty || '-'}</td>
+                                        <td>${h.chapterName || '-'}</td>
                                         <td>${h.questionCount || '-'}</td>
                                         <td>${h.correctCount || '-'}</td>
                                         <td style="font-weight:600; color:${(h.accuracy||0) >= 70 ? '#10b981' : (h.accuracy||0) >= 40 ? '#f59e0b' : '#dc2626'};">${accText}</td>
