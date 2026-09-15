@@ -697,7 +697,7 @@ async function findUserAcrossDevices(userId) {
     if (local) return local;
     if (firestoreEnabled) {
         try {
-            const doc = await firebase.firestore().collection('users').doc(userId).get();
+            const doc = await withTimeout(firebase.firestore().collection('users').doc(userId).get(), 8000);
             if (doc.exists) {
                 const data = doc.data();
                 // 同步到本機 localStorage，下次登入即時識別
@@ -1186,20 +1186,40 @@ async function handleRedirectResult() {
     if (window.__authHandled) return;
     window.__authHandled = true;
     try {
-        // 監聽登入狀態：Redirect 跳回後，若已登入且未進入主程式 → 處理
+        // 方式1：getRedirectResult（處理剛從 Google 跳回的登入）
+        let redirectUser = null;
+        try {
+            const result = await withTimeout(firebase.auth().getRedirectResult(), 10000);
+            if (result && result.user) redirectUser = result.user;
+        } catch (e) {
+            console.warn('⚠️ getRedirectResult 失敗（可能非 redirect 流程）:', e.code || e.message);
+        }
+        // 方式2：onAuthStateChanged（兜底，處理任何已登入狀態）
         firebase.auth().onAuthStateChanged(async (user) => {
             if (user && !currentUser && !window.__authProcessing) {
                 window.__authProcessing = true;
-                console.log('✅ 偵測到已登入（Redirect 回程）:', user.email);
+                console.log('✅ 偵測到已登入（onAuthStateChanged）:', user.email);
                 try {
                     await processGoogleLogin({ email: user.email, displayName: user.displayName });
                 } catch(e) {
-                    console.error('❌ Redirect 登入後處理失敗:', e);
+                    console.error('❌ 登入後處理失敗:', e);
                     showLoginError('❌ 登入後處理失敗：' + e.message);
                 }
                 window.__authProcessing = false;
             }
         });
+        // 若 getRedirectResult 直接拿到 user，且 onAuthStateChanged 尚未處理 → 處理
+        if (redirectUser && !currentUser && !window.__authProcessing) {
+            window.__authProcessing = true;
+            console.log('✅ Google Redirect 登入成功:', redirectUser.displayName, redirectUser.email);
+            try {
+                await processGoogleLogin({ email: redirectUser.email, displayName: redirectUser.displayName });
+            } catch(e) {
+                console.error('❌ Redirect 登入後處理失敗:', e);
+                showLoginError('❌ 登入後處理失敗：' + e.message);
+            }
+            window.__authProcessing = false;
+        }
     } catch (error) {
         console.error('❌ Google Redirect 登入處理失敗:', error);
     }
