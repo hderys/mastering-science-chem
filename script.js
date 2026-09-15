@@ -1089,11 +1089,7 @@ async function handleGoogleLogin() {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         
-        // iPad/iPhone（iOS Safari）用 Redirect，其他用 Popup
-        if (isIOS()) {
-            await firebase.auth().signInWithRedirect(provider);
-            return;  // 跳轉後頁面會重新載入，由 handleRedirectResult 接手
-        }
+        // 一律用 Popup 登入（原本一直正常，不使用 Redirect）
         const result = await firebase.auth().signInWithPopup(provider);
         const user = result.user;
         console.log('✅ Google 登入成功:', user.displayName, user.email);
@@ -1176,53 +1172,6 @@ async function processGoogleLogin(user) {
     }
     
     await finalizeLogin(existingUser);
-}
-
-// iPad/iPhone Redirect 登入結果處理（頁面載入時呼叫）
-async function handleRedirectResult() {
-    // 僅在 http/https 環境檢查（避免 file:// 或無儲存環境報錯）
-    if (!/^https?:/.test(location.protocol || '')) return;
-    // 防重複處理
-    if (window.__authHandled) return;
-    window.__authHandled = true;
-    try {
-        // 方式1：getRedirectResult（處理剛從 Google 跳回的登入）
-        let redirectUser = null;
-        try {
-            const result = await withTimeout(firebase.auth().getRedirectResult(), 10000);
-            if (result && result.user) redirectUser = result.user;
-        } catch (e) {
-            console.warn('⚠️ getRedirectResult 失敗（可能非 redirect 流程）:', e.code || e.message);
-        }
-        // 方式2：onAuthStateChanged（兜底，處理任何已登入狀態）
-        firebase.auth().onAuthStateChanged(async (user) => {
-            if (user && !currentUser && !window.__authProcessing) {
-                window.__authProcessing = true;
-                console.log('✅ 偵測到已登入（onAuthStateChanged）:', user.email);
-                try {
-                    await processGoogleLogin({ email: user.email, displayName: user.displayName });
-                } catch(e) {
-                    console.error('❌ 登入後處理失敗:', e);
-                    showLoginError('❌ 登入後處理失敗：' + e.message);
-                }
-                window.__authProcessing = false;
-            }
-        });
-        // 若 getRedirectResult 直接拿到 user，且 onAuthStateChanged 尚未處理 → 處理
-        if (redirectUser && !currentUser && !window.__authProcessing) {
-            window.__authProcessing = true;
-            console.log('✅ Google Redirect 登入成功:', redirectUser.displayName, redirectUser.email);
-            try {
-                await processGoogleLogin({ email: redirectUser.email, displayName: redirectUser.displayName });
-            } catch(e) {
-                console.error('❌ Redirect 登入後處理失敗:', e);
-                showLoginError('❌ 登入後處理失敗：' + e.message);
-            }
-            window.__authProcessing = false;
-        }
-    } catch (error) {
-        console.error('❌ Google Redirect 登入處理失敗:', error);
-    }
 }
 
 // ===== 登入完成後的共同流程（記錄上線時間 + 進入主程式） =====
@@ -5713,8 +5662,6 @@ async function saveClassSettings(className, settings) {
 
 document.addEventListener('DOMContentLoaded', function() {
     checkFirebase();
-    // iOS Redirect 登入：從 Google 跳回後處理結果
-    handleRedirectResult();
     document.getElementById('diff-easy').addEventListener('click', () => { selectedDifficulty = 0; document.getElementById('diff-easy').classList.add('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
     document.getElementById('diff-medium').addEventListener('click', () => { if (document.getElementById('diff-medium').disabled) return; selectedDifficulty = 1; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.add('active'); document.getElementById('diff-hard').classList.remove('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
     document.getElementById('diff-hard').addEventListener('click', () => { if (document.getElementById('diff-hard').disabled) return; selectedDifficulty = 2; document.getElementById('diff-easy').classList.remove('active'); document.getElementById('diff-medium').classList.remove('active'); document.getElementById('diff-hard').classList.add('active'); isTrialMode = false; updateSettingsUnlockStatus(); });
