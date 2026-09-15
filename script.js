@@ -1200,17 +1200,8 @@ async function handleRedirectResult() {
                 window.__authProcessing = false;
             }
         });
-        // 也嘗試 getRedirectResult（處理剛跳回的首次登入）
-        const result = await firebase.auth().getRedirectResult();
-        if (result && result.user) {
-            console.log('✅ Google Redirect 登入成功:', result.user.displayName, result.user.email);
-            await processGoogleLogin(result.user);
-        }
     } catch (error) {
-        console.error('❌ Google Redirect 登入失敗:', error);
-        if (error.code && error.code !== 'auth/redirect-cancelled-by-user' && error.code !== 'auth/operation-not-supported-in-this-environment') {
-            showLoginError('❌ Google 登入失敗：' + error.message);
-        }
+        console.error('❌ Google Redirect 登入處理失敗:', error);
     }
 }
 
