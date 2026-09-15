@@ -548,7 +548,10 @@ async function loadUserData() {
 
 function recordBatch(answers) {
     for (let a of answers) {
-        userData.latestStatus[a.qid] = a.isCorrect;
+        // 未作答（無選項）的題不寫入 latestStatus：不算錯題，保留原狀態
+        if (a.userLetter !== null && a.userLetter !== undefined) {
+            userData.latestStatus[a.qid] = a.isCorrect;
+        }
         userData.allAttempts.push({ qid: a.qid, isCorrect: a.isCorrect, timestamp: Date.now(), userLetter: a.userLetter || null });
     }
     saveUserData();
