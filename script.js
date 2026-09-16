@@ -2985,6 +2985,8 @@ async function renderPractice() {
     const settingsKey = groupClassName(className, currentUser.language);
     const classSettings = await loadClassSettings(settingsKey) || {};
     const openChapters = classSettings.openChapters || [];
+    // 是否老師曾設定過此班級（若設定過但清單為空＝全部關閉；未設定過＝預設全開）
+    const classConfigured = classSettings.configured === true;
     const isTeacher = currentUser.isTeacher || false;
     // 非學校電郵的訪客/試用者：只開放第一單元（Unit 1），除非已被老師批准
     const userId = currentUser.userId || currentUser.id || '';
@@ -3008,7 +3010,8 @@ async function renderPractice() {
         let filteredChapters = {};
         for (let ch in chapters) {
             const chNum = parseInt(ch);
-            if (isTeacher || openChapters.length === 0 || openChapters.includes(chNum)) filteredChapters[ch] = chapters[ch];
+            // 未設定過此班級 → 全部開放；設定過 → 依 openChapters（空清單＝全部關閉）
+            if (isTeacher || !classConfigured || openChapters.includes(chNum)) filteredChapters[ch] = chapters[ch];
         }
         if (Object.keys(filteredChapters).length === 0) continue;
         let mastery = getUnitMastery(unit);
@@ -5648,17 +5651,17 @@ async function loadClassSettings(className) {
 async function saveClassSettings(className, settings) {
     if (!firestoreEnabled) {
         const db = getUsers();
-        db.classSettings = { ...db.classSettings, [className]: settings };
+        db.classSettings = { ...db.classSettings, [className]: { ...settings, configured: true } };
         saveUsers(db);
         return;
     }
     try {
-        await firebase.firestore().collection('classes').doc(className).set(settings, { merge: true });
+        await firebase.firestore().collection('classes').doc(className).set({ ...settings, configured: true }, { merge: true });
         console.log(`✅ 班級 ${className} 設定已儲存`);
     } catch(e) {
         console.warn('⚠️ Firebase 儲存失敗:', e.message);
         const db = getUsers();
-        db.classSettings = { ...db.classSettings, [className]: settings };
+        db.classSettings = { ...db.classSettings, [className]: { ...settings, configured: true } };
         saveUsers(db);
     }
 }
