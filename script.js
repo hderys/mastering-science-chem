@@ -2985,8 +2985,8 @@ async function renderPractice() {
     const settingsKey = groupClassName(className, currentUser.language);
     const classSettings = await loadClassSettings(settingsKey) || {};
     const openChapters = classSettings.openChapters || [];
-    // 是否老師曾設定過此班級（若設定過但清單為空＝全部關閉；未設定過＝預設全開）
-    const classConfigured = classSettings.configured === true;
+    // 是否老師曾設定過此班級（有 openChapters 陣列就算設定過；舊設定無 configured 標記也適用）
+    const classConfigured = classSettings.configured === true || Array.isArray(classSettings.openChapters);
     const isTeacher = currentUser.isTeacher || false;
     // 非學校電郵的訪客/試用者：只開放第一單元（Unit 1），除非已被老師批准
     const userId = currentUser.userId || currentUser.id || '';
@@ -4067,7 +4067,15 @@ async function renderTestList() {
 
 // 進入主程式時：若有待作答測驗，讓測驗 tab 閃爍
 async function refreshTestTabNotice() {
-    if (!currentUser || currentUser.isTeacher) return;
+    const testTab = document.querySelector('.tab[data-tab="test"]');
+    // 老師身份：一律清除測驗 tab 提示（老師不需看到測驗閃爍）
+    if (!currentUser || currentUser.isTeacher) {
+        if (testTab) {
+            testTab.classList.remove('test-tab-notice');
+            testTab.textContent = '📝 測驗';
+        }
+        return;
+    }
     const className = groupClassName(currentUser.className, currentUser.language);
     const tests = await loadTestsForClass(className);
     const now = new Date();
@@ -4081,7 +4089,6 @@ async function refreshTestTabNotice() {
         const dl = t.deadline ? new Date(t.deadline) : null;
         return !myResult && !(dl && now > dl);
     });
-    const testTab = document.querySelector('.tab[data-tab="test"]');
     if (testTab) {
         if (hasPending) {
             testTab.classList.add('test-tab-notice');
@@ -5878,6 +5885,8 @@ async function openStudentPreview() {
     renderPractice();
     setupTabs();
     document.querySelector('.tab[data-tab="practice"]')?.click();
+    // 更新測驗 tab 提示（依模擬學生的待作答測驗）
+    refreshTestTabNotice();
     // 顯示「預覽中」橫幅（主程式頂部）
     showPreviewBanner(classKey);
 }
@@ -5910,6 +5919,8 @@ function exitStudentPreview() {
     // 移除預覽橫幅
     const banner = document.getElementById('previewBanner');
     if (banner) banner.remove();
+    // 還原測驗 tab 提示（用老師身份，清除預覽時的閃爍）
+    refreshTestTabNotice();
     // 回到後台（重新渲染後台）
     const teacherTab = document.getElementById('teacherTab');
     if (teacherTab && currentUser && currentUser.isTeacher) teacherTab.style.display = 'inline-block';
