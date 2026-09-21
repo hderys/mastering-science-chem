@@ -5844,7 +5844,9 @@ async function renderTeacherPanel() {
     renderSubtab('progress', currentClass);
 }
 
-// ===== 模擬學生視角：查看某班學生看到的章節與測驗 =====
+// ===== 模擬學生視角：切換 currentUser 渲染真正學生版面 =====
+let __previewOrigUser = null;
+
 async function openStudentPreview() {
     const classKey = document.getElementById('teacherClassSelector')?.value;
     if (!classKey || classKey === '__all__') {
@@ -5852,77 +5854,70 @@ async function openStudentPreview() {
         return;
     }
     const isZh = classKey === 'S4(中)';
-    // 1. 章節顯示（依該班設定）
-    const classSettings = await loadClassSettings(classKey) || {};
-    const openChapters = classSettings.openChapters || [];
-    const classConfigured = classSettings.configured === true;
-    let chapterHtml = '';
-    for (let u in window.ALL_UNITS) {
-        const unitObj = window.ALL_UNITS[u];
-        let unitChapterHtml = '';
-        for (let c in unitObj.chapters) {
-            const chNum = parseInt(c);
-            const visible = !classConfigured || openChapters.includes(chNum);
-            const chName = isZh && unitObj.chapters[c].nameZh ? unitObj.chapters[c].nameZh : unitObj.chapters[c].name;
-            const num = parseInt(c);
-            const displayName = isZh && !isNaN(num) ? `${num}·${chName}` : chName;
-            unitChapterHtml += `
-                <div style="display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f0edf8;">
-                    <span>${visible ? '🟢' : '🔴'}</span>
-                    <span style="font-size:0.8rem; ${visible ? 'color:#333;' : 'color:#bbb;'}">${displayName}</span>
-                    <span style="margin-left:auto; font-size:0.7rem; color:${visible ? '#10b981' : '#dc2626'};">${visible ? '學生可見' : '已隱藏'}</span>
-                </div>`;
-        }
-        if (unitChapterHtml) {
-            chapterHtml += `<div style="margin-top:8px;"><div style="font-weight:700; color:#2e0f5a; font-size:0.85rem;">${isZh && unitObj.nameZh ? unitObj.nameZh : unitObj.name}</div>${unitChapterHtml}</div>`;
-        }
+    if (__previewOrigUser) { alert('⚠️ 已在預覽模式中，請先退出'); return; }
+    // 保存原 currentUser
+    __previewOrigUser = currentUser;
+    // 建立模擬學生物件（className=4C、language 依班級，groupClassName 會歸組為 S4(中)/S4(Eng)）
+    const previewUser = {
+        userId: 'preview@student',
+        id: 'preview@student',
+        name: '👁️ 預覽學生',
+        className: '4C',
+        language: isZh ? 'zh' : 'en',
+        isTeacher: false,
+        approved: true,
+        studentId: 'PREVIEW'
+    };
+    currentUser = previewUser;
+    // 顯示學生端 mainApp，隱藏登入頁與老師 tab
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    const teacherTab = document.getElementById('teacherTab');
+    if (teacherTab) teacherTab.style.display = 'none';
+    // 渲染學生端（真正 renderPractice；不載入 userData，避免影響老師資料）
+    renderPractice();
+    setupTabs();
+    document.querySelector('.tab[data-tab="practice"]')?.click();
+    // 顯示「預覽中」橫幅（主程式頂部）
+    showPreviewBanner(classKey);
+}
+
+function showPreviewBanner(classKey) {
+    const mainApp = document.getElementById('mainApp');
+    if (!mainApp) return;
+    let banner = document.getElementById('previewBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'previewBanner';
+        banner.style.cssText = 'background:#eef2ff; border:2px solid #6366f1; border-radius:12px; padding:10px 14px; margin-bottom:10px; font-size:0.85rem; color:#312e81; display:flex; align-items:center; gap:10px; flex-wrap:wrap;';
+        mainApp.insertBefore(banner, mainApp.firstChild);
     }
-    // 2. 測驗列表（該班派發且已發佈）
-    const tests = await loadTestsForClass(classKey);
-    const now = new Date();
-    const visibleTests = tests.filter(t => {
-        if (t.status === 'draft') return false;
-        if (t.status === 'scheduled' && t.publishTime && now < new Date(t.publishTime)) return false;
-        return true;
-    });
-    let testHtml = visibleTests.length === 0
-        ? '<div style="color:#999; font-size:0.8rem;">📝 此班目前沒有可作答的測驗</div>'
-        : visibleTests.map(t => {
-            const dl = t.deadline ? new Date(t.deadline) : null;
-            const expired = dl && now > dl;
-            const dlText = dl ? `截止 ${format(dl, 'yyyy-MM-dd HH:mm')}` : '無截止';
-            const tlText = t.timeLimit ? `限時 ${t.timeLimit} 分` : '不限時';
-            return `<div style="padding:7px 0; border-bottom:1px solid #f0edf8; font-size:0.82rem;">
-                <span style="font-weight:600; color:#2e0f5a;">📝 ${t.name}</span>
-                <span style="margin-left:6px; font-size:0.72rem; color:${expired ? '#dc2626' : '#4a1d8c'};">${expired ? '已截止' : '待作答'}</span>
-                <div style="font-size:0.7rem; color:#888;">${t.questionCount} 題 · ${dlText} · ${tlText}</div>
-            </div>`;
-        }).join('');
-    // 3. 彈窗
-    const overlay = document.createElement('div');
-    overlay.id = 'studentPreviewOverlay';
-    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:999999; backdrop-filter:blur(3px);';
-    const modal = document.createElement('div');
-    modal.style.cssText = 'background:white; border-radius:20px; padding:22px; max-width:640px; width:94%; max-height:88vh; overflow-y:auto; box-shadow:0 20px 70px rgba(0,0,0,0.35);';
-    modal.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <span style="font-weight:700; color:#2e0f5a;">👁️ 學生視角預覽：${classKey}</span>
-            <button onclick="document.getElementById('studentPreviewOverlay').remove()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#888;">✕</button>
+    banner.innerHTML = `
+        <span style="font-size:1.1rem;">👁️</span>
+        <div style="flex:1; min-width:180px;">
+            <b>學生視角預覽：${classKey}</b>
+            <div style="font-size:0.75rem; color:#4338ca; margin-top:2px;">這是該班學生登入後看到的版面。章節顯示/隱藏依班級設定。</div>
         </div>
-        <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:8px 12px; font-size:0.75rem; color:#0c4a6e; margin-bottom:12px;">
-            💡 這是該班學生登入後看到的「每課練習」章節狀態與「測驗」列表（🟢=可見 🔴=已隱藏）
-        </div>
-        <div style="font-weight:700; color:#2e0f5a; margin-bottom:4px;">📖 每課練習 — 章節顯示</div>
-        ${chapterHtml || '<div style="color:#999; font-size:0.8rem;">無章節</div>'}
-        <div style="font-weight:700; color:#2e0f5a; margin:14px 0 4px 0;">📝 測驗</div>
-        ${testHtml}
-        <div style="margin-top:14px; text-align:center;">
-            <button onclick="document.getElementById('studentPreviewOverlay').remove()" style="background:#4a1d8c; color:white; border:none; padding:7px 28px; border-radius:40px; cursor:pointer;">關閉</button>
-        </div>
+        <button onclick="exitStudentPreview()" style="padding:7px 16px; border:none; border-radius:40px; background:#6366f1; color:white; font-weight:700; cursor:pointer;">✕ 退出預覽</button>
     `;
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+function exitStudentPreview() {
+    if (!__previewOrigUser) { alert('⚠️ 目前不在預覽模式'); return; }
+    // 還原 currentUser
+    currentUser = __previewOrigUser;
+    __previewOrigUser = null;
+    // 移除預覽橫幅
+    const banner = document.getElementById('previewBanner');
+    if (banner) banner.remove();
+    // 回到後台（重新渲染後台）
+    const teacherTab = document.getElementById('teacherTab');
+    if (teacherTab && currentUser && currentUser.isTeacher) teacherTab.style.display = 'inline-block';
+    document.getElementById('mainApp').style.display = 'block';
+    renderTeacherPanel();
+    // 切到後台分頁
+    const teacherTabBtn = document.querySelector('.tab[data-tab="teacher"]');
+    if (teacherTabBtn) teacherTabBtn.click();
 }
 
 let currentSubtab = 'progress';
