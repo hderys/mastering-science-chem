@@ -6103,6 +6103,12 @@ async function renderSubtabByChapter(className) {
 async function renderSubtabWrong(className) {
     const container = document.getElementById('subtab-wrong');
     if (!container) return;
+    // 所選班級為中文班時，題目顯示中文
+    const isZhClass = className === 'S4(中)';
+    const qDisplayText = (q) => {
+        const t = isZhClass && q.textZh ? q.textZh : q.text;
+        return t.replace(/<br>/g, ' ').replace(/<[^>]+>/g, '');
+    };
     
     const students = await loadAllStudentsFromFirebase(className);
     
@@ -6128,7 +6134,7 @@ async function renderSubtabWrong(className) {
             const chKey = `${u}_${c}`;
             const entries = [];
             for (const q of chQ) {
-                if (wrongInfo[q.id]) entries.push({ qid: q.id, text: q.text, count: wrongInfo[q.id].count, students: wrongInfo[q.id].students });
+                if (wrongInfo[q.id]) entries.push({ qid: q.id, text: qDisplayText(q), count: wrongInfo[q.id].count, students: wrongInfo[q.id].students });
             }
             if (entries.length > 0) {
                 entries.sort((a, b) => b.count - a.count);
@@ -6164,7 +6170,7 @@ async function renderSubtabWrong(className) {
                 html += `
                     <tr>
                         <td>${rank}</td>
-                        <td style="cursor:pointer;" onclick="previewQuestion('${e.qid}')">${displayText} <span style="font-size:0.62rem; color:#4338ca; white-space:nowrap;">👁️ 查看</span></td>
+                        <td style="cursor:pointer;" onclick="previewQuestion('${e.qid}', '${isZhClass ? 'zh' : 'en'}')">${displayText} <span style="font-size:0.62rem; color:#4338ca; white-space:nowrap;">👁️ 查看</span></td>
                         <td style="font-weight:600; color:#dc2626;">${e.count} 人</td>
                         <td style="font-size:0.7rem; color:#555;">${e.students.join('、')}</td>
                     </tr>`;
